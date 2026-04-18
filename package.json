@@ -14,10 +14,16 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
-    "solid-js": "1.9.11"
+    "solid-js": "1.9.11",
+    "vite-plus": "0.1.x",
+    "@voidzero-dev/vite-plus-core": "0.1.x"
   },
   "devDependencies": {
     "@wxt-dev/module-solid": "1.1.4",
     "wxt": "0.20.20"
+  },
+  "overrides": {
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.x",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.x"
   }
 }
