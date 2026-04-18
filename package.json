@@ -11,7 +11,9 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "check": "vp check",
+    "fix": "vp check --fix"
   },
   "dependencies": {
     "solid-js": "1.9.11",
