@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+  <!-- 透過背景 -->
+  <rect width="60" height="60" fill="transparent" />
+  <!-- 縦横2:3の長方形 -->
+  <rect x="0" y="10" width="60" height="40" fill="#E6E7E9" />
+  <!-- 左足 -->
+  <rect x="15" y="45" width="5" height="10" fill="#E6E7E9" />
+  <!-- 右足 -->
+  <rect x="40" y="45" width="5" height="10" fill="#E6E7E9" />
+  <!-- アンテナ -->
+  <path
+    d="M15 0 L30 15 L45 0"
+    fill="none"
+    stroke="#E6E7E9"
+    stroke-width="5"
+    stroke-linecap="round"
+    stroke-linejoin="round" />
+  <!-- 3本線 -->
+  <rect x="7" y="17" width="36" height="4" fill="#252525" />
+  <rect x="7" y="27" width="24" height="4" fill="#252525" />
+  <rect x="7" y="37" width="12" height="4" fill="#252525" />
+  <!-- 再生アイコン ▷ -->
+  <polygon points="36 26 36 46 56 36" fill="#252525" />
+</svg>

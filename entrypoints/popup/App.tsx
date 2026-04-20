@@ -1,4 +1,3 @@
-import wxtLogo from "/wxt.svg";
 import { createSignal } from "solid-js";
 
 import solidLogo from "@/assets/solid.svg";
@@ -11,9 +10,6 @@ function App() {
   return (
     <>
       <div>
-        <a href="https://wxt.dev" target="_blank">
-          <img src={wxtLogo} class="logo" alt="WXT logo" />
-        </a>
         <a href="https://solidjs.com" target="_blank">
           <img src={solidLogo} class="logo solid" alt="Solid logo" />
         </a>
@@ -25,7 +21,6 @@ function App() {
           Edit <code>popup/App.tsx</code> and save to test HMR
         </p>
       </div>
-      <p class="read-the-docs">Click on the WXT and Solid logos to learn more</p>
     </>
   );
 }
