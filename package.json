@@ -16,9 +16,9 @@
     "fix": "vp check --fix"
   },
   "dependencies": {
-    "@voidzero-dev/vite-plus-core": "0.1.x",
+    "@voidzero-dev/vite-plus-core": "0.1.19",
     "solid-js": "1.9.11",
-    "vite-plus": "0.1.x"
+    "vite-plus": "0.1.19"
   },
   "devDependencies": {
     "@wxt-dev/module-solid": "1.1.4",
