@@ -1,27 +1,22 @@
-import { createSignal } from "solid-js";
-
-import solidLogo from "@/assets/solid.svg";
-
-import "./App.css";
-
 function App() {
-  const [count, setCount] = createSignal(0);
-
   return (
-    <>
-      <div>
-        <a href="https://solidjs.com" target="_blank">
-          <img src={solidLogo} class="logo solid" alt="Solid logo" />
-        </a>
+    <main class="min-h-screen min-w-80 bg-stone-950 px-4 py-5 text-stone-100">
+      <div class="mx-auto flex w-full max-w-sm flex-col gap-4">
+        <header class="space-y-1">
+          <p class="text-[11px] font-medium uppercase tracking-[0.24em] text-stone-500">
+            NiconiPlaylist
+          </p>
+          <h1 class="text-lg font-semibold text-stone-50">Popup scaffold</h1>
+          <p class="text-sm leading-5 text-stone-400">
+            Tailwind CSS is ready. Next step is replacing this scaffold with playlist UI.
+          </p>
+        </header>
+
+        <section class="rounded-2xl border border-stone-800 bg-stone-900/80 p-4 shadow-lg shadow-black/20">
+          <p class="text-sm text-stone-300">No playlist UI has been implemented yet.</p>
+        </section>
       </div>
-      <h1>WXT + Solid</h1>
-      <div class="card">
-        <button onClick={() => setCount((count) => count + 1)}>count is {count()}</button>
-        <p>
-          Edit <code>popup/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-    </>
+    </main>
   );
 }
 

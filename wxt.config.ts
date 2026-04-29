@@ -1,9 +1,14 @@
-import { defineConfig } from "wxt";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig, type WxtViteConfig } from "wxt";
 
 export default defineConfig({
   modules: ["@wxt-dev/module-solid"],
   srcDir: "src",
   outDirTemplate: "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}",
+  vite: () =>
+    ({
+      plugins: [tailwindcss()],
+    }) as WxtViteConfig,
   manifestVersion: 3,
   targetBrowsers: ["chrome", "firefox"],
   manifest: {
