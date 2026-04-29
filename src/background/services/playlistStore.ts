@@ -42,3 +42,9 @@ export async function getLastActivePlaylistId(): Promise<PlaylistId | null> {
 
   return typeof value === "string" ? value : null;
 }
+
+export async function setLastActivePlaylistId(playlistId: PlaylistId | null): Promise<void> {
+  await browser.storage.local.set({
+    [STORAGE_KEYS.lastActivePlaylistId]: playlistId,
+  });
+}

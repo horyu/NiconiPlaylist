@@ -1,5 +1,6 @@
 import { browser } from "wxt/browser";
 
+import { importSharedPlaylist } from "@/background/services/importPlaylist";
 import { getLastActivePlaylistId, getStoredPlaylists } from "@/background/services/playlistStore";
 import { MESSAGE_TYPES } from "@/lib/messages";
 
@@ -9,7 +10,7 @@ export function registerPlaylistHandlers() {
       return undefined;
     }
 
-    if (message.type === MESSAGE_TYPES.getPopupState) {
+    if (message.type === MESSAGE_TYPES.getPlaylistsState) {
       const [playlists, lastActivePlaylistId] = await Promise.all([
         getStoredPlaylists(),
         getLastActivePlaylistId(),
@@ -18,6 +19,17 @@ export function registerPlaylistHandlers() {
       return {
         playlists,
         lastActivePlaylistId,
+      };
+    }
+
+    if (
+      message.type === MESSAGE_TYPES.importSharedPlaylist &&
+      typeof message.sharedUrl === "string"
+    ) {
+      const playlist = await importSharedPlaylist(message.sharedUrl);
+
+      return {
+        playlist,
       };
     }
 

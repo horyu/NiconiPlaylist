@@ -1,16 +1,26 @@
 import type { Playlist, PlaylistId } from "@/lib/types";
 
 export const MESSAGE_TYPES = {
-  getPopupState: "playlist:get-popup-state",
+  getPlaylistsState: "playlist:get-playlists-state",
+  importSharedPlaylist: "playlist:import-shared-playlist",
 } as const;
 
-export type PopupStateMessage = {
-  type: (typeof MESSAGE_TYPES)["getPopupState"];
+export type GetPlaylistsStateMessage = {
+  type: (typeof MESSAGE_TYPES)["getPlaylistsState"];
 };
 
-export type PopupStateResponse = {
+export type PlaylistsStateResponse = {
   playlists: Playlist[];
   lastActivePlaylistId: PlaylistId | null;
 };
 
-export type RuntimeMessage = PopupStateMessage;
+export type ImportSharedPlaylistMessage = {
+  type: (typeof MESSAGE_TYPES)["importSharedPlaylist"];
+  sharedUrl: string;
+};
+
+export type ImportSharedPlaylistResponse = {
+  playlist: Playlist;
+};
+
+export type RuntimeMessage = GetPlaylistsStateMessage | ImportSharedPlaylistMessage;

@@ -1,7 +1,8 @@
-import { createResource, For, Match, Switch } from "solid-js";
+import { createResource, For, Match, onCleanup, onMount, Switch } from "solid-js";
 import { browser } from "wxt/browser";
 
-import { MESSAGE_TYPES } from "@/lib/messages";
+import { getLastActivePlaylistId, getStoredPlaylists } from "@/background/services/playlistStore";
+import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { Playlist } from "@/lib/types";
 
 type PopupState = {
@@ -9,25 +10,48 @@ type PopupState = {
   lastActivePlaylistId: string | null;
 };
 
+type StorageChanges = Record<
+  string,
+  {
+    oldValue?: unknown;
+    newValue?: unknown;
+  }
+>;
+
 async function fetchPopupState(): Promise<PopupState> {
-  const response = await browser.runtime.sendMessage({
-    type: MESSAGE_TYPES.getPopupState,
-  });
+  const [playlists, lastActivePlaylistId] = await Promise.all([
+    getStoredPlaylists(),
+    getLastActivePlaylistId(),
+  ]);
 
   return {
-    playlists: Array.isArray(response?.playlists) ? response.playlists : [],
-    lastActivePlaylistId:
-      typeof response?.lastActivePlaylistId === "string" ? response.lastActivePlaylistId : null,
+    playlists,
+    lastActivePlaylistId,
   };
 }
 
-function App() {
-  const [popupState] = createResource(fetchPopupState);
+function Popup() {
+  const [popupState, { refetch }] = createResource(fetchPopupState);
 
   const activePlaylist = () =>
     popupState()?.playlists.find(
       (playlist) => playlist.id === popupState()?.lastActivePlaylistId,
     ) ?? null;
+
+  onMount(() => {
+    const handleStorageChanged = (changes: StorageChanges) => {
+      if (changes[STORAGE_KEYS.playlists] || changes[STORAGE_KEYS.lastActivePlaylistId]) {
+        void refetch();
+      }
+    };
+
+    browser.storage.onChanged.addListener(handleStorageChanged);
+    void refetch();
+
+    onCleanup(() => {
+      browser.storage.onChanged.removeListener(handleStorageChanged);
+    });
+  });
 
   return (
     <main class="min-h-screen min-w-80 bg-stone-950 px-4 py-5 text-stone-100">
@@ -96,4 +120,4 @@ function App() {
   );
 }
 
-export default App;
+export default Popup;

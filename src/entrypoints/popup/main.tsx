@@ -1,6 +1,6 @@
 import { render } from "solid-js/web";
 
 import "./style.css";
-import App from "./App";
+import Popup from "./Popup";
 
-render(() => <App />, document.getElementById("root")!);
+render(() => <Popup />, document.getElementById("root")!);
