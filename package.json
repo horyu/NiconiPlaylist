@@ -13,7 +13,9 @@
     "zip:firefox": "wxt zip -b firefox",
     "postinstall": "wxt prepare",
     "check": "vp check",
-    "fix": "vp check --fix"
+    "fix": "vp check --fix",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
   },
   "dependencies": {
     "@voidzero-dev/vite-plus-core": "0.1.19",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.2.4",
+    "@types/bun": "1.3.13",
     "@wxt-dev/module-solid": "1.1.4",
     "tailwindcss": "4.2.4",
     "wxt": "0.20.20"
