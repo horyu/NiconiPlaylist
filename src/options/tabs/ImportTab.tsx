@@ -25,8 +25,11 @@ type ImportTabProps = {
   onImported: () => Promise<void> | void;
 };
 
+const DEFAULT_SHARED_URL =
+  "https://horyu.github.io/NiconiPlaylist/import?videoIds=BOQS5OiOBd-4tQKovKop";
+
 export function ImportTab(props: ImportTabProps) {
-  const [sharedUrl, setSharedUrl] = createSignal("");
+  const [sharedUrl, setSharedUrl] = createSignal(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
   const [feedback, setFeedback] = createSignal<string | null>(null);
   const preview = createMemo<PreviewState>(() => {
     const value = sharedUrl().trim();
@@ -59,7 +62,7 @@ export function ImportTab(props: ImportTabProps) {
 
     try {
       await importSharedPlaylist(sharedUrl().trim());
-      setSharedUrl("");
+      setSharedUrl(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
       setFeedback("プレイリストをインポートしました。");
       await props.onImported();
     } catch (error) {
@@ -79,9 +82,10 @@ export function ImportTab(props: ImportTabProps) {
       <form class="space-y-4" onSubmit={handleImport}>
         <label class="block space-y-2">
           <span class="text-sm font-medium text-stone-200">共有 URL</span>
-          <textarea
-            class="min-h-32 w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
-            placeholder="https://horyu.github.io/NiconiPlaylist/import?title=..."
+          <input
+            type="url"
+            class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+            placeholder="https://horyu.github.io/NiconiPlaylist/import?videoIds=..."
             value={sharedUrl()}
             onInput={(event) => setSharedUrl(event.currentTarget.value)}
           />
