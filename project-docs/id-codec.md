@@ -78,6 +78,12 @@ const decoded = decodeIds(encoded);
 // decoded は ids と完全一致する
 ```
 
+実際のエンコード例として、`sm9`, `so5364283`, `nm2829323`, `ss46168863` を共有 URL にしたものは以下。
+
+```txt
+https://horyu.github.io/NiconiPlaylist/import?videoIds=BOQS5OiOBd-4tQKovKop
+```
+
 空配列も可逆変換の対象とする。
 
 `encodeIds([])` は `count = 0` の encoded string を返し、`decodeIds` はそれを `[]` として復元する。
