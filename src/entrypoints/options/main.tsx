@@ -1,6 +1,6 @@
 import { render } from "solid-js/web";
 
 import "../popup/style.css";
-import Options from "./Options";
+import OptionsPage from "../../options";
 
-render(() => <Options />, document.getElementById("root")!);
+render(() => <OptionsPage />, document.getElementById("root")!);

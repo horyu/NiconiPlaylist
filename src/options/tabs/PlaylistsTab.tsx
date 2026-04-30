@@ -1,0 +1,92 @@
+import { For, Match, Show, Switch } from "solid-js";
+
+import { deleteStoredPlaylist } from "@/background/services/playlistStore";
+import type { PlaylistId } from "@/lib/types";
+import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
+
+type PlaylistsTabProps = {
+  state: PlaylistsState | undefined;
+  loading: boolean;
+  error: unknown;
+  onDeleted: () => Promise<void> | void;
+  onFeedback: (message: string | null) => void;
+};
+
+export function PlaylistsTab(props: PlaylistsTabProps) {
+  async function handleDelete(playlistId: PlaylistId) {
+    props.onFeedback(null);
+
+    try {
+      await deleteStoredPlaylist(playlistId);
+      props.onFeedback("プレイリストを削除しました。");
+      await props.onDeleted();
+    } catch (error) {
+      props.onFeedback(
+        error instanceof Error ? error.message : "プレイリストの削除に失敗しました。",
+      );
+    }
+  }
+
+  return (
+    <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
+      <div class="mb-4 space-y-1">
+        <h2 class="text-lg font-semibold text-stone-50">保存済みプレイリスト</h2>
+        <p class="text-sm text-stone-400">最後に操作したプレイリストは Active として表示します。</p>
+      </div>
+
+      <Switch
+        fallback={
+          <p class="text-sm leading-6 text-stone-400">
+            保存済みプレイリストはまだありません。共有 URL をインポートしてください。
+          </p>
+        }
+      >
+        <Match when={props.loading}>
+          <p class="text-sm text-stone-400">読み込み中...</p>
+        </Match>
+
+        <Match when={props.error}>
+          <p class="text-sm text-red-300">保存済みプレイリストを取得できませんでした。</p>
+        </Match>
+
+        <Match when={props.state?.playlists.length}>
+          <ul class="space-y-3">
+            <For each={props.state?.playlists ?? []}>
+              {(playlist) => (
+                <li class="rounded-2xl border border-stone-800 bg-stone-950/50 p-4">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="space-y-1">
+                      <p class="text-sm font-medium text-stone-100">
+                        {playlist.title ?? playlist.id}
+                      </p>
+                      <p class="text-xs text-stone-400">{playlist.videoIds.length} videos</p>
+                    </div>
+                    <Show when={playlist.id === props.state?.lastActivePlaylistId}>
+                      <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+                        Active
+                      </span>
+                    </Show>
+                  </div>
+
+                  <Show when={playlist.memo}>
+                    <p class="mt-3 text-sm leading-6 text-stone-400">{playlist.memo}</p>
+                  </Show>
+
+                  <div class="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      class="rounded-full border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-400/50 hover:bg-red-500/10"
+                      onClick={() => void handleDelete(playlist.id)}
+                    >
+                      削除
+                    </button>
+                  </div>
+                </li>
+              )}
+            </For>
+          </ul>
+        </Match>
+      </Switch>
+    </section>
+  );
+}
