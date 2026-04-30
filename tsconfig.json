@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
+    "resolveJsonModule": true,
     "types": ["bun"]
   },
-  "include": ["src/**/*", "./*.ts"]
+  "include": ["src/**/*", "scripts/**/*", "./*.ts"]
 }

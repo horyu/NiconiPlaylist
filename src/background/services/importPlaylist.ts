@@ -2,6 +2,7 @@ import { parseSharedPlaylistUrl } from "@/lib/playlistUrl";
 import type { Playlist } from "@/lib/types";
 
 import { getStoredPlaylists, setLastActivePlaylistId, setStoredPlaylists } from "./playlistStore";
+import { ensureVideoMetadataForVideoIds } from "./videoMetadata";
 
 function createPlaylistId(): string {
   return crypto.randomUUID();
@@ -41,6 +42,11 @@ export async function importSharedPlaylist(sharedUrl: string): Promise<Playlist>
 
   await setStoredPlaylists([...playlists, playlist]);
   await setLastActivePlaylistId(playlist.id);
+  try {
+    await ensureVideoMetadataForVideoIds(playlist.videoIds);
+  } catch (error) {
+    console.warn("動画メタデータの取得に失敗しました。", error);
+  }
 
   return playlist;
 }

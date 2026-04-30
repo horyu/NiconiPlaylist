@@ -1,0 +1,19 @@
+{
+  "kind": "found",
+  "watchId": "sm1",
+  "title": "削除された動画",
+  "thumbnail": {
+    "url": "https://resource.video.nimg.jp/web/img/common/video_deleted.jpg?_t=20181018",
+    "middleUrl": "https://resource.video.nimg.jp/web/img/common/video_deleted_M.jpg?_t=20190301",
+    "largeUrl": "https://resource.video.nimg.jp/web/img/common/video_deleted_L.jpg?_t=20190301",
+    "listingUrl": "https://resource.video.nimg.jp/web/img/common/video_deleted_M.jpg?_t=20190301",
+    "nHdUrl": "https://resource.video.nimg.jp/web/img/common/video_deleted_360p.jpg?_t=20200610"
+  },
+  "duration": 0,
+  "owner": {
+    "id": null,
+    "name": null,
+    "type": "unknown",
+    "iconUrl": null
+  }
+}
