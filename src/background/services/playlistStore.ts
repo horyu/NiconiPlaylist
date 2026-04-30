@@ -48,3 +48,17 @@ export async function setLastActivePlaylistId(playlistId: PlaylistId | null): Pr
     [STORAGE_KEYS.lastActivePlaylistId]: playlistId,
   });
 }
+
+export async function deleteStoredPlaylist(playlistId: PlaylistId): Promise<void> {
+  const [playlists, lastActivePlaylistId] = await Promise.all([
+    getStoredPlaylists(),
+    getLastActivePlaylistId(),
+  ]);
+  const nextPlaylists = playlists.filter((playlist) => playlist.id !== playlistId);
+
+  await setStoredPlaylists(nextPlaylists);
+
+  if (lastActivePlaylistId === playlistId) {
+    await setLastActivePlaylistId(nextPlaylists[0]?.id ?? null);
+  }
+}

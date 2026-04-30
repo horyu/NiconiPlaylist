@@ -1,9 +1,13 @@
 import { createMemo, createResource, createSignal, For, Match, Show, Switch } from "solid-js";
 
 import { importSharedPlaylist } from "@/background/services/importPlaylist";
-import { getLastActivePlaylistId, getStoredPlaylists } from "@/background/services/playlistStore";
+import {
+  deleteStoredPlaylist,
+  getLastActivePlaylistId,
+  getStoredPlaylists,
+} from "@/background/services/playlistStore";
 import { parseSharedPlaylistUrl } from "@/lib/playlistUrl";
-import type { Playlist } from "@/lib/types";
+import type { Playlist, PlaylistId } from "@/lib/types";
 
 type PlaylistsState = {
   playlists: Playlist[];
@@ -81,6 +85,18 @@ function Options() {
       await refetch();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "インポートに失敗しました。");
+    }
+  }
+
+  async function handleDelete(playlistId: PlaylistId) {
+    setFeedback(null);
+
+    try {
+      await deleteStoredPlaylist(playlistId);
+      setFeedback("プレイリストを削除しました。");
+      await refetch();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "プレイリストの削除に失敗しました。");
     }
   }
 
@@ -229,6 +245,16 @@ function Options() {
                       <Show when={playlist.memo}>
                         <p class="mt-3 text-sm leading-6 text-stone-400">{playlist.memo}</p>
                       </Show>
+
+                      <div class="mt-4 flex justify-end">
+                        <button
+                          type="button"
+                          class="rounded-full border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-400/50 hover:bg-red-500/10"
+                          onClick={() => void handleDelete(playlist.id)}
+                        >
+                          削除
+                        </button>
+                      </div>
                     </li>
                   )}
                 </For>
