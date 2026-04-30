@@ -1,4 +1,13 @@
-import { createResource, For, Match, onCleanup, onMount, Switch } from "solid-js";
+import {
+  createResource,
+  createSignal,
+  For,
+  Match,
+  onCleanup,
+  onMount,
+  Show,
+  Switch,
+} from "solid-js";
 import { browser } from "wxt/browser";
 
 import {
@@ -36,6 +45,7 @@ async function fetchPopupState(): Promise<PopupState> {
 
 function Popup() {
   const [popupState, { refetch }] = createResource(fetchPopupState);
+  const [feedback, setFeedback] = createSignal<string | null>(null);
 
   const activePlaylist = () =>
     popupState()?.playlists.find(
@@ -58,8 +68,14 @@ function Popup() {
   });
 
   async function handleActivate(playlistId: PlaylistId) {
-    await activateStoredPlaylist(playlistId);
-    await refetch();
+    setFeedback(null);
+
+    try {
+      await activateStoredPlaylist(playlistId);
+      await refetch();
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "プレイリストの選択に失敗しました。");
+    }
   }
 
   return (
@@ -74,6 +90,14 @@ function Popup() {
             Saved playlists and the most recent active playlist will appear here.
           </p>
         </header>
+
+        <Show when={feedback()}>
+          {(message) => (
+            <div class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+              {message()}
+            </div>
+          )}
+        </Show>
 
         <section class="rounded-2xl border border-stone-800 bg-stone-900/80 p-4 shadow-lg shadow-black/20">
           <Switch
