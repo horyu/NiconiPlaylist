@@ -75,6 +75,7 @@ export default function OptionsPage() {
                 state={state()}
                 loading={state.loading}
                 error={state.error}
+                onActivated={refreshState}
                 onDeleted={refreshState}
                 onFeedback={setFeedback}
               />

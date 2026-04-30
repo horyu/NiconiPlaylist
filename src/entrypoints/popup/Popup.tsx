@@ -1,9 +1,13 @@
 import { createResource, For, Match, onCleanup, onMount, Switch } from "solid-js";
 import { browser } from "wxt/browser";
 
-import { getLastActivePlaylistId, getStoredPlaylists } from "@/background/services/playlistStore";
+import {
+  activateStoredPlaylist,
+  getLastActivePlaylistId,
+  getStoredPlaylists,
+} from "@/background/services/playlistStore";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import type { Playlist } from "@/lib/types";
+import type { Playlist, PlaylistId } from "@/lib/types";
 
 type PopupState = {
   playlists: Playlist[];
@@ -52,6 +56,11 @@ function Popup() {
       browser.storage.onChanged.removeListener(handleStorageChanged);
     });
   });
+
+  async function handleActivate(playlistId: PlaylistId) {
+    await activateStoredPlaylist(playlistId);
+    await refetch();
+  }
 
   return (
     <main class="min-h-screen min-w-80 bg-stone-950 px-4 py-5 text-stone-100">
@@ -107,6 +116,15 @@ function Popup() {
                             <p class="mt-2 text-xs leading-5 text-stone-500">{playlist.memo}</p>
                           </Match>
                         </Switch>
+                        <div class="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                            onClick={() => void handleActivate(playlist.id)}
+                          >
+                            選択
+                          </button>
+                        </div>
                       </li>
                     )}
                   </For>

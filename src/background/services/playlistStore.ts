@@ -49,6 +49,16 @@ export async function setLastActivePlaylistId(playlistId: PlaylistId | null): Pr
   });
 }
 
+export async function activateStoredPlaylist(playlistId: PlaylistId): Promise<void> {
+  const playlists = await getStoredPlaylists();
+
+  if (!playlists.some((playlist) => playlist.id === playlistId)) {
+    throw new Error("指定したプレイリストは保存されていません。");
+  }
+
+  await setLastActivePlaylistId(playlistId);
+}
+
 export async function deleteStoredPlaylist(playlistId: PlaylistId): Promise<void> {
   const [playlists, lastActivePlaylistId] = await Promise.all([
     getStoredPlaylists(),

@@ -1,6 +1,6 @@
 import { For, Match, Show, Switch } from "solid-js";
 
-import { deleteStoredPlaylist } from "@/background/services/playlistStore";
+import { activateStoredPlaylist, deleteStoredPlaylist } from "@/background/services/playlistStore";
 import type { PlaylistId } from "@/lib/types";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
 
@@ -8,11 +8,26 @@ type PlaylistsTabProps = {
   state: PlaylistsState | undefined;
   loading: boolean;
   error: unknown;
+  onActivated: () => Promise<void> | void;
   onDeleted: () => Promise<void> | void;
   onFeedback: (message: string | null) => void;
 };
 
 export function PlaylistsTab(props: PlaylistsTabProps) {
+  async function handleActivate(playlistId: PlaylistId) {
+    props.onFeedback(null);
+
+    try {
+      await activateStoredPlaylist(playlistId);
+      props.onFeedback("アクティブなプレイリストを更新しました。");
+      await props.onActivated();
+    } catch (error) {
+      props.onFeedback(
+        error instanceof Error ? error.message : "プレイリストの選択に失敗しました。",
+      );
+    }
+  }
+
   async function handleDelete(playlistId: PlaylistId) {
     props.onFeedback(null);
 
@@ -72,7 +87,14 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                     <p class="mt-3 text-sm leading-6 text-stone-400">{playlist.memo}</p>
                   </Show>
 
-                  <div class="mt-4 flex justify-end">
+                  <div class="mt-4 flex justify-end gap-2">
+                    <button
+                      type="button"
+                      class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                      onClick={() => void handleActivate(playlist.id)}
+                    >
+                      選択
+                    </button>
                     <button
                       type="button"
                       class="rounded-full border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-400/50 hover:bg-red-500/10"
