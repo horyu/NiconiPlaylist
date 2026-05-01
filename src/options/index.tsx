@@ -1,6 +1,7 @@
 import { createSignal, For, Match, Show, Switch } from "solid-js";
 
 import { usePlaylistsState } from "@/options/hooks/usePlaylistsState";
+import { useVideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 import { ImportTab } from "@/options/tabs/ImportTab";
 import { PlaylistsTab } from "@/options/tabs/PlaylistsTab";
 
@@ -15,9 +16,10 @@ export default function OptionsPage() {
   const [activeTab, setActiveTab] = createSignal<TabKey>("import");
   const [feedback, setFeedback] = createSignal<string | null>(null);
   const [state, { refetch }] = usePlaylistsState();
+  const [videoMetadataState, { refetch: refetchVideoMetadataState }] = useVideoMetadataState();
 
   async function refreshState() {
-    await refetch();
+    await Promise.all([refetch(), refetchVideoMetadataState()]);
   }
 
   return (
@@ -73,6 +75,7 @@ export default function OptionsPage() {
               </Show>
               <PlaylistsTab
                 state={state()}
+                videoMetadataState={videoMetadataState()}
                 loading={state.loading}
                 error={state.error}
                 onActivated={refreshState}

@@ -1,11 +1,15 @@
-import { For, Match, Show, Switch } from "solid-js";
+import { createEffect, For, Match, Show, Switch } from "solid-js";
 
 import { activateStoredPlaylist, deleteStoredPlaylist } from "@/background/services/playlistStore";
+import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import type { PlaylistId } from "@/lib/types";
+import { VideoListItem } from "@/options/components/VideoListItem";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
+import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 
 type PlaylistsTabProps = {
   state: PlaylistsState | undefined;
+  videoMetadataState: VideoMetadataState | undefined;
   loading: boolean;
   error: unknown;
   onActivated: () => Promise<void> | void;
@@ -14,6 +18,15 @@ type PlaylistsTabProps = {
 };
 
 export function PlaylistsTab(props: PlaylistsTabProps) {
+  createEffect(() => {
+    const playlists = props.state?.playlists ?? [];
+    const videoIds = playlists.flatMap((playlist) => playlist.videoIds);
+
+    if (videoIds.length > 0) {
+      enqueueVideoMetadataForVideoIds(videoIds);
+    }
+  });
+
   async function handleActivate(playlistId: PlaylistId) {
     props.onFeedback(null);
 
@@ -86,6 +99,27 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                   <Show when={playlist.memo}>
                     <p class="mt-3 text-sm leading-6 text-stone-400">{playlist.memo}</p>
                   </Show>
+
+                  <ul class="mt-4 space-y-2">
+                    <For each={playlist.videoIds}>
+                      {(videoId) => {
+                        const videoMetadata = () =>
+                          props.videoMetadataState?.videoMetadataMap[videoId];
+                        const ownerMetadata = () => {
+                          const ownerId = videoMetadata()?.ownerId;
+                          return ownerId ? props.videoMetadataState?.ownersMap[ownerId] : undefined;
+                        };
+
+                        return (
+                          <VideoListItem
+                            videoId={videoId}
+                            videoMetadata={videoMetadata()}
+                            ownerMetadata={ownerMetadata()}
+                          />
+                        );
+                      }}
+                    </For>
+                  </ul>
 
                   <div class="mt-4 flex justify-end gap-2">
                     <button

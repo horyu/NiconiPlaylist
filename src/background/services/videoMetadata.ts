@@ -14,6 +14,9 @@ import {
 } from "./videoMetadataStore";
 
 type DevFoundOwner = Extract<DevVideoMetadataRecord, { kind: "found" }>["owner"];
+const METADATA_FETCH_INTERVAL_MS = 500;
+const queuedVideoIds = new Set<VideoId>();
+let isProcessingQueue = false;
 
 function isThumbnail(value: unknown): value is VideoThumbnail {
   if (!value || typeof value !== "object") {
@@ -124,6 +127,12 @@ function createSyntheticDevVideoMetadataRecord(watchId: VideoId): DevVideoMetada
       iconUrl: null,
     },
   };
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
 }
 
 function toStoredRecords(
@@ -250,40 +259,75 @@ async function loadVideoMetadataRecord(watchId: VideoId): Promise<DevVideoMetada
 }
 
 export async function ensureVideoMetadataForVideoIds(videoIds: VideoId[]): Promise<void> {
-  const [videoMetadataMap, ownersMap] = await Promise.all([
-    getStoredVideoMetadataMap(),
-    getStoredOwnersMap(),
-  ]);
-  const missingVideoIds = videoIds.filter((videoId, index) => {
-    return !videoMetadataMap[videoId] && videoIds.indexOf(videoId) === index;
-  });
+  enqueueVideoMetadataForVideoIds(videoIds);
+}
 
-  if (missingVideoIds.length === 0) {
+async function processQueuedVideoMetadata(): Promise<void> {
+  if (isProcessingQueue) {
     return;
   }
 
-  const nextVideoMetadataMap = { ...videoMetadataMap };
-  const nextOwnersMap = { ...ownersMap };
+  isProcessingQueue = true;
 
-  for (const videoId of missingVideoIds) {
-    const record = await loadVideoMetadataRecord(videoId);
+  try {
+    while (queuedVideoIds.size > 0) {
+      const [videoId] = queuedVideoIds;
+      queuedVideoIds.delete(videoId);
 
-    if (record.kind !== "found") {
-      continue;
+      const existingVideoMetadataMap = await getStoredVideoMetadataMap();
+
+      if (existingVideoMetadataMap[videoId]) {
+        continue;
+      }
+
+      const record = await loadVideoMetadataRecord(videoId);
+
+      if (record.kind === "found") {
+        const [videoMetadataMap, ownersMap] = await Promise.all([
+          getStoredVideoMetadataMap(),
+          getStoredOwnersMap(),
+        ]);
+        const fetchedAt = new Date().toISOString();
+        const stored = toStoredRecords(record, fetchedAt);
+
+        await setStoredVideoMetadataMap({
+          ...videoMetadataMap,
+          [videoId]: stored.videoMetadata,
+        });
+
+        if (stored.ownerMetadata) {
+          await setStoredOwnersMap({
+            ...ownersMap,
+            [stored.ownerMetadata.id]: stored.ownerMetadata,
+          });
+        }
+      }
+
+      if (queuedVideoIds.size > 0) {
+        await sleep(METADATA_FETCH_INTERVAL_MS);
+      }
     }
+  } finally {
+    isProcessingQueue = false;
 
-    const fetchedAt = new Date().toISOString();
-    const stored = toStoredRecords(record, fetchedAt);
-
-    nextVideoMetadataMap[videoId] = stored.videoMetadata;
-
-    if (stored.ownerMetadata) {
-      nextOwnersMap[stored.ownerMetadata.id] = stored.ownerMetadata;
+    if (queuedVideoIds.size > 0) {
+      void processQueuedVideoMetadata();
     }
   }
+}
 
-  await Promise.all([
-    setStoredVideoMetadataMap(nextVideoMetadataMap),
-    setStoredOwnersMap(nextOwnersMap),
-  ]);
+export function enqueueVideoMetadataForVideoIds(videoIds: VideoId[]): void {
+  void getStoredVideoMetadataMap().then((videoMetadataMap) => {
+    const uniqueVideoIds = videoIds.filter((videoId, index) => {
+      return videoIds.indexOf(videoId) === index;
+    });
+
+    for (const videoId of uniqueVideoIds) {
+      if (!videoMetadataMap[videoId]) {
+        queuedVideoIds.add(videoId);
+      }
+    }
+
+    void processQueuedVideoMetadata();
+  });
 }

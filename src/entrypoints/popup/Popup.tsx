@@ -1,4 +1,5 @@
 import {
+  createEffect,
   createResource,
   createSignal,
   For,
@@ -15,12 +16,21 @@ import {
   getLastActivePlaylistId,
   getStoredPlaylists,
 } from "@/background/services/playlistStore";
+import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
+import {
+  getStoredOwnersMap,
+  getStoredVideoMetadataMap,
+} from "@/background/services/videoMetadataStore";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { Playlist, PlaylistId } from "@/lib/types";
+import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
+import { VideoListItem } from "@/options/components/VideoListItem";
 
 type PopupState = {
+  ownersMap: Record<string, OwnerMetadata>;
   playlists: Playlist[];
   lastActivePlaylistId: string | null;
+  videoMetadataMap: Record<string, VideoMetadata>;
 };
 
 type StorageChanges = Record<
@@ -32,14 +42,18 @@ type StorageChanges = Record<
 >;
 
 async function fetchPopupState(): Promise<PopupState> {
-  const [playlists, lastActivePlaylistId] = await Promise.all([
+  const [playlists, lastActivePlaylistId, videoMetadataMap, ownersMap] = await Promise.all([
     getStoredPlaylists(),
     getLastActivePlaylistId(),
+    getStoredVideoMetadataMap(),
+    getStoredOwnersMap(),
   ]);
 
   return {
+    ownersMap,
     playlists,
     lastActivePlaylistId,
+    videoMetadataMap,
   };
 }
 
@@ -52,9 +66,21 @@ function Popup() {
       (playlist) => playlist.id === popupState()?.lastActivePlaylistId,
     ) ?? null;
 
+  createEffect(() => {
+    const videoIds = activePlaylist()?.videoIds.slice(0, 3) ?? [];
+
+    if (videoIds.length > 0) {
+      enqueueVideoMetadataForVideoIds(videoIds);
+    }
+  });
+
   onMount(() => {
     const handleStorageChanged = (changes: StorageChanges) => {
       if (changes[STORAGE_KEYS.playlists] || changes[STORAGE_KEYS.lastActivePlaylistId]) {
+        void refetch();
+      }
+
+      if (changes[STORAGE_KEYS.videoMetadata] || changes[STORAGE_KEYS.owners]) {
         void refetch();
       }
     };
@@ -125,6 +151,29 @@ function Popup() {
                   <p class="mt-1 text-sm font-medium text-stone-100">
                     {activePlaylist()?.title ?? activePlaylist()?.id ?? "None"}
                   </p>
+                  <Show when={activePlaylist()}>
+                    {(playlist) => (
+                      <ul class="mt-3 space-y-2">
+                        <For each={playlist().videoIds.slice(0, 3)}>
+                          {(videoId) => {
+                            const videoMetadata = () => popupState()?.videoMetadataMap[videoId];
+                            const ownerMetadata = () => {
+                              const ownerId = videoMetadata()?.ownerId;
+                              return ownerId ? popupState()?.ownersMap[ownerId] : undefined;
+                            };
+
+                            return (
+                              <VideoListItem
+                                videoId={videoId}
+                                videoMetadata={videoMetadata()}
+                                ownerMetadata={ownerMetadata()}
+                              />
+                            );
+                          }}
+                        </For>
+                      </ul>
+                    )}
+                  </Show>
                 </div>
 
                 <ul class="space-y-2">
