@@ -28,8 +28,9 @@ function createImportedPlaylistTitle(videoIds: string[]): string {
   return `${timestamp} ${time} ${firstVideoId}`;
 }
 
-export async function importSharedPlaylist(sharedUrl: string): Promise<Playlist> {
-  const draft = parseSharedPlaylistUrl(sharedUrl);
+type PlaylistDraft = Pick<Playlist, "videoIds" | "title" | "memo">;
+
+export async function createStoredPlaylist(draft: PlaylistDraft): Promise<Playlist> {
   const playlist: Playlist = {
     id: createPlaylistId(),
     title: draft.title ?? createImportedPlaylistTitle(draft.videoIds),
@@ -43,4 +44,9 @@ export async function importSharedPlaylist(sharedUrl: string): Promise<Playlist>
   await setLastActivePlaylistId(playlist.id);
 
   return playlist;
+}
+
+export async function importSharedPlaylist(sharedUrl: string): Promise<Playlist> {
+  const draft = parseSharedPlaylistUrl(sharedUrl);
+  return createStoredPlaylist(draft);
 }
