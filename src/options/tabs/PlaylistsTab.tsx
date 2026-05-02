@@ -57,7 +57,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
   return (
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
-      <div class="mb-4 space-y-1">
+      <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">保存済みプレイリスト</h2>
         <p class="text-sm text-stone-400">最後に操作したプレイリストは Active として表示します。</p>
       </div>
