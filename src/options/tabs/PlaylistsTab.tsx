@@ -41,7 +41,10 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     }
   }
 
-  async function handleDelete(playlistId: PlaylistId) {
+  async function handleDelete(playlistId: PlaylistId, title: string) {
+    if (!window.confirm(`「${title}」を削除しますか？`)) {
+      return;
+    }
     props.onFeedback(null);
 
     try {
@@ -132,7 +135,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                     <button
                       type="button"
                       class="rounded-full border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-400/50 hover:bg-red-500/10"
-                      onClick={() => void handleDelete(playlist.id)}
+                      onClick={() => void handleDelete(playlist.id, playlist.title ?? playlist.id)}
                     >
                       削除
                     </button>
