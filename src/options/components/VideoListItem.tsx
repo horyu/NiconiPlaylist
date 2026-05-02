@@ -23,13 +23,18 @@ function formatDuration(duration: number | null | undefined): string {
 export function VideoListItem(props: VideoListItemProps) {
   return (
     <li class="flex items-start gap-3 rounded-xl border border-stone-800 bg-stone-950/40 p-3">
-      <div class="h-14 w-24 overflow-hidden rounded-lg bg-stone-900">
+      <a
+        href={`https://www.nicovideo.jp/watch/${props.videoId}`}
+        target="_blank"
+        rel="noreferrer"
+        class="h-14 w-24 overflow-hidden rounded-lg bg-stone-900"
+      >
         <Show
           when={props.videoMetadata?.thumbnail.listingUrl ?? props.videoMetadata?.thumbnail.url}
         >
           {(thumbnailUrl) => <img src={thumbnailUrl()} alt="" class="h-full w-full object-cover" />}
         </Show>
-      </div>
+      </a>
 
       <div class="min-w-0 flex-1 space-y-1">
         <p class="truncate text-sm font-medium text-stone-100">
