@@ -1,6 +1,10 @@
-import { createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
 
-import { createStoredPlaylist, importSharedPlaylist } from "@/background/services/importPlaylist";
+import {
+  DEFAULT_PLAYLIST_TITLE_SOURCE,
+  createStoredPlaylist,
+  importSharedPlaylist,
+} from "@/background/services/importPlaylist";
 import { parseSharedPlaylistUrl } from "@/lib/playlistUrl";
 import { parseVideoIdInputLines } from "@/lib/videoIdInput";
 
@@ -44,6 +48,10 @@ const DEFAULT_SHARED_URL =
 export function ImportTab(props: ImportTabProps) {
   const [sharedUrl, setSharedUrl] = createSignal(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
   const [directInput, setDirectInput] = createSignal("");
+  const [sharedTitle, setSharedTitle] = createSignal("");
+  const [sharedMemo, setSharedMemo] = createSignal("");
+  const [directTitle, setDirectTitle] = createSignal("");
+  const [directMemo, setDirectMemo] = createSignal("");
   const [sharedUrlFeedback, setSharedUrlFeedback] = createSignal<string | null>(null);
   const [directInputFeedback, setDirectInputFeedback] = createSignal<string | null>(null);
   const preview = createMemo<PreviewState>(() => {
@@ -107,13 +115,31 @@ export function ImportTab(props: ImportTabProps) {
     return current.kind === "error" ? current : null;
   });
 
+  createEffect(() => {
+    const current = readyPreview();
+
+    if (!current) {
+      setSharedTitle("");
+      setSharedMemo("");
+      return;
+    }
+
+    setSharedTitle(current.title ?? "");
+    setSharedMemo(current.memo ?? "");
+  });
+
   async function handleImport(event: SubmitEvent) {
     event.preventDefault();
     setSharedUrlFeedback(null);
 
     try {
-      await importSharedPlaylist(sharedUrl().trim());
+      await importSharedPlaylist(sharedUrl().trim(), {
+        title: sharedTitle(),
+        memo: sharedMemo(),
+      });
       setSharedUrl(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
+      setSharedTitle("");
+      setSharedMemo("");
       setSharedUrlFeedback("プレイリストをインポートしました。");
       await props.onImported();
     } catch (error) {
@@ -132,10 +158,19 @@ export function ImportTab(props: ImportTabProps) {
     }
 
     try {
-      await createStoredPlaylist({
-        videoIds: currentPreview.videoIds,
-      });
+      await createStoredPlaylist(
+        {
+          videoIds: currentPreview.videoIds,
+          title: directTitle(),
+          memo: directMemo(),
+        },
+        {
+          defaultTitleSource: DEFAULT_PLAYLIST_TITLE_SOURCE.videoIdInput,
+        },
+      );
       setDirectInput("");
+      setDirectTitle("");
+      setDirectMemo("");
       setDirectInputFeedback("プレイリストを作成しました。");
       await props.onImported();
     } catch (error) {
@@ -166,30 +201,44 @@ export function ImportTab(props: ImportTabProps) {
               onInput={(event) => setSharedUrl(event.currentTarget.value)}
             />
           </label>
+          <div class="grid gap-4 lg:grid-cols-2">
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-stone-200">title</span>
+              <input
+                type="text"
+                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                placeholder={
+                  readyPreview()?.title ??
+                  `YYYY/MM/DD hh:mm:ss ${DEFAULT_PLAYLIST_TITLE_SOURCE.sharedUrlImport}`
+                }
+                value={sharedTitle()}
+                onInput={(event) => setSharedTitle(event.currentTarget.value)}
+              />
+            </label>
+
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-stone-200">memo</span>
+              <input
+                type="text"
+                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                placeholder={readyPreview()?.memo ?? "未指定"}
+                value={sharedMemo()}
+                onInput={(event) => setSharedMemo(event.currentTarget.value)}
+              />
+            </label>
+          </div>
 
           <section class="rounded-2xl border border-stone-800 bg-stone-950/60 p-4">
             <div class="mb-3 space-y-1">
               <h3 class="text-sm font-medium text-stone-100">インポート前プレビュー</h3>
               <p class="text-xs leading-5 text-stone-500">
-                title、memo、件数、先頭数件の videoId を保存前に確認します。
+                件数と先頭数件の videoId を保存前に確認します。
               </p>
             </div>
 
             <Switch
               fallback={
                 <div class="space-y-3">
-                  <div class="space-y-1">
-                    <p class="text-xs uppercase tracking-[0.2em] text-stone-500">Title</p>
-                    <p class="text-sm text-stone-300">{readyPreview()?.title ?? "未指定"}</p>
-                  </div>
-
-                  <div class="space-y-1">
-                    <p class="text-xs uppercase tracking-[0.2em] text-stone-500">Memo</p>
-                    <p class="text-sm leading-6 text-stone-300">
-                      {readyPreview()?.memo ?? "未指定"}
-                    </p>
-                  </div>
-
                   <div class="space-y-1">
                     <p class="text-xs uppercase tracking-[0.2em] text-stone-500">Videos</p>
                     <p class="text-sm text-stone-300">{readyPreview()?.videoIds.length ?? 0} 件</p>
@@ -258,6 +307,29 @@ export function ImportTab(props: ImportTabProps) {
               onInput={(event) => setDirectInput(event.currentTarget.value)}
             />
           </label>
+          <div class="grid gap-4 lg:grid-cols-2">
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-stone-200">title</span>
+              <input
+                type="text"
+                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                placeholder={`YYYY/MM/DD hh:mm:ss ${DEFAULT_PLAYLIST_TITLE_SOURCE.videoIdInput}`}
+                value={directTitle()}
+                onInput={(event) => setDirectTitle(event.currentTarget.value)}
+              />
+            </label>
+
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-stone-200">memo</span>
+              <input
+                type="text"
+                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                placeholder="未指定"
+                value={directMemo()}
+                onInput={(event) => setDirectMemo(event.currentTarget.value)}
+              />
+            </label>
+          </div>
 
           <section class="rounded-2xl border border-stone-800 bg-stone-950/60 p-4">
             <div class="mb-3 space-y-1">

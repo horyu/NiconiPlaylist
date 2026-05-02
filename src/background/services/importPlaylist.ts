@@ -3,6 +3,11 @@ import type { Playlist } from "@/lib/types";
 
 import { getStoredPlaylists, setLastActivePlaylistId, setStoredPlaylists } from "./playlistStore";
 
+export const DEFAULT_PLAYLIST_TITLE_SOURCE = {
+  sharedUrlImport: "共有URLインポート",
+  videoIdInput: "動画ID入力",
+} as const;
+
 function createPlaylistId(): string {
   return crypto.randomUUID();
 }
@@ -11,7 +16,17 @@ function formatDatePart(value: number): string {
   return value.toString().padStart(2, "0");
 }
 
-function createImportedPlaylistTitle(videoIds: string[]): string {
+function normalizeOptionalText(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+type PlaylistDraft = Pick<Playlist, "videoIds" | "title" | "memo">;
+type CreateStoredPlaylistOptions = {
+  defaultTitleSource?: string;
+};
+
+function createDefaultPlaylistTitleBySource(source: string): string {
   const now = new Date();
   const timestamp = [
     now.getFullYear(),
@@ -23,18 +38,22 @@ function createImportedPlaylistTitle(videoIds: string[]): string {
     formatDatePart(now.getMinutes()),
     formatDatePart(now.getSeconds()),
   ].join(":");
-  const firstVideoId = videoIds[0] ?? "unknown";
 
-  return `${timestamp} ${time} ${firstVideoId}`;
+  return `${timestamp} ${time} ${source}`;
 }
 
-type PlaylistDraft = Pick<Playlist, "videoIds" | "title" | "memo">;
-
-export async function createStoredPlaylist(draft: PlaylistDraft): Promise<Playlist> {
+export async function createStoredPlaylist(
+  draft: PlaylistDraft,
+  options?: CreateStoredPlaylistOptions,
+): Promise<Playlist> {
   const playlist: Playlist = {
     id: createPlaylistId(),
-    title: draft.title ?? createImportedPlaylistTitle(draft.videoIds),
-    memo: draft.memo,
+    title:
+      normalizeOptionalText(draft.title) ??
+      createDefaultPlaylistTitleBySource(
+        options?.defaultTitleSource ?? DEFAULT_PLAYLIST_TITLE_SOURCE.videoIdInput,
+      ),
+    memo: normalizeOptionalText(draft.memo),
     videoIds: draft.videoIds,
   };
 
@@ -46,7 +65,19 @@ export async function createStoredPlaylist(draft: PlaylistDraft): Promise<Playli
   return playlist;
 }
 
-export async function importSharedPlaylist(sharedUrl: string): Promise<Playlist> {
+export async function importSharedPlaylist(
+  sharedUrl: string,
+  overrides?: Partial<Pick<Playlist, "title" | "memo">>,
+): Promise<Playlist> {
   const draft = parseSharedPlaylistUrl(sharedUrl);
-  return createStoredPlaylist(draft);
+  return createStoredPlaylist(
+    {
+      ...draft,
+      title: overrides?.title ?? draft.title,
+      memo: overrides?.memo ?? draft.memo,
+    },
+    {
+      defaultTitleSource: DEFAULT_PLAYLIST_TITLE_SOURCE.sharedUrlImport,
+    },
+  );
 }
