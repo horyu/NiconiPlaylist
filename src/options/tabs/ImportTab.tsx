@@ -53,7 +53,6 @@ export function ImportTab(props: ImportTabProps) {
   const [sharedUrl, setSharedUrl] = createSignal(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
   const [directInput, setDirectInput] = createSignal("");
   const [showAllSharedPreview, setShowAllSharedPreview] = createSignal(false);
-  const [showAllDirectPreview, setShowAllDirectPreview] = createSignal(false);
   const [sharedTitle, setSharedTitle] = createSignal("");
   const [sharedMemo, setSharedMemo] = createSignal("");
   const [directTitle, setDirectTitle] = createSignal("");
@@ -124,10 +123,7 @@ export function ImportTab(props: ImportTabProps) {
     const videoIds = readyPreview()?.videoIds ?? [];
     return showAllSharedPreview() ? videoIds : videoIds.slice(0, 5);
   });
-  const directPreviewVideoIds = createMemo(() => {
-    const videoIds = readyDirectInputPreview()?.videoIds ?? [];
-    return showAllDirectPreview() ? videoIds : videoIds.slice(0, 5);
-  });
+  const directPreviewVideoIds = createMemo(() => readyDirectInputPreview()?.videoIds ?? []);
   const sharedPreviewCountLabel = createMemo(() => {
     const visible = sharedPreviewVideoIds().length;
     const total = readyPreview()?.videoIds.length ?? 0;
@@ -202,7 +198,6 @@ export function ImportTab(props: ImportTabProps) {
         },
       );
       setDirectInput("");
-      setShowAllDirectPreview(false);
       setDirectTitle("");
       setDirectMemo("");
       setDirectInputFeedback("プレイリストを作成しました。");
@@ -370,7 +365,6 @@ export function ImportTab(props: ImportTabProps) {
                   value={directInput()}
                   onInput={(event) => {
                     setDirectInput(event.currentTarget.value);
-                    setShowAllDirectPreview(false);
                   }}
                 />
               </label>
@@ -425,16 +419,6 @@ export function ImportTab(props: ImportTabProps) {
                         <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
                           {directPreviewCountLabel()}
                         </p>
-                        <Show when={(readyDirectInputPreview()?.videoIds.length ?? 0) > 5}>
-                          <button
-                            type="button"
-                            class="text-xs text-stone-400 transition hover:text-stone-200 disabled:cursor-default disabled:text-stone-600"
-                            disabled={showAllDirectPreview()}
-                            onClick={() => setShowAllDirectPreview(true)}
-                          >
-                            {showAllDirectPreview() ? "全件表示中" : "全件読み込む"}
-                          </button>
-                        </Show>
                       </div>
                       <ul class="space-y-2">
                         <For each={directPreviewVideoIds()}>
