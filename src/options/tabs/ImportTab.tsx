@@ -1,4 +1,5 @@
 import { createEffect, createMemo, createSignal, For, Match, Show, Switch } from "solid-js";
+import { onCleanup } from "solid-js";
 
 import {
   DEFAULT_PLAYLIST_TITLE_SOURCE,
@@ -6,7 +7,7 @@ import {
   importSharedPlaylist,
 } from "@/background/services/importPlaylist";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
-import { parseSharedPlaylistUrl } from "@/lib/playlistUrl";
+import { buildSharedPlaylistUrl, parseSharedPlaylistUrl } from "@/lib/playlistUrl";
 import { parseVideoIdInputLines } from "@/lib/videoIdInput";
 import { VideoListItem } from "@/options/components/VideoListItem";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -50,6 +51,13 @@ const DEFAULT_SHARED_URL =
   "https://horyu.github.io/NiconiPlaylist/import?videoIds=BOQS5OiOBd-4tQKovKop";
 
 export function ImportTab(props: ImportTabProps) {
+  let directShareCopiedTimer: ReturnType<typeof setTimeout> | null = null;
+  onCleanup(() => {
+    if (directShareCopiedTimer) {
+      clearTimeout(directShareCopiedTimer);
+      directShareCopiedTimer = null;
+    }
+  });
   const [sharedUrl, setSharedUrl] = createSignal(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
   const [directInput, setDirectInput] = createSignal("");
   const [showAllSharedPreview, setShowAllSharedPreview] = createSignal(false);
@@ -57,6 +65,11 @@ export function ImportTab(props: ImportTabProps) {
   const [sharedMemo, setSharedMemo] = createSignal("");
   const [directTitle, setDirectTitle] = createSignal("");
   const [directMemo, setDirectMemo] = createSignal("");
+  const [directShareInfo, setDirectShareInfo] = createSignal<{
+    url: string;
+    byteCount: number;
+  } | null>(null);
+  const [directShareCopied, setDirectShareCopied] = createSignal(false);
   const [sharedUrlFeedback, setSharedUrlFeedback] = createSignal<string | null>(null);
   const [directInputFeedback, setDirectInputFeedback] = createSignal<string | null>(null);
   const preview = createMemo<PreviewState>(() => {
@@ -197,6 +210,12 @@ export function ImportTab(props: ImportTabProps) {
         },
       );
       setDirectInput("");
+      setDirectShareInfo(null);
+      if (directShareCopiedTimer) {
+        clearTimeout(directShareCopiedTimer);
+        directShareCopiedTimer = null;
+      }
+      setDirectShareCopied(false);
       setDirectTitle("");
       setDirectMemo("");
       setDirectInputFeedback("プレイリストを作成しました。");
@@ -204,6 +223,68 @@ export function ImportTab(props: ImportTabProps) {
     } catch (error) {
       setDirectInputFeedback(
         error instanceof Error ? error.message : "プレイリストの作成に失敗しました。",
+      );
+    }
+  }
+
+  async function handleCreateSharedUrl() {
+    setDirectInputFeedback(null);
+    setDirectShareInfo(null);
+    if (directShareCopiedTimer) {
+      clearTimeout(directShareCopiedTimer);
+      directShareCopiedTimer = null;
+    }
+    setDirectShareCopied(false);
+
+    const currentPreview = directInputPreview();
+
+    if (currentPreview.kind === "empty") {
+      setDirectInputFeedback("watch URL または動画IDを入力してください。");
+      return;
+    }
+
+    if (currentPreview.kind === "error") {
+      setDirectInputFeedback(currentPreview.message);
+      return;
+    }
+
+    const normalizeOptionalText = (value: string) => {
+      const trimmed = value.trim();
+      return trimmed ? trimmed : undefined;
+    };
+    const url = buildSharedPlaylistUrl({
+      videoIds: currentPreview.videoIds,
+      title: normalizeOptionalText(directTitle()),
+      memo: normalizeOptionalText(directMemo()),
+    });
+
+    const byteCount = new TextEncoder().encode(url).length;
+    setDirectShareInfo({ url, byteCount });
+    if (directShareCopiedTimer) {
+      clearTimeout(directShareCopiedTimer);
+      directShareCopiedTimer = null;
+    }
+    setDirectShareCopied(false);
+
+    setDirectInputFeedback(null);
+  }
+
+  async function handleCopySharedUrl(url: string) {
+    try {
+      await navigator.clipboard.writeText(url);
+      setDirectInputFeedback(null);
+      setDirectShareCopied(true);
+      if (directShareCopiedTimer) {
+        clearTimeout(directShareCopiedTimer);
+      }
+      directShareCopiedTimer = setTimeout(() => {
+        setDirectShareCopied(false);
+        directShareCopiedTimer = null;
+      }, 1500);
+    } catch (error) {
+      setDirectShareCopied(false);
+      setDirectInputFeedback(
+        error instanceof Error ? error.message : "共有 URL のコピーに失敗しました。",
       );
     }
   }
@@ -366,6 +447,12 @@ export function ImportTab(props: ImportTabProps) {
                   value={directInput()}
                   onInput={(event) => {
                     setDirectInput(event.currentTarget.value);
+                    setDirectShareInfo(null);
+                    if (directShareCopiedTimer) {
+                      clearTimeout(directShareCopiedTimer);
+                      directShareCopiedTimer = null;
+                    }
+                    setDirectShareCopied(false);
                   }}
                 />
               </label>
@@ -377,7 +464,15 @@ export function ImportTab(props: ImportTabProps) {
                     class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
                     placeholder={`YYYY/MM/DD hh:mm:ss ${DEFAULT_PLAYLIST_TITLE_SOURCE.videoIdInput}`}
                     value={directTitle()}
-                    onInput={(event) => setDirectTitle(event.currentTarget.value)}
+                    onInput={(event) => {
+                      setDirectTitle(event.currentTarget.value);
+                      setDirectShareInfo(null);
+                      if (directShareCopiedTimer) {
+                        clearTimeout(directShareCopiedTimer);
+                        directShareCopiedTimer = null;
+                      }
+                      setDirectShareCopied(false);
+                    }}
                   />
                 </label>
 
@@ -388,15 +483,20 @@ export function ImportTab(props: ImportTabProps) {
                     class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
                     placeholder="未指定"
                     value={directMemo()}
-                    onInput={(event) => setDirectMemo(event.currentTarget.value)}
+                    onInput={(event) => {
+                      setDirectMemo(event.currentTarget.value);
+                      setDirectShareInfo(null);
+                      if (directShareCopiedTimer) {
+                        clearTimeout(directShareCopiedTimer);
+                        directShareCopiedTimer = null;
+                      }
+                      setDirectShareCopied(false);
+                    }}
                   />
                 </label>
               </div>
 
-              <div class="flex items-center justify-between gap-4">
-                <Show when={directInputFeedback()}>
-                  {(message) => <p class="text-sm text-stone-400">{message()}</p>}
-                </Show>
+              <div class="flex items-center gap-2">
                 <button
                   type="submit"
                   disabled={directInputPreview().kind !== "ready"}
@@ -404,7 +504,41 @@ export function ImportTab(props: ImportTabProps) {
                 >
                   プレイリストを作成
                 </button>
+                <button
+                  type="button"
+                  disabled={directInputPreview().kind !== "ready"}
+                  class="rounded-full border border-stone-700 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                  onClick={handleCreateSharedUrl}
+                >
+                  共有URLを作成
+                </button>
               </div>
+
+              <Show when={directInputFeedback()}>
+                {(message) => <p class="text-sm text-stone-400">{message()}</p>}
+              </Show>
+
+              <Show when={directShareInfo()}>
+                {(info) => (
+                  <p class="text-sm text-stone-400 break-all">
+                    <button
+                      type="button"
+                      class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                      onClick={() => handleCopySharedUrl(info().url)}
+                      disabled={directShareCopied()}
+                    >
+                      {directShareCopied() ? "コピー済み" : "コピー"}
+                    </button>{" "}
+                    {info().byteCount} byte:{" "}
+                    <a
+                      href={info().url}
+                      class="text-stone-200 underline decoration-stone-500 underline-offset-4 transition hover:text-white"
+                    >
+                      {info().url}
+                    </a>
+                  </p>
+                )}
+              </Show>
             </div>
 
             <section class="rounded-2xl border border-stone-800 bg-stone-950/60 p-4 lg:sticky lg:top-6">
