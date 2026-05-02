@@ -130,9 +130,8 @@ export function ImportTab(props: ImportTabProps) {
     return `${visible}/${total}件表示中`;
   });
   const directPreviewCountLabel = createMemo(() => {
-    const visible = directPreviewVideoIds().length;
     const total = readyDirectInputPreview()?.videoIds.length ?? 0;
-    return `${visible}/${total}件表示中`;
+    return `${total}件`;
   });
 
   createEffect(() => {
@@ -277,29 +276,31 @@ export function ImportTab(props: ImportTabProps) {
             </div>
 
             <section class="rounded-2xl border border-stone-800 bg-stone-950/60 p-4 lg:sticky lg:top-6">
-              <div class="mb-3">
+              <div class="mb-3 flex items-center gap-3">
                 <h3 class="text-sm font-medium text-stone-100">インポート前プレビュー</h3>
+                <Show when={preview().kind === "ready"}>
+                  <div class="flex items-center gap-3">
+                    <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
+                      {sharedPreviewCountLabel()}
+                    </p>
+                    <Show when={(readyPreview()?.videoIds.length ?? 0) > 5}>
+                      <button
+                        type="button"
+                        class="text-xs text-stone-400 transition hover:text-stone-200 disabled:cursor-default disabled:text-stone-600"
+                        disabled={showAllSharedPreview()}
+                        onClick={() => setShowAllSharedPreview(true)}
+                      >
+                        {showAllSharedPreview() ? "全件表示中" : "全件読み込む"}
+                      </button>
+                    </Show>
+                  </div>
+                </Show>
               </div>
 
               <Switch
                 fallback={
                   <div class="space-y-3">
                     <div class="space-y-2">
-                      <div class="flex items-center gap-3">
-                        <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
-                          {sharedPreviewCountLabel()}
-                        </p>
-                        <Show when={(readyPreview()?.videoIds.length ?? 0) > 5}>
-                          <button
-                            type="button"
-                            class="text-xs text-stone-400 transition hover:text-stone-200 disabled:cursor-default disabled:text-stone-600"
-                            disabled={showAllSharedPreview()}
-                            onClick={() => setShowAllSharedPreview(true)}
-                          >
-                            {showAllSharedPreview() ? "全件表示中" : "全件読み込む"}
-                          </button>
-                        </Show>
-                      </div>
                       <ul class="space-y-2">
                         <For each={sharedPreviewVideoIds()}>
                           {(videoId) => {
@@ -407,19 +408,19 @@ export function ImportTab(props: ImportTabProps) {
             </div>
 
             <section class="rounded-2xl border border-stone-800 bg-stone-950/60 p-4 lg:sticky lg:top-6">
-              <div class="mb-3">
+              <div class="mb-3 flex items-center gap-3">
                 <h3 class="text-sm font-medium text-stone-100">作成前プレビュー</h3>
+                <Show when={directInputPreview().kind === "ready"}>
+                  <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
+                    {directPreviewCountLabel()}
+                  </p>
+                </Show>
               </div>
 
               <Switch
                 fallback={
                   <div class="space-y-3">
                     <div class="space-y-2">
-                      <div class="flex items-center gap-3">
-                        <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
-                          {directPreviewCountLabel()}
-                        </p>
-                      </div>
                       <ul class="space-y-2">
                         <For each={directPreviewVideoIds()}>
                           {(videoId) => {
