@@ -2,13 +2,15 @@ import { createSignal, For, Match, Show, Switch } from "solid-js";
 
 import { usePlaylistsState } from "@/options/hooks/usePlaylistsState";
 import { useVideoMetadataState } from "@/options/hooks/useVideoMetadataState";
-import { ImportTab } from "@/options/tabs/ImportTab";
+import { DirectInputCreateSection } from "@/options/tabs/DirectInputCreateSection";
 import { PlaylistsTab } from "@/options/tabs/PlaylistsTab";
+import { SharedUrlImportSection } from "@/options/tabs/SharedUrlImportSection";
 
-type TabKey = "import" | "playlists";
+type TabKey = "import" | "create" | "playlists";
 
 const TAB_LABELS: { key: TabKey; label: string }[] = [
   { key: "import", label: "インポート" },
+  { key: "create", label: "作成" },
   { key: "playlists", label: "プレイリスト" },
 ];
 
@@ -61,7 +63,17 @@ export default function OptionsPage() {
 
         <Switch>
           <Match when={activeTab() === "import"}>
-            <ImportTab onImported={refreshState} videoMetadataState={videoMetadataState()} />
+            <SharedUrlImportSection
+              onImported={refreshState}
+              videoMetadataState={videoMetadataState()}
+            />
+          </Match>
+
+          <Match when={activeTab() === "create"}>
+            <DirectInputCreateSection
+              onImported={refreshState}
+              videoMetadataState={videoMetadataState()}
+            />
           </Match>
 
           <Match when={activeTab() === "playlists"}>
