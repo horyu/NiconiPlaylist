@@ -5,8 +5,11 @@ import {
   createStoredPlaylist,
   importSharedPlaylist,
 } from "@/background/services/importPlaylist";
+import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { parseSharedPlaylistUrl } from "@/lib/playlistUrl";
 import { parseVideoIdInputLines } from "@/lib/videoIdInput";
+import { VideoListItem } from "@/options/components/VideoListItem";
+import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 
 type PreviewState =
   | {
@@ -40,6 +43,7 @@ type DirectInputPreviewState =
 
 type ImportTabProps = {
   onImported: () => Promise<void> | void;
+  videoMetadataState: VideoMetadataState | undefined;
 };
 
 const DEFAULT_SHARED_URL =
@@ -48,6 +52,8 @@ const DEFAULT_SHARED_URL =
 export function ImportTab(props: ImportTabProps) {
   const [sharedUrl, setSharedUrl] = createSignal(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
   const [directInput, setDirectInput] = createSignal("");
+  const [showAllSharedPreview, setShowAllSharedPreview] = createSignal(false);
+  const [showAllDirectPreview, setShowAllDirectPreview] = createSignal(false);
   const [sharedTitle, setSharedTitle] = createSignal("");
   const [sharedMemo, setSharedMemo] = createSignal("");
   const [directTitle, setDirectTitle] = createSignal("");
@@ -114,6 +120,24 @@ export function ImportTab(props: ImportTabProps) {
     const current = directInputPreview();
     return current.kind === "error" ? current : null;
   });
+  const sharedPreviewVideoIds = createMemo(() => {
+    const videoIds = readyPreview()?.videoIds ?? [];
+    return showAllSharedPreview() ? videoIds : videoIds.slice(0, 5);
+  });
+  const directPreviewVideoIds = createMemo(() => {
+    const videoIds = readyDirectInputPreview()?.videoIds ?? [];
+    return showAllDirectPreview() ? videoIds : videoIds.slice(0, 5);
+  });
+  const sharedPreviewCountLabel = createMemo(() => {
+    const visible = sharedPreviewVideoIds().length;
+    const total = readyPreview()?.videoIds.length ?? 0;
+    return `${visible}/${total}件表示中`;
+  });
+  const directPreviewCountLabel = createMemo(() => {
+    const visible = directPreviewVideoIds().length;
+    const total = readyDirectInputPreview()?.videoIds.length ?? 0;
+    return `${visible}/${total}件表示中`;
+  });
 
   createEffect(() => {
     const current = readyPreview();
@@ -128,6 +152,14 @@ export function ImportTab(props: ImportTabProps) {
     setSharedMemo(current.memo ?? "");
   });
 
+  createEffect(() => {
+    const videoIds = [...sharedPreviewVideoIds(), ...directPreviewVideoIds()];
+
+    if (videoIds.length > 0) {
+      enqueueVideoMetadataForVideoIds(videoIds);
+    }
+  });
+
   async function handleImport(event: SubmitEvent) {
     event.preventDefault();
     setSharedUrlFeedback(null);
@@ -138,6 +170,7 @@ export function ImportTab(props: ImportTabProps) {
         memo: sharedMemo(),
       });
       setSharedUrl(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
+      setShowAllSharedPreview(false);
       setSharedTitle("");
       setSharedMemo("");
       setSharedUrlFeedback("プレイリストをインポートしました。");
@@ -169,6 +202,7 @@ export function ImportTab(props: ImportTabProps) {
         },
       );
       setDirectInput("");
+      setShowAllDirectPreview(false);
       setDirectTitle("");
       setDirectMemo("");
       setDirectInputFeedback("プレイリストを作成しました。");
@@ -198,7 +232,10 @@ export function ImportTab(props: ImportTabProps) {
               class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
               placeholder="https://horyu.github.io/NiconiPlaylist/import?videoIds=..."
               value={sharedUrl()}
-              onInput={(event) => setSharedUrl(event.currentTarget.value)}
+              onInput={(event) => {
+                setSharedUrl(event.currentTarget.value);
+                setShowAllSharedPreview(false);
+              }}
             />
           </label>
           <div class="grid gap-4 lg:grid-cols-2">
@@ -229,30 +266,49 @@ export function ImportTab(props: ImportTabProps) {
           </div>
 
           <section class="rounded-2xl border border-stone-800 bg-stone-950/60 p-4">
-            <div class="mb-3 space-y-1">
+            <div class="mb-3">
               <h3 class="text-sm font-medium text-stone-100">インポート前プレビュー</h3>
-              <p class="text-xs leading-5 text-stone-500">
-                件数と先頭数件の videoId を保存前に確認します。
-              </p>
             </div>
 
             <Switch
               fallback={
                 <div class="space-y-3">
-                  <div class="space-y-1">
-                    <p class="text-xs uppercase tracking-[0.2em] text-stone-500">Videos</p>
-                    <p class="text-sm text-stone-300">{readyPreview()?.videoIds.length ?? 0} 件</p>
-                  </div>
-
                   <div class="space-y-2">
-                    <p class="text-xs uppercase tracking-[0.2em] text-stone-500">First videoIds</p>
+                    <div class="flex items-center gap-3">
+                      <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
+                        {sharedPreviewCountLabel()}
+                      </p>
+                      <Show when={(readyPreview()?.videoIds.length ?? 0) > 5}>
+                        <button
+                          type="button"
+                          class="text-xs text-stone-400 transition hover:text-stone-200 disabled:cursor-default disabled:text-stone-600"
+                          disabled={showAllSharedPreview()}
+                          onClick={() => setShowAllSharedPreview(true)}
+                        >
+                          {showAllSharedPreview() ? "全件表示中" : "全件読み込む"}
+                        </button>
+                      </Show>
+                    </div>
                     <ul class="space-y-2">
-                      <For each={readyPreview()?.videoIds.slice(0, 5) ?? []}>
-                        {(videoId) => (
-                          <li class="rounded-xl border border-stone-800 bg-stone-900/60 px-3 py-2 text-sm text-stone-300">
-                            {videoId}
-                          </li>
-                        )}
+                      <For each={sharedPreviewVideoIds()}>
+                        {(videoId) => {
+                          const videoMetadata = () =>
+                            props.videoMetadataState?.videoMetadataMap[videoId];
+                          const ownerMetadata = () => {
+                            const ownerId = videoMetadata()?.ownerId;
+                            return ownerId
+                              ? props.videoMetadataState?.ownersMap[ownerId]
+                              : undefined;
+                          };
+
+                          return (
+                            <VideoListItem
+                              videoId={videoId}
+                              videoMetadata={videoMetadata()}
+                              ownerMetadata={ownerMetadata()}
+                            />
+                          );
+                        }}
                       </For>
                     </ul>
                   </div>
@@ -304,7 +360,10 @@ export function ImportTab(props: ImportTabProps) {
                 "\n",
               )}
               value={directInput()}
-              onInput={(event) => setDirectInput(event.currentTarget.value)}
+              onInput={(event) => {
+                setDirectInput(event.currentTarget.value);
+                setShowAllDirectPreview(false);
+              }}
             />
           </label>
           <div class="grid gap-4 lg:grid-cols-2">
@@ -332,32 +391,49 @@ export function ImportTab(props: ImportTabProps) {
           </div>
 
           <section class="rounded-2xl border border-stone-800 bg-stone-950/60 p-4">
-            <div class="mb-3 space-y-1">
+            <div class="mb-3">
               <h3 class="text-sm font-medium text-stone-100">作成前プレビュー</h3>
-              <p class="text-xs leading-5 text-stone-500">
-                件数と先頭数件の videoId を確認してから保存します。
-              </p>
             </div>
 
             <Switch
               fallback={
                 <div class="space-y-3">
-                  <div class="space-y-1">
-                    <p class="text-xs uppercase tracking-[0.2em] text-stone-500">Videos</p>
-                    <p class="text-sm text-stone-300">
-                      {readyDirectInputPreview()?.videoIds.length ?? 0} 件
-                    </p>
-                  </div>
-
                   <div class="space-y-2">
-                    <p class="text-xs uppercase tracking-[0.2em] text-stone-500">First videoIds</p>
+                    <div class="flex items-center gap-3">
+                      <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
+                        {directPreviewCountLabel()}
+                      </p>
+                      <Show when={(readyDirectInputPreview()?.videoIds.length ?? 0) > 5}>
+                        <button
+                          type="button"
+                          class="text-xs text-stone-400 transition hover:text-stone-200 disabled:cursor-default disabled:text-stone-600"
+                          disabled={showAllDirectPreview()}
+                          onClick={() => setShowAllDirectPreview(true)}
+                        >
+                          {showAllDirectPreview() ? "全件表示中" : "全件読み込む"}
+                        </button>
+                      </Show>
+                    </div>
                     <ul class="space-y-2">
-                      <For each={readyDirectInputPreview()?.videoIds.slice(0, 5) ?? []}>
-                        {(videoId) => (
-                          <li class="rounded-xl border border-stone-800 bg-stone-900/60 px-3 py-2 text-sm text-stone-300">
-                            {videoId}
-                          </li>
-                        )}
+                      <For each={directPreviewVideoIds()}>
+                        {(videoId) => {
+                          const videoMetadata = () =>
+                            props.videoMetadataState?.videoMetadataMap[videoId];
+                          const ownerMetadata = () => {
+                            const ownerId = videoMetadata()?.ownerId;
+                            return ownerId
+                              ? props.videoMetadataState?.ownersMap[ownerId]
+                              : undefined;
+                          };
+
+                          return (
+                            <VideoListItem
+                              videoId={videoId}
+                              videoMetadata={videoMetadata()}
+                              ownerMetadata={ownerMetadata()}
+                            />
+                          );
+                        }}
                       </For>
                     </ul>
                   </div>

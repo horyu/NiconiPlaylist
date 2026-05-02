@@ -61,7 +61,7 @@ export default function OptionsPage() {
 
         <Switch>
           <Match when={activeTab() === "import"}>
-            <ImportTab onImported={refreshState} />
+            <ImportTab onImported={refreshState} videoMetadataState={videoMetadataState()} />
           </Match>
 
           <Match when={activeTab() === "playlists"}>
