@@ -20,6 +20,7 @@ function formatIndex(index: number): string {
 
 type PopupPlaylistVideoListProps = {
   currentPlaybackIndex: number | null;
+  hasAlivePlaybackTab: boolean;
   onMovePlaybackIndex: (index: number) => void;
   ownersMap: Record<string, OwnerMetadata>;
   playlist: Playlist;
@@ -44,6 +45,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
             return ownerId ? props.ownersMap[ownerId] : undefined;
           };
           const isCurrent = () => props.currentPlaybackIndex === index();
+          const showPlaybackButton = () => !isCurrent() || !props.hasAlivePlaybackTab;
 
           return (
             <li
@@ -101,7 +103,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
 
               <div class="shrink-0">
                 <Show
-                  when={!isCurrent()}
+                  when={showPlaybackButton()}
                   fallback={
                     <div class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200">
                       ●

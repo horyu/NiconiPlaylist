@@ -314,6 +314,7 @@ function Popup() {
                     </Show>
                     <PopupPlaylistVideoList
                       currentPlaybackIndex={currentPlaybackIndex()}
+                      hasAlivePlaybackTab={activePlaylistAliveTabId() !== null}
                       onMovePlaybackIndex={(index) => void handleMovePlaybackIndex(index)}
                       ownersMap={popupState()?.ownersMap ?? {}}
                       playlist={playlist()}
