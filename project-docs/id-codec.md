@@ -97,6 +97,8 @@ https://horyu.github.io/NiconiPlaylist/import?videoIds=BOQS5OiOBd-4tQKovKop
 - `nm`
 - `ss`
 
+他のID接頭辞（ [ID - ニコ百](https://dic.nicovideo.jp/a/id) を参照）はこの拡張機能ではサポートしない。
+
 prefix code は以下とする。
 
 ```ts
