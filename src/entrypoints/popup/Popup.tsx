@@ -13,28 +13,13 @@ import { browser } from "wxt/browser";
 
 import {
   activateStoredPlaylist,
-  getLastActivePlaylistId,
   getStoredPlaybackContexts,
-  getStoredPlaylists,
   setStoredPlaybackContextIndex,
 } from "@/background/services/playlistStore";
+import { getPopupState } from "@/background/services/popupState";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
-import {
-  getStoredOwnersMap,
-  getStoredVideoMetadataMap,
-} from "@/background/services/videoMetadataStore";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import type { PlaybackContext, Playlist, PlaylistId } from "@/lib/types";
-import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
-
-type PopupState = {
-  activeTabId: number | null;
-  ownersMap: Record<string, OwnerMetadata>;
-  playbackContexts: PlaybackContext[];
-  playlists: Playlist[];
-  lastActivePlaylistId: PlaylistId | null;
-  videoMetadataMap: Record<string, VideoMetadata>;
-};
+import type { Playlist, PlaylistId } from "@/lib/types";
 
 type StorageChanges = Record<
   string,
@@ -55,15 +40,6 @@ function formatDuration(duration: number | null | undefined): string {
   return `${minutes}:${seconds}`;
 }
 
-async function getActiveTabId(): Promise<number | null> {
-  const [activeTab] = await browser.tabs.query({
-    active: true,
-    currentWindow: true,
-  });
-
-  return typeof activeTab?.id === "number" ? activeTab.id : null;
-}
-
 async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
   const settledTabs = await Promise.allSettled(
     tabIds.map((tabId) =>
@@ -76,33 +52,6 @@ async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
       result.status === "fulfilled" && typeof result.value === "number" ? [result.value] : [],
     ),
   );
-}
-
-async function fetchPopupState(): Promise<PopupState> {
-  const [
-    activeTabId,
-    playlists,
-    lastActivePlaylistId,
-    videoMetadataMap,
-    ownersMap,
-    playbackContexts,
-  ] = await Promise.all([
-    getActiveTabId(),
-    getStoredPlaylists(),
-    getLastActivePlaylistId(),
-    getStoredVideoMetadataMap(),
-    getStoredOwnersMap(),
-    getStoredPlaybackContexts(),
-  ]);
-
-  return {
-    activeTabId,
-    ownersMap,
-    playbackContexts,
-    playlists,
-    lastActivePlaylistId,
-    videoMetadataMap,
-  };
 }
 
 function formatPlaylistOptionLabel(playlist: Playlist): string {
@@ -118,7 +67,7 @@ function buildWatchUrl(videoId: string): string {
 }
 
 function Popup() {
-  const [popupState, { refetch }] = createResource(fetchPopupState);
+  const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
   const [aliveTabIdByPlaylistId, setAliveTabIdByPlaylistId] = createSignal<
     Partial<Record<PlaylistId, number>>
