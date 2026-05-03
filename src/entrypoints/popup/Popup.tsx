@@ -328,14 +328,24 @@ function Popup() {
                               </div>
 
                               <div class="shrink-0">
-                                <button
-                                  type="button"
-                                  class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-default disabled:border-emerald-500/40 disabled:bg-emerald-500/10 disabled:text-emerald-200"
-                                  disabled={isCurrent()}
-                                  onClick={() => void handleMovePlaybackIndex(index())}
+                                <Show
+                                  when={!isCurrent()}
+                                  fallback={
+                                    <div class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200">
+                                      ●
+                                    </div>
+                                  }
                                 >
-                                  {isCurrent() ? "現在位置" : "ここから再生"}
-                                </button>
+                                  <button
+                                    type="button"
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-stone-600 text-sm text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                    title="ここから再生"
+                                    aria-label="ここから再生"
+                                    onClick={() => void handleMovePlaybackIndex(index())}
+                                  >
+                                    ▶
+                                  </button>
+                                </Show>
                               </div>
                             </li>
                           );
