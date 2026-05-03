@@ -14,7 +14,6 @@ import { browser } from "wxt/browser";
 import {
   activateStoredPlaylist,
   getLastActivePlaylistId,
-  getStoredPlaybackContextByTabId,
   getStoredPlaybackContexts,
   getStoredPlaylists,
   setStoredPlaybackContextIndex,
@@ -31,7 +30,7 @@ import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 type PopupState = {
   activeTabId: number | null;
   ownersMap: Record<string, OwnerMetadata>;
-  playbackContext: PlaybackContext | null;
+  playbackContexts: PlaybackContext[];
   playlists: Playlist[];
   lastActivePlaylistId: PlaylistId | null;
   videoMetadataMap: Record<string, VideoMetadata>;
@@ -80,20 +79,26 @@ async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
 }
 
 async function fetchPopupState(): Promise<PopupState> {
-  const activeTabId = await getActiveTabId();
-  const [playlists, lastActivePlaylistId, videoMetadataMap, ownersMap, playbackContext] =
-    await Promise.all([
-      getStoredPlaylists(),
-      getLastActivePlaylistId(),
-      getStoredVideoMetadataMap(),
-      getStoredOwnersMap(),
-      activeTabId === null ? Promise.resolve(null) : getStoredPlaybackContextByTabId(activeTabId),
-    ]);
+  const [
+    activeTabId,
+    playlists,
+    lastActivePlaylistId,
+    videoMetadataMap,
+    ownersMap,
+    playbackContexts,
+  ] = await Promise.all([
+    getActiveTabId(),
+    getStoredPlaylists(),
+    getLastActivePlaylistId(),
+    getStoredVideoMetadataMap(),
+    getStoredOwnersMap(),
+    getStoredPlaybackContexts(),
+  ]);
 
   return {
     activeTabId,
     ownersMap,
-    playbackContext,
+    playbackContexts,
     playlists,
     lastActivePlaylistId,
     videoMetadataMap,
@@ -139,34 +144,31 @@ function Popup() {
     const state = popupState();
     const playlist = activePlaylist();
 
-    if (!state?.playbackContext || !playlist) {
+    if (!state || !playlist) {
       return null;
     }
 
-    return state.playbackContext.playlistId === playlist.id
-      ? state.playbackContext.currentIndex
-      : null;
+    const activeTabPlaybackContext =
+      state.activeTabId === null
+        ? null
+        : state.playbackContexts.find((context) => context.tabId === state.activeTabId);
+    const alivePlaylistTabId = aliveTabIdByPlaylistId()[playlist.id] ?? null;
+    const alivePlaylistPlaybackContext =
+      alivePlaylistTabId === null
+        ? null
+        : (state.playbackContexts.find((context) => context.tabId === alivePlaylistTabId) ?? null);
+    const playlistPlaybackContext =
+      activeTabPlaybackContext?.playlistId === playlist.id
+        ? activeTabPlaybackContext
+        : alivePlaylistPlaybackContext?.playlistId === playlist.id
+          ? alivePlaylistPlaybackContext
+          : (state.playbackContexts.find((context) => context.playlistId === playlist.id) ?? null);
+
+    return playlistPlaybackContext?.currentIndex ?? null;
   };
 
-  createEffect(() => {
-    // プレイリスト切替時に前回の li 参照を持ち越さないよう、
-    // activePlaylist().id を依存として ref 配列をリセットする。
-    void activePlaylist()?.id;
-    videoItemElements.length = 0;
-  });
-
-  createEffect(() => {
-    const videoIds = activePlaylist()?.videoIds ?? [];
-
-    if (videoIds.length > 0) {
-      enqueueVideoMetadataForVideoIds(videoIds);
-    }
-  });
-
-  createEffect(() => {
-    const playbackIndex = currentPlaybackIndex();
-
-    if (playbackIndex === null || !videoListElement) {
+  function scrollToPlaybackIndex(playbackIndex: number) {
+    if (!videoListElement) {
       return;
     }
 
@@ -177,13 +179,18 @@ function Popup() {
       return;
     }
 
-    requestAnimationFrame(() => {
-      if (!videoListElement || !targetElement) {
-        return;
-      }
+    const listRect = videoListElement.getBoundingClientRect();
+    const targetRect = targetElement.getBoundingClientRect();
 
-      videoListElement.scrollTop = targetElement.offsetTop - videoListElement.offsetTop;
-    });
+    videoListElement.scrollTop += targetRect.top - listRect.top;
+  }
+
+  createEffect(() => {
+    const videoIds = activePlaylist()?.videoIds ?? [];
+
+    if (videoIds.length > 0) {
+      enqueueVideoMetadataForVideoIds(videoIds);
+    }
   });
 
   async function refreshAliveTabMap() {
@@ -373,18 +380,30 @@ function Popup() {
                           <button
                             type="button"
                             class="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-200 transition hover:bg-sky-500/20"
-                            title="対応タブへ移動"
-                            aria-label="対応タブへ移動"
+                            title="再生中のタブをフォーカス"
+                            aria-label="再生中のタブをフォーカス"
                             onClick={() => void handleFocusAliveTab()}
                           >
-                            対応タブあり
+                            再生中のタブをフォーカス
                           </button>
                         </Show>
                       </div>
                       <Show when={currentPlaybackIndex() !== null}>
-                        <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-200">
+                        <button
+                          type="button"
+                          class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+                          title="再生位置へスクロール"
+                          aria-label="再生位置へスクロール"
+                          onClick={() => {
+                            const playbackIndex = currentPlaybackIndex();
+
+                            if (playbackIndex !== null) {
+                              scrollToPlaybackIndex(playbackIndex);
+                            }
+                          }}
+                        >
                           再生中: {formatIndex(currentPlaybackIndex() ?? 0)}
-                        </span>
+                        </button>
                       </Show>
                     </div>
                     <Show when={playlist().memo}>
