@@ -100,6 +100,8 @@ function buildWatchUrl(videoId: string): string {
 function Popup() {
   const [popupState, { refetch }] = createResource(fetchPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
+  let videoListElement: HTMLUListElement | undefined;
+  const videoItemElements: Array<HTMLLIElement | undefined> = [];
 
   const activePlaylist = () =>
     popupState()?.playlists.find(
@@ -120,11 +122,41 @@ function Popup() {
   };
 
   createEffect(() => {
+    // プレイリスト切替時に前回の li 参照を持ち越さないよう、
+    // activePlaylist().id を依存として ref 配列をリセットする。
+    void activePlaylist()?.id;
+    videoItemElements.length = 0;
+  });
+
+  createEffect(() => {
     const videoIds = activePlaylist()?.videoIds ?? [];
 
     if (videoIds.length > 0) {
       enqueueVideoMetadataForVideoIds(videoIds);
     }
+  });
+
+  createEffect(() => {
+    const playbackIndex = currentPlaybackIndex();
+
+    if (playbackIndex === null || !videoListElement) {
+      return;
+    }
+
+    const targetIndex = Math.max(playbackIndex - 2, 0);
+    const targetElement = videoItemElements[targetIndex];
+
+    if (!targetElement || !videoListElement.contains(targetElement)) {
+      return;
+    }
+
+    requestAnimationFrame(() => {
+      if (!videoListElement || !targetElement) {
+        return;
+      }
+
+      videoListElement.scrollTop = targetElement.offsetTop - videoListElement.offsetTop;
+    });
   });
 
   onMount(() => {
@@ -259,7 +291,12 @@ function Popup() {
                       {(memo) => <p class="text-xs leading-5 text-stone-500">{memo()}</p>}
                     </Show>
 
-                    <ul class="max-h-[32rem] space-y-2 overflow-y-auto pr-1">
+                    <ul
+                      ref={(element) => {
+                        videoListElement = element;
+                      }}
+                      class="max-h-[32rem] space-y-2 overflow-y-auto pr-1"
+                    >
                       <For each={playlist().videoIds}>
                         {(videoId, index) => {
                           const videoMetadata = () => popupState()?.videoMetadataMap[videoId];
@@ -271,6 +308,9 @@ function Popup() {
 
                           return (
                             <li
+                              ref={(element) => {
+                                videoItemElements[index()] = element;
+                              }}
                               class={`flex items-start gap-3 rounded-xl border p-3 transition ${
                                 isCurrent()
                                   ? "border-emerald-500/40 bg-emerald-500/10"
