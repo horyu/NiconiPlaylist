@@ -20,25 +20,14 @@ import { getPopupState } from "@/background/services/popupState";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { Playlist, PlaylistId } from "@/lib/types";
+import { PopupPlaylistVideoList } from "@/popup/components/PopupPlaylistVideoList";
+import {
+  createActivePlaylist,
+  createActivePlaylistAliveTabId,
+  createCurrentPlaybackIndex,
+} from "@/popup/hooks/usePopupPlaybackState";
 
-type StorageChanges = Record<
-  string,
-  {
-    oldValue?: unknown;
-    newValue?: unknown;
-  }
->;
-
-function formatDuration(duration: number | null | undefined): string {
-  if (duration === null || duration === undefined) {
-    return "--:--";
-  }
-
-  const minutes = Math.floor(duration / 60);
-  const seconds = (duration % 60).toString().padStart(2, "0");
-
-  return `${minutes}:${seconds}`;
-}
+type StorageChanges = Record<string, { oldValue?: unknown; newValue?: unknown }>;
 
 async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
   const settledTabs = await Promise.allSettled(
@@ -58,10 +47,6 @@ function formatPlaylistOptionLabel(playlist: Playlist): string {
   return playlist.title ?? playlist.id;
 }
 
-function formatIndex(index: number): string {
-  return (index + 1).toString();
-}
-
 function buildWatchUrl(videoId: string): string {
   return `https://www.nicovideo.jp/watch/${videoId}`;
 }
@@ -74,47 +59,16 @@ function Popup() {
   >({});
   let videoListElement: HTMLUListElement | undefined;
   const videoItemElements: Array<HTMLLIElement | undefined> = [];
-
-  const activePlaylist = () =>
-    popupState()?.playlists.find(
-      (playlist) => playlist.id === popupState()?.lastActivePlaylistId,
-    ) ?? null;
-  const activePlaylistAliveTabId = () => {
-    const playlist = activePlaylist();
-
-    if (!playlist) {
-      return null;
-    }
-
-    return aliveTabIdByPlaylistId()[playlist.id] ?? null;
-  };
-
-  const currentPlaybackIndex = () => {
-    const state = popupState();
-    const playlist = activePlaylist();
-
-    if (!state || !playlist) {
-      return null;
-    }
-
-    const activeTabPlaybackContext =
-      state.activeTabId === null
-        ? null
-        : state.playbackContexts.find((context) => context.tabId === state.activeTabId);
-    const alivePlaylistTabId = aliveTabIdByPlaylistId()[playlist.id] ?? null;
-    const alivePlaylistPlaybackContext =
-      alivePlaylistTabId === null
-        ? null
-        : (state.playbackContexts.find((context) => context.tabId === alivePlaylistTabId) ?? null);
-    const playlistPlaybackContext =
-      activeTabPlaybackContext?.playlistId === playlist.id
-        ? activeTabPlaybackContext
-        : alivePlaylistPlaybackContext?.playlistId === playlist.id
-          ? alivePlaylistPlaybackContext
-          : (state.playbackContexts.find((context) => context.playlistId === playlist.id) ?? null);
-
-    return playlistPlaybackContext?.currentIndex ?? null;
-  };
+  const activePlaylist = createActivePlaylist(() => popupState());
+  const activePlaylistAliveTabId = createActivePlaylistAliveTabId(
+    activePlaylist,
+    aliveTabIdByPlaylistId,
+  );
+  const currentPlaybackIndex = createCurrentPlaybackIndex(
+    () => popupState(),
+    activePlaylist,
+    activePlaylistAliveTabId,
+  );
 
   function scrollToPlaybackIndex(playbackIndex: number) {
     if (!videoListElement) {
@@ -351,115 +305,23 @@ function Popup() {
                             }
                           }}
                         >
-                          再生中: {formatIndex(currentPlaybackIndex() ?? 0)}
+                          再生中: {(currentPlaybackIndex() ?? 0) + 1}
                         </button>
                       </Show>
                     </div>
-                    <Show when={playlist().memo}>
-                      {(memo) => <p class="text-xs leading-5 text-stone-500">{memo()}</p>}
-                    </Show>
-
-                    <ul
-                      ref={(element) => {
+                    <PopupPlaylistVideoList
+                      currentPlaybackIndex={currentPlaybackIndex()}
+                      onMovePlaybackIndex={(index) => void handleMovePlaybackIndex(index)}
+                      ownersMap={popupState()?.ownersMap ?? {}}
+                      playlist={playlist()}
+                      registerVideoItemElement={(index, element) => {
+                        videoItemElements[index] = element;
+                      }}
+                      registerVideoListElement={(element) => {
                         videoListElement = element;
                       }}
-                      class="max-h-[32rem] space-y-2 overflow-y-auto pr-1"
-                    >
-                      <For each={playlist().videoIds}>
-                        {(videoId, index) => {
-                          const videoMetadata = () => popupState()?.videoMetadataMap[videoId];
-                          const ownerMetadata = () => {
-                            const ownerId = videoMetadata()?.ownerId;
-                            return ownerId ? popupState()?.ownersMap[ownerId] : undefined;
-                          };
-                          const isCurrent = () => currentPlaybackIndex() === index();
-
-                          return (
-                            <li
-                              ref={(element) => {
-                                videoItemElements[index()] = element;
-                              }}
-                              class={`flex items-start gap-3 rounded-xl border p-3 transition ${
-                                isCurrent()
-                                  ? "border-emerald-500/40 bg-emerald-500/10"
-                                  : "border-stone-800 bg-stone-900/40"
-                              }`}
-                            >
-                              <div class="flex w-8 shrink-0 flex-col items-center pt-1 text-center">
-                                <span
-                                  class={`text-sm font-semibold ${
-                                    isCurrent() ? "text-emerald-200" : "text-stone-300"
-                                  }`}
-                                >
-                                  {formatIndex(index())}
-                                </span>
-                                <Show when={isCurrent()}>
-                                  <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
-                                    now
-                                  </span>
-                                </Show>
-                              </div>
-
-                              <a
-                                href={`https://www.nicovideo.jp/watch/${videoId}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                class="h-14 w-24 shrink-0 overflow-hidden rounded-lg bg-stone-900"
-                              >
-                                <Show
-                                  when={
-                                    videoMetadata()?.thumbnail.listingUrl ??
-                                    videoMetadata()?.thumbnail.url
-                                  }
-                                >
-                                  {(thumbnailUrl) => (
-                                    <img
-                                      src={thumbnailUrl()}
-                                      alt=""
-                                      class="h-full w-full object-cover"
-                                    />
-                                  )}
-                                </Show>
-                              </a>
-
-                              <div class="min-w-0 flex-1 space-y-1">
-                                <p class="truncate text-sm font-medium text-stone-100">
-                                  {videoMetadata()?.title ?? videoId}
-                                </p>
-                                <p class="text-xs text-stone-400">{videoId}</p>
-                                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
-                                  <span>{formatDuration(videoMetadata()?.duration)}</span>
-                                  <Show when={ownerMetadata()?.name}>
-                                    {(ownerName) => <span>{ownerName()}</span>}
-                                  </Show>
-                                </div>
-                              </div>
-
-                              <div class="shrink-0">
-                                <Show
-                                  when={!isCurrent()}
-                                  fallback={
-                                    <div class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200">
-                                      ●
-                                    </div>
-                                  }
-                                >
-                                  <button
-                                    type="button"
-                                    class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-stone-600 text-sm text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                                    title="ここから再生"
-                                    aria-label="ここから再生"
-                                    onClick={() => void handleMovePlaybackIndex(index())}
-                                  >
-                                    ▶
-                                  </button>
-                                </Show>
-                              </div>
-                            </li>
-                          );
-                        }}
-                      </For>
-                    </ul>
+                      videoMetadataMap={popupState()?.videoMetadataMap ?? {}}
+                    />
                   </div>
                 )}
               </Show>
