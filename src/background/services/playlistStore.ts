@@ -1,7 +1,7 @@
 import { browser } from "wxt/browser";
 
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import type { Playlist, PlaylistId } from "@/lib/types";
+import type { PlaybackContext, Playlist, PlaylistId, VideoId } from "@/lib/types";
 
 function isPlaylist(value: unknown): value is Playlist {
   if (!value || typeof value !== "object") {
@@ -19,6 +19,22 @@ function isPlaylist(value: unknown): value is Playlist {
   );
 }
 
+function isPlaybackContext(value: unknown): value is PlaybackContext {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PlaybackContext>;
+
+  return (
+    typeof candidate.playlistId === "string" &&
+    typeof candidate.tabId === "number" &&
+    Number.isInteger(candidate.tabId) &&
+    typeof candidate.currentIndex === "number" &&
+    Number.isInteger(candidate.currentIndex)
+  );
+}
+
 export async function getStoredPlaylists(): Promise<Playlist[]> {
   const stored = await browser.storage.local.get(STORAGE_KEYS.playlists);
   const value = stored[STORAGE_KEYS.playlists];
@@ -33,6 +49,25 @@ export async function getStoredPlaylists(): Promise<Playlist[]> {
 export async function setStoredPlaylists(playlists: Playlist[]): Promise<void> {
   await browser.storage.local.set({
     [STORAGE_KEYS.playlists]: playlists,
+  });
+}
+
+export async function getStoredPlaybackContexts(): Promise<PlaybackContext[]> {
+  const stored = await browser.storage.local.get(STORAGE_KEYS.playbackContexts);
+  const value = stored[STORAGE_KEYS.playbackContexts];
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(isPlaybackContext);
+}
+
+export async function setStoredPlaybackContexts(
+  playbackContexts: PlaybackContext[],
+): Promise<void> {
+  await browser.storage.local.set({
+    [STORAGE_KEYS.playbackContexts]: playbackContexts,
   });
 }
 
@@ -71,4 +106,62 @@ export async function deleteStoredPlaylist(playlistId: PlaylistId): Promise<void
   if (lastActivePlaylistId === playlistId) {
     await setLastActivePlaylistId(nextPlaylists[0]?.id ?? null);
   }
+}
+
+export async function syncPlaybackContextForVideo(
+  tabId: number,
+  videoId: VideoId,
+): Promise<PlaybackContext | null> {
+  const [playlists, lastActivePlaylistId, playbackContexts] = await Promise.all([
+    getStoredPlaylists(),
+    getLastActivePlaylistId(),
+    getStoredPlaybackContexts(),
+  ]);
+
+  const activePlaylist = playlists.find((playlist) => playlist.id === lastActivePlaylistId);
+  const currentIndex = activePlaylist?.videoIds.findIndex(
+    (currentVideoId) => currentVideoId === videoId,
+  );
+
+  const nextPlaybackContexts = playbackContexts.filter((context) => context.tabId !== tabId);
+
+  if (!activePlaylist || currentIndex === undefined || currentIndex < 0) {
+    await setStoredPlaybackContexts(nextPlaybackContexts);
+    return null;
+  }
+
+  const playbackContext: PlaybackContext = {
+    playlistId: activePlaylist.id,
+    tabId,
+    currentIndex,
+  };
+
+  nextPlaybackContexts.push(playbackContext);
+  await setStoredPlaybackContexts(nextPlaybackContexts);
+
+  return playbackContext;
+}
+
+export async function resolveNextVideoForPlaybackContext(
+  tabId: number,
+  videoId: VideoId,
+): Promise<{ playbackContext: PlaybackContext | null; nextVideoId: VideoId | null }> {
+  const playbackContext = await syncPlaybackContextForVideo(tabId, videoId);
+
+  if (!playbackContext) {
+    return {
+      playbackContext: null,
+      nextVideoId: null,
+    };
+  }
+
+  const playlists = await getStoredPlaylists();
+  const playlist = playlists.find(
+    (currentPlaylist) => currentPlaylist.id === playbackContext.playlistId,
+  );
+
+  return {
+    playbackContext,
+    nextVideoId: playlist?.videoIds[playbackContext.currentIndex + 1] ?? null,
+  };
 }
