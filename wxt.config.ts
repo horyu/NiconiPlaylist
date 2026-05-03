@@ -12,7 +12,7 @@ export default defineConfig({
   manifestVersion: 3,
   targetBrowsers: ["chrome", "firefox"],
   manifest: {
-    permissions: ["storage"],
+    permissions: ["storage", "tabs"],
     host_permissions: ["https://www.nicovideo.jp/watch/*", "https://nvapi.nicovideo.jp/*"],
   },
 });
