@@ -1,6 +1,4 @@
-import { browser } from "wxt/browser";
-
-import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { getStorageData, setStorageData } from "@/background/services/storage";
 import type { OwnerId, OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 function isVideoMetadata(value: unknown): value is VideoMetadata {
@@ -46,15 +44,14 @@ function isOwnerMetadata(value: unknown): value is OwnerMetadata {
 }
 
 export async function getStoredVideoMetadataMap(): Promise<Record<string, VideoMetadata>> {
-  const stored = await browser.storage.local.get(STORAGE_KEYS.videoMetadata);
-  const value = stored[STORAGE_KEYS.videoMetadata];
+  const { videoMetadata } = await getStorageData(["videoMetadata"]);
 
-  if (!value || typeof value !== "object") {
+  if (!videoMetadata || typeof videoMetadata !== "object") {
     return {};
   }
 
   return Object.fromEntries(
-    Object.entries(value).filter((entry): entry is [string, VideoMetadata] =>
+    Object.entries(videoMetadata).filter((entry): entry is [string, VideoMetadata] =>
       isVideoMetadata(entry[1]),
     ),
   );
@@ -63,28 +60,23 @@ export async function getStoredVideoMetadataMap(): Promise<Record<string, VideoM
 export async function setStoredVideoMetadataMap(
   videoMetadataMap: Record<string, VideoMetadata>,
 ): Promise<void> {
-  await browser.storage.local.set({
-    [STORAGE_KEYS.videoMetadata]: videoMetadataMap,
-  });
+  await setStorageData({ videoMetadata: videoMetadataMap });
 }
 
 export async function getStoredOwnersMap(): Promise<Record<OwnerId, OwnerMetadata>> {
-  const stored = await browser.storage.local.get(STORAGE_KEYS.owners);
-  const value = stored[STORAGE_KEYS.owners];
+  const { owners } = await getStorageData(["owners"]);
 
-  if (!value || typeof value !== "object") {
+  if (!owners || typeof owners !== "object") {
     return {};
   }
 
   return Object.fromEntries(
-    Object.entries(value).filter((entry): entry is [OwnerId, OwnerMetadata] =>
+    Object.entries(owners).filter((entry): entry is [OwnerId, OwnerMetadata] =>
       isOwnerMetadata(entry[1]),
     ),
   );
 }
 
 export async function setStoredOwnersMap(ownersMap: Record<OwnerId, OwnerMetadata>): Promise<void> {
-  await browser.storage.local.set({
-    [STORAGE_KEYS.owners]: ownersMap,
-  });
+  await setStorageData({ owners: ownersMap });
 }

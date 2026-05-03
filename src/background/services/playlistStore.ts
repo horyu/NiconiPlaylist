@@ -1,6 +1,4 @@
-import { browser } from "wxt/browser";
-
-import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { getStorageData, setStorageData } from "@/background/services/storage";
 import type { PlaybackContext, Playlist, PlaylistId, VideoId } from "@/lib/types";
 
 function isPlaylist(value: unknown): value is Playlist {
@@ -73,52 +71,34 @@ function resolvePlaybackIndex(
 }
 
 export async function getStoredPlaylists(): Promise<Playlist[]> {
-  const stored = await browser.storage.local.get(STORAGE_KEYS.playlists);
-  const value = stored[STORAGE_KEYS.playlists];
+  const { playlists } = await getStorageData(["playlists"]);
 
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter(isPlaylist);
+  return playlists.filter(isPlaylist);
 }
 
 export async function setStoredPlaylists(playlists: Playlist[]): Promise<void> {
-  await browser.storage.local.set({
-    [STORAGE_KEYS.playlists]: playlists,
-  });
+  await setStorageData({ playlists });
 }
 
 export async function getStoredPlaybackContexts(): Promise<PlaybackContext[]> {
-  const stored = await browser.storage.local.get(STORAGE_KEYS.playbackContexts);
-  const value = stored[STORAGE_KEYS.playbackContexts];
+  const { playbackContexts } = await getStorageData(["playbackContexts"]);
 
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.filter(isPlaybackContext);
+  return playbackContexts.filter(isPlaybackContext);
 }
 
 export async function setStoredPlaybackContexts(
   playbackContexts: PlaybackContext[],
 ): Promise<void> {
-  await browser.storage.local.set({
-    [STORAGE_KEYS.playbackContexts]: playbackContexts,
-  });
+  await setStorageData({ playbackContexts });
 }
 
 export async function getLastActivePlaylistId(): Promise<PlaylistId | null> {
-  const stored = await browser.storage.local.get(STORAGE_KEYS.lastActivePlaylistId);
-  const value = stored[STORAGE_KEYS.lastActivePlaylistId];
-
-  return typeof value === "string" ? value : null;
+  const { lastActivePlaylistId } = await getStorageData(["lastActivePlaylistId"]);
+  return lastActivePlaylistId;
 }
 
 export async function setLastActivePlaylistId(playlistId: PlaylistId | null): Promise<void> {
-  await browser.storage.local.set({
-    [STORAGE_KEYS.lastActivePlaylistId]: playlistId,
-  });
+  await setStorageData({ lastActivePlaylistId: playlistId });
 }
 
 export async function activateStoredPlaylist(playlistId: PlaylistId): Promise<void> {
