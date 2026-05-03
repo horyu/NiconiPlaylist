@@ -199,14 +199,14 @@ export async function syncPlaybackContextForVideo(
   tabId: number,
   videoId: VideoId,
 ): Promise<PlaybackContext | null> {
-  const [playlists, lastActivePlaylistId, playbackContexts] = await Promise.all([
+  const [playlists, playbackContexts] = await Promise.all([
     getStoredPlaylists(),
-    getLastActivePlaylistId(),
     getStoredPlaybackContexts(),
   ]);
-
-  const activePlaylist = playlists.find((playlist) => playlist.id === lastActivePlaylistId);
   const previousPlaybackContext = playbackContexts.find((context) => context.tabId === tabId);
+  const activePlaylist = previousPlaybackContext
+    ? playlists.find((playlist) => playlist.id === previousPlaybackContext.playlistId)
+    : null;
   const currentIndex: number | null = activePlaylist
     ? resolvePlaybackIndex(activePlaylist, videoId, previousPlaybackContext)
     : null;

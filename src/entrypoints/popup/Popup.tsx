@@ -15,6 +15,7 @@ import {
   activateStoredPlaylist,
   getLastActivePlaylistId,
   getStoredPlaybackContextByTabId,
+  getStoredPlaybackContexts,
   getStoredPlaylists,
   setStoredPlaybackContextIndex,
 } from "@/background/services/playlistStore";
@@ -64,6 +65,20 @@ async function getActiveTabId(): Promise<number | null> {
   return typeof activeTab?.id === "number" ? activeTab.id : null;
 }
 
+async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
+  const settledTabs = await Promise.allSettled(
+    tabIds.map((tabId) =>
+      browser.tabs.get(tabId).then((tab) => (typeof tab.id === "number" ? tab.id : null)),
+    ),
+  );
+
+  return new Set(
+    settledTabs.flatMap((result) =>
+      result.status === "fulfilled" && typeof result.value === "number" ? [result.value] : [],
+    ),
+  );
+}
+
 async function fetchPopupState(): Promise<PopupState> {
   const activeTabId = await getActiveTabId();
   const [playlists, lastActivePlaylistId, videoMetadataMap, ownersMap, playbackContext] =
@@ -100,6 +115,9 @@ function buildWatchUrl(videoId: string): string {
 function Popup() {
   const [popupState, { refetch }] = createResource(fetchPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
+  const [aliveTabIdByPlaylistId, setAliveTabIdByPlaylistId] = createSignal<
+    Partial<Record<PlaylistId, number>>
+  >({});
   let videoListElement: HTMLUListElement | undefined;
   const videoItemElements: Array<HTMLLIElement | undefined> = [];
 
@@ -107,6 +125,15 @@ function Popup() {
     popupState()?.playlists.find(
       (playlist) => playlist.id === popupState()?.lastActivePlaylistId,
     ) ?? null;
+  const activePlaylistAliveTabId = () => {
+    const playlist = activePlaylist();
+
+    if (!playlist) {
+      return null;
+    }
+
+    return aliveTabIdByPlaylistId()[playlist.id] ?? null;
+  };
 
   const currentPlaybackIndex = () => {
     const state = popupState();
@@ -159,6 +186,26 @@ function Popup() {
     });
   });
 
+  async function refreshAliveTabMap() {
+    const playbackContexts = await getStoredPlaybackContexts();
+    const aliveTabIds = await resolveAliveTabIds([
+      ...new Set(playbackContexts.map((context) => context.tabId)),
+    ]);
+    const nextAliveTabIdByPlaylistId = playbackContexts.reduce<Partial<Record<PlaylistId, number>>>(
+      (result, context) => {
+        if (!aliveTabIds.has(context.tabId) || result[context.playlistId] !== undefined) {
+          return result;
+        }
+
+        result[context.playlistId] = context.tabId;
+        return result;
+      },
+      {},
+    );
+
+    setAliveTabIdByPlaylistId(nextAliveTabIdByPlaylistId);
+  }
+
   onMount(() => {
     const handleStorageChanged = (changes: StorageChanges) => {
       if (
@@ -176,6 +223,7 @@ function Popup() {
 
     browser.storage.onChanged.addListener(handleStorageChanged);
     void refetch();
+    void refreshAliveTabMap();
 
     onCleanup(() => {
       browser.storage.onChanged.removeListener(handleStorageChanged);
@@ -188,8 +236,40 @@ function Popup() {
     try {
       await activateStoredPlaylist(playlistId);
       await refetch();
+      await refreshAliveTabMap();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "プレイリストの選択に失敗しました。");
+    }
+  }
+
+  async function handleFocusAliveTab() {
+    const tabId = activePlaylistAliveTabId();
+
+    if (tabId === null) {
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      const tab = await browser.tabs.get(tabId);
+      const tasks: Promise<unknown>[] = [
+        browser.tabs.update(tabId, {
+          active: true,
+        }),
+      ];
+
+      if (typeof tab.windowId === "number") {
+        tasks.push(
+          browser.windows.update(tab.windowId, {
+            focused: true,
+          }),
+        );
+      }
+
+      await Promise.all(tasks);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "対応タブへ移動できませんでした。");
     }
   }
 
@@ -280,7 +360,27 @@ function Popup() {
                 {(playlist) => (
                   <div class="space-y-3">
                     <div class="flex items-center justify-between gap-3 rounded-xl bg-stone-900/40 px-3 py-2.5">
-                      <p class="text-xs text-stone-400">{playlist().videoIds.length} 件</p>
+                      <div class="flex items-center gap-2 text-xs text-stone-400">
+                        <span>{playlist().videoIds.length} 件</span>
+                        <Show
+                          when={activePlaylistAliveTabId() !== null}
+                          fallback={
+                            <span class="rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[11px] text-stone-400">
+                              対応タブなし
+                            </span>
+                          }
+                        >
+                          <button
+                            type="button"
+                            class="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-200 transition hover:bg-sky-500/20"
+                            title="対応タブへ移動"
+                            aria-label="対応タブへ移動"
+                            onClick={() => void handleFocusAliveTab()}
+                          >
+                            対応タブあり
+                          </button>
+                        </Show>
+                      </div>
                       <Show when={currentPlaybackIndex() !== null}>
                         <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-200">
                           再生中: {formatIndex(currentPlaybackIndex() ?? 0)}
