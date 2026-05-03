@@ -1,47 +1,6 @@
 import { getStorageData, setStorageData } from "@/background/services/storage";
+import { isOwnerMetadata, isVideoMetadata } from "@/lib/typeGuards";
 import type { OwnerId, OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
-
-function isVideoMetadata(value: unknown): value is VideoMetadata {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<VideoMetadata>;
-
-  return (
-    typeof candidate.watchId === "string" &&
-    typeof candidate.title === "string" &&
-    !!candidate.thumbnail &&
-    typeof candidate.thumbnail === "object" &&
-    (candidate.duration === null || typeof candidate.duration === "number") &&
-    (candidate.ownerId === null ||
-      candidate.ownerId === undefined ||
-      typeof candidate.ownerId === "string") &&
-    typeof candidate.fetchedAt === "string"
-  );
-}
-
-function isOwnerMetadata(value: unknown): value is OwnerMetadata {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<OwnerMetadata>;
-
-  return (
-    typeof candidate.id === "string" &&
-    (candidate.name === null ||
-      candidate.name === undefined ||
-      typeof candidate.name === "string") &&
-    (candidate.type === null ||
-      candidate.type === undefined ||
-      typeof candidate.type === "string") &&
-    (candidate.iconUrl === null ||
-      candidate.iconUrl === undefined ||
-      typeof candidate.iconUrl === "string") &&
-    typeof candidate.fetchedAt === "string"
-  );
-}
 
 export async function getStoredVideoMetadataMap(): Promise<Record<string, VideoMetadata>> {
   const { videoMetadata } = await getStorageData(["videoMetadata"]);

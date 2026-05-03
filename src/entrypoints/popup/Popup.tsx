@@ -309,6 +309,9 @@ function Popup() {
                         </button>
                       </Show>
                     </div>
+                    <Show when={playlist().memo}>
+                      {(memo) => <p class="text-xs leading-5 text-stone-500">{memo()}</p>}
+                    </Show>
                     <PopupPlaylistVideoList
                       currentPlaybackIndex={currentPlaybackIndex()}
                       onMovePlaybackIndex={(index) => void handleMovePlaybackIndex(index)}

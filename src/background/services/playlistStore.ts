@@ -1,37 +1,6 @@
 import { getStorageData, setStorageData } from "@/background/services/storage";
+import { isPlaybackContext, isPlaylist } from "@/lib/typeGuards";
 import type { PlaybackContext, Playlist, PlaylistId, VideoId } from "@/lib/types";
-
-function isPlaylist(value: unknown): value is Playlist {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<Playlist>;
-
-  return (
-    typeof candidate.id === "string" &&
-    Array.isArray(candidate.videoIds) &&
-    candidate.videoIds.every((videoId) => typeof videoId === "string") &&
-    (candidate.title === undefined || typeof candidate.title === "string") &&
-    (candidate.memo === undefined || typeof candidate.memo === "string")
-  );
-}
-
-function isPlaybackContext(value: unknown): value is PlaybackContext {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<PlaybackContext>;
-
-  return (
-    typeof candidate.playlistId === "string" &&
-    typeof candidate.tabId === "number" &&
-    Number.isInteger(candidate.tabId) &&
-    typeof candidate.currentIndex === "number" &&
-    Number.isInteger(candidate.currentIndex)
-  );
-}
 
 function resolvePlaybackIndex(
   playlist: Playlist,
