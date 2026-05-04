@@ -35,27 +35,32 @@ export function createCurrentPlaybackIndex(
   return () => {
     const state = popupState();
     const playlist = activePlaylist();
+    const playbackTabId = activePlaylistAliveTabId();
 
     if (!state || !playlist) {
       return null;
     }
 
-    const activeTabPlaybackContext =
-      state.activeTabId === null
-        ? null
-        : state.playbackContexts.find((context) => context.tabId === state.activeTabId);
-    const alivePlaylistTabId = activePlaylistAliveTabId();
-    const alivePlaylistPlaybackContext =
-      alivePlaylistTabId === null
-        ? null
-        : (state.playbackContexts.find((context) => context.tabId === alivePlaylistTabId) ?? null);
-    const playlistPlaybackContext =
-      activeTabPlaybackContext?.playlistId === playlist.id
-        ? activeTabPlaybackContext
-        : alivePlaylistPlaybackContext?.playlistId === playlist.id
-          ? alivePlaylistPlaybackContext
-          : (state.playbackContexts.find((context) => context.playlistId === playlist.id) ?? null);
+    if (playbackTabId === null) {
+      const playlistContexts = state.playbackContexts.filter(
+        (context) => context.playlistId === playlist.id,
+      );
 
-    return playlistPlaybackContext?.currentIndex ?? null;
+      if (playlistContexts.length === 0) {
+        return null;
+      }
+
+      return Math.max(...playlistContexts.map((context) => context.currentIndex));
+    }
+
+    const playbackContext = state.playbackContexts.find(
+      (context) => context.tabId === playbackTabId,
+    );
+
+    if (playbackContext?.playlistId !== playlist.id) {
+      return null;
+    }
+
+    return playbackContext.currentIndex ?? null;
   };
 }

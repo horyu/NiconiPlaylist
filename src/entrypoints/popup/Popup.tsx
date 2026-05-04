@@ -32,7 +32,17 @@ type StorageChanges = Record<string, { oldValue?: unknown; newValue?: unknown }>
 async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
   const settledTabs = await Promise.allSettled(
     tabIds.map((tabId) =>
-      browser.tabs.get(tabId).then((tab) => (typeof tab.id === "number" ? tab.id : null)),
+      browser.tabs.get(tabId).then((tab) => {
+        if (typeof tab.id !== "number") {
+          return null;
+        }
+
+        if (!tab.url || !tab.url.startsWith(WATCH_URL_PREFIX)) {
+          return null;
+        }
+
+        return tab.id;
+      }),
     ),
   );
 
@@ -51,6 +61,16 @@ function buildWatchUrl(videoId: string): string {
   return `https://www.nicovideo.jp/watch/${videoId}`;
 }
 
+const WATCH_URL_PREFIX = "https://www.nicovideo.jp/watch/";
+
+function isNewTabUrl(url: string | null): boolean {
+  if (!url) {
+    return false;
+  }
+
+  return !/^https?:\/\//u.test(url);
+}
+
 function Popup() {
   const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
@@ -63,10 +83,41 @@ function Popup() {
     activePlaylist,
     aliveTabIdByPlaylistId,
   );
+  const playbackTabId = () => {
+    const state = popupState();
+    const playlist = activePlaylist();
+
+    if (!state || !playlist) {
+      return null;
+    }
+
+    const aliveTabId = activePlaylistAliveTabId();
+
+    if (aliveTabId !== null) {
+      return aliveTabId;
+    }
+
+    const activeTabId = state.activeTabId;
+    const activeTabUrl = state.activeTabUrl ?? null;
+
+    if (!activeTabId || !activeTabUrl?.startsWith(WATCH_URL_PREFIX)) {
+      return null;
+    }
+
+    const activeTabPlaybackContext = state.playbackContexts.find(
+      (context) => context.tabId === activeTabId,
+    );
+
+    if (activeTabPlaybackContext?.playlistId !== playlist.id) {
+      return null;
+    }
+
+    return activeTabId;
+  };
   const currentPlaybackIndex = createCurrentPlaybackIndex(
     () => popupState(),
     activePlaylist,
-    activePlaylistAliveTabId,
+    playbackTabId,
   );
   const activePlaylistVideoCount = () => activePlaylist()?.videoIds.length ?? 0;
   const autoScrollKey = () => {
@@ -156,7 +207,7 @@ function Popup() {
   }
 
   async function handleFocusPlaybackTab() {
-    const tabId = activePlaylistAliveTabId();
+    const tabId = playbackTabId();
 
     if (tabId === null) {
       return;
@@ -190,9 +241,11 @@ function Popup() {
     const state = popupState();
     const playlist = activePlaylist();
     const nextVideoId = playlist?.videoIds[index];
-    const targetTabId = activePlaylistAliveTabId() ?? state?.activeTabId ?? null;
+    const activeTabId = state?.activeTabId ?? null;
+    const activeTabUrl = state?.activeTabUrl ?? null;
+    const playbackTabIdValue = playbackTabId();
 
-    if (!targetTabId || !playlist || !nextVideoId) {
+    if (!playlist || !nextVideoId) {
       setFeedback("現在のタブ情報を取得できません。");
       return;
     }
@@ -200,10 +253,36 @@ function Popup() {
     setFeedback(null);
 
     try {
-      await setStoredPlaybackContextIndex(targetTabId, playlist.id, index);
-      await browser.tabs.update(targetTabId, {
-        url: buildWatchUrl(nextVideoId),
+      const watchUrl = buildWatchUrl(nextVideoId);
+
+      if (playbackTabIdValue !== null) {
+        await setStoredPlaybackContextIndex(playbackTabIdValue, playlist.id, index);
+        await browser.tabs.update(playbackTabIdValue, {
+          url: watchUrl,
+        });
+        await refetch();
+        return;
+      }
+
+      if (activeTabId && isNewTabUrl(activeTabUrl)) {
+        await setStoredPlaybackContextIndex(activeTabId, playlist.id, index);
+        await browser.tabs.update(activeTabId, {
+          url: watchUrl,
+        });
+        await refetch();
+        return;
+      }
+
+      const createdTab = await browser.tabs.create({
+        url: watchUrl,
+        active: true,
       });
+
+      if (typeof createdTab.id !== "number") {
+        throw new Error("新しいタブを作成できませんでした。");
+      }
+
+      await setStoredPlaybackContextIndex(createdTab.id, playlist.id, index);
       await refetch();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "再生位置の更新に失敗しました。");
@@ -299,7 +378,7 @@ function Popup() {
                     <PopupPlaylistVideoList
                       autoScrollKey={autoScrollKey()}
                       currentPlaybackIndex={currentPlaybackIndex()}
-                      hasPlaybackTab={activePlaylistAliveTabId() !== null}
+                      hasPlaybackTab={playbackTabId() !== null}
                       manualScrollRequestKey={manualScrollRequestKey()}
                       onFocusPlaybackTab={() => void handleFocusPlaybackTab()}
                       onMovePlaybackIndex={(index) => void handleMovePlaybackIndex(index)}
