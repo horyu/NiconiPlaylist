@@ -118,6 +118,10 @@ async function handlePause(event: Event) {
   });
   if (playbackState?.nextVideoId) {
     navigateToNextVideo(playbackState.nextVideoId);
+  } else {
+    void browser.runtime.sendMessage({
+      type: "watch:clear-playback-context",
+    });
   }
 
   console.log("NiconiPlaylist detected playback end.", {

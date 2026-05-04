@@ -108,6 +108,13 @@ export async function getStoredPlaybackContextByTabId(
   return playbackContexts.find((context) => context.tabId === tabId) ?? null;
 }
 
+export async function clearStoredPlaybackContextByTabId(tabId: number): Promise<void> {
+  const playbackContexts = await getStoredPlaybackContexts();
+  const nextPlaybackContexts = playbackContexts.filter((context) => context.tabId !== tabId);
+
+  await setStoredPlaybackContexts(nextPlaybackContexts);
+}
+
 export async function setStoredPlaybackContextIndex(
   tabId: number,
   playlistId: PlaylistId,

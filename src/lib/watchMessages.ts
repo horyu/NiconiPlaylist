@@ -15,6 +15,10 @@ export type WatchNavigateNextVideoMessage = {
   url: string;
 };
 
+export type WatchClearPlaybackContextMessage = {
+  type: "watch:clear-playback-context";
+};
+
 export type WatchInitLocationObserverMessage = {
   type: "watch:init-location-observer";
 };
@@ -23,7 +27,8 @@ export type WatchMessage =
   | WatchSyncPlaybackContextMessage
   | WatchResolveNextVideoMessage
   | WatchNavigateNextVideoMessage
-  | WatchInitLocationObserverMessage;
+  | WatchInitLocationObserverMessage
+  | WatchClearPlaybackContextMessage;
 
 export type WatchPlaybackContextResponse = {
   playbackContext: PlaybackContext | null;

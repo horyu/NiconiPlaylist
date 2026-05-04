@@ -1,6 +1,7 @@
 import { browser } from "wxt/browser";
 
 import {
+  clearStoredPlaybackContextByTabId,
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
 } from "@/background/services/playlistStore";
@@ -34,6 +35,14 @@ export async function handleWatchMessage(
 
   if (message.type === "watch:resolve-next-video") {
     return resolveNextVideoForPlaybackContext(tabId, message.videoId);
+  }
+
+  if (message.type === "watch:clear-playback-context") {
+    await clearStoredPlaybackContextByTabId(tabId);
+    return {
+      playbackContext: null,
+      nextVideoId: null,
+    };
   }
 
   if (message.type === "watch:navigate-next-video") {
