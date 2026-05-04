@@ -21,8 +21,9 @@ function formatIndex(index: number): string {
 type PopupPlaylistVideoListProps = {
   autoScrollKey: string | null;
   currentPlaybackIndex: number | null;
-  hasAlivePlaybackTab: boolean;
+  hasPlaybackTab: boolean;
   manualScrollRequestKey: number;
+  onFocusPlaybackTab: () => void;
   onMovePlaybackIndex: (index: number) => void;
   ownersMap: Record<string, OwnerMetadata>;
   playlist: Playlist;
@@ -96,7 +97,8 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
             return ownerId ? props.ownersMap[ownerId] : undefined;
           };
           const isCurrent = () => props.currentPlaybackIndex === index();
-          const showPlaybackButton = () => !isCurrent() || !props.hasAlivePlaybackTab;
+          const showPlaybackButton = () => !isCurrent() || !props.hasPlaybackTab;
+          const canFocusPlaybackTab = () => isCurrent() && props.hasPlaybackTab;
 
           return (
             <li
@@ -156,9 +158,24 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                 <Show
                   when={showPlaybackButton()}
                   fallback={
-                    <div class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200">
-                      ●
-                    </div>
+                    <Show
+                      when={canFocusPlaybackTab()}
+                      fallback={
+                        <div class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200">
+                          ●
+                        </div>
+                      }
+                    >
+                      <button
+                        type="button"
+                        class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+                        title="再生中のタブをフォーカス"
+                        aria-label="再生中のタブをフォーカス"
+                        onClick={() => props.onFocusPlaybackTab()}
+                      >
+                        ●
+                      </button>
+                    </Show>
                   }
                 >
                   <button

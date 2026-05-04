@@ -68,6 +68,7 @@ function Popup() {
     activePlaylist,
     activePlaylistAliveTabId,
   );
+  const activePlaylistVideoCount = () => activePlaylist()?.videoIds.length ?? 0;
   const autoScrollKey = () => {
     const playlist = activePlaylist();
     const playbackIndex = currentPlaybackIndex();
@@ -116,6 +117,7 @@ function Popup() {
         changes[STORAGE_KEYS.playbackContexts]
       ) {
         void refetch();
+        void refreshAliveTabMap();
       }
 
       if (changes[STORAGE_KEYS.videoMetadata] || changes[STORAGE_KEYS.owners]) {
@@ -153,7 +155,7 @@ function Popup() {
     }
   }
 
-  async function handleFocusAliveTab() {
+  async function handleFocusPlaybackTab() {
     const tabId = activePlaylistAliveTabId();
 
     if (tabId === null) {
@@ -188,8 +190,7 @@ function Popup() {
     const state = popupState();
     const playlist = activePlaylist();
     const nextVideoId = playlist?.videoIds[index];
-    const playbackTabId = activePlaylistAliveTabId();
-    const targetTabId = playbackTabId ?? state?.activeTabId ?? null;
+    const targetTabId = activePlaylistAliveTabId() ?? state?.activeTabId ?? null;
 
     if (!targetTabId || !playlist || !nextVideoId) {
       setFeedback("現在のタブ情報を取得できません。");
@@ -255,7 +256,7 @@ function Popup() {
 
           <Match when={popupState()?.playlists.length}>
             <div class="space-y-3">
-              <div>
+              <div class="flex items-center gap-2">
                 <select
                   class="w-full rounded-xl border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
                   value={popupState()?.lastActivePlaylistId ?? ""}
@@ -267,55 +268,40 @@ function Popup() {
                     )}
                   </For>
                 </select>
+                <button
+                  type="button"
+                  class={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    currentPlaybackIndex() !== null
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                      : "border-stone-700 bg-stone-900 text-stone-300"
+                  }`}
+                  title="再生中の動画へ移動"
+                  aria-label="再生中の動画へ移動"
+                  onClick={() => {
+                    if (currentPlaybackIndex() === null) {
+                      return;
+                    }
+                    setManualScrollRequestKey((value) => value + 1);
+                  }}
+                >
+                  {currentPlaybackIndex() === null ? "-" : (currentPlaybackIndex() ?? 0) + 1}
+                  {" / "}
+                  {activePlaylistVideoCount()}件
+                </button>
               </div>
 
               <Show when={activePlaylist()}>
                 {(playlist) => (
                   <div class="space-y-3">
-                    <div class="flex items-center justify-between gap-3 rounded-xl bg-stone-900/40 px-3 py-2.5">
-                      <div class="flex items-center gap-2 text-xs text-stone-400">
-                        <span>{playlist().videoIds.length} 件</span>
-                        <Show
-                          when={activePlaylistAliveTabId() !== null}
-                          fallback={
-                            <span class="rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[11px] text-stone-400">
-                              対応タブなし
-                            </span>
-                          }
-                        >
-                          <button
-                            type="button"
-                            class="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-0.5 text-[11px] text-sky-200 transition hover:bg-sky-500/20"
-                            title="再生中のタブをフォーカス"
-                            aria-label="再生中のタブをフォーカス"
-                            onClick={() => void handleFocusAliveTab()}
-                          >
-                            再生中のタブをフォーカス
-                          </button>
-                        </Show>
-                      </div>
-                      <Show when={currentPlaybackIndex() !== null}>
-                        <button
-                          type="button"
-                          class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
-                          title="再生位置へスクロール"
-                          aria-label="再生位置へスクロール"
-                          onClick={() => {
-                            setManualScrollRequestKey((value) => value + 1);
-                          }}
-                        >
-                          再生中: {(currentPlaybackIndex() ?? 0) + 1}
-                        </button>
-                      </Show>
-                    </div>
                     <Show when={playlist().memo}>
                       {(memo) => <p class="text-xs leading-5 text-stone-500">{memo()}</p>}
                     </Show>
                     <PopupPlaylistVideoList
                       autoScrollKey={autoScrollKey()}
                       currentPlaybackIndex={currentPlaybackIndex()}
-                      hasAlivePlaybackTab={activePlaylistAliveTabId() !== null}
+                      hasPlaybackTab={activePlaylistAliveTabId() !== null}
                       manualScrollRequestKey={manualScrollRequestKey()}
+                      onFocusPlaybackTab={() => void handleFocusPlaybackTab()}
                       onMovePlaybackIndex={(index) => void handleMovePlaybackIndex(index)}
                       ownersMap={popupState()?.ownersMap ?? {}}
                       playlist={playlist()}
