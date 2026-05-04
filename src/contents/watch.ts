@@ -52,7 +52,10 @@ function buildWatchUrl(videoId: string): string {
 
 function navigateToNextVideo(nextVideoId: string): void {
   const nextVideoUrl = buildWatchUrl(nextVideoId);
-  location.href = nextVideoUrl;
+  void browser.runtime.sendMessage({
+    type: "watch:navigate-next-video",
+    url: nextVideoUrl,
+  });
 }
 
 async function handlePause(event: Event) {

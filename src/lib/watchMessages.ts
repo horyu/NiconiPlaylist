@@ -10,7 +10,15 @@ export type WatchResolveNextVideoMessage = {
   videoId: VideoId;
 };
 
-export type WatchMessage = WatchSyncPlaybackContextMessage | WatchResolveNextVideoMessage;
+export type WatchNavigateNextVideoMessage = {
+  type: "watch:navigate-next-video";
+  url: string;
+};
+
+export type WatchMessage =
+  | WatchSyncPlaybackContextMessage
+  | WatchResolveNextVideoMessage
+  | WatchNavigateNextVideoMessage;
 
 export type WatchPlaybackContextResponse = {
   playbackContext: PlaybackContext | null;
