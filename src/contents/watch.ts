@@ -147,6 +147,7 @@ export function initWatchContent() {
   document.addEventListener("pause", handlePause, true);
   initWatchLocationObserver();
   syncPlaybackContextIfNeeded();
+  void browser.runtime.sendMessage({ type: "badge:refresh" });
 
   console.log("NiconiPlaylist content loaded.", { url: location.href });
 }

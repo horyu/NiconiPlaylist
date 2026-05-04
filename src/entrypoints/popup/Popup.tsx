@@ -187,6 +187,7 @@ function Popup() {
     browser.tabs.onUpdated.addListener(handleTabUpdated);
     void refetch();
     void refreshAliveTabMap();
+    void browser.runtime.sendMessage({ type: "badge:refresh" });
 
     onCleanup(() => {
       browser.storage.onChanged.removeListener(handleStorageChanged);
