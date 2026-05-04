@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { createEffect, For, on, Show } from "solid-js";
 
 import type { Playlist } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
@@ -19,21 +19,72 @@ function formatIndex(index: number): string {
 }
 
 type PopupPlaylistVideoListProps = {
+  autoScrollKey: string | null;
   currentPlaybackIndex: number | null;
   hasAlivePlaybackTab: boolean;
+  manualScrollRequestKey: number;
   onMovePlaybackIndex: (index: number) => void;
   ownersMap: Record<string, OwnerMetadata>;
   playlist: Playlist;
-  registerVideoItemElement: (index: number, element: HTMLLIElement) => void;
-  registerVideoListElement: (element: HTMLUListElement) => void;
   videoMetadataMap: Record<string, VideoMetadata>;
 };
 
 export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
+  let videoListElement: HTMLUListElement | undefined;
+  const videoItemElements: Array<HTMLLIElement | undefined> = [];
+
+  function scrollToPlaybackIndex(playbackIndex: number) {
+    if (!videoListElement) {
+      return;
+    }
+
+    const targetIndex = Math.max(playbackIndex - 2, 0);
+
+    requestAnimationFrame(() => {
+      const targetElement = videoItemElements[targetIndex];
+
+      if (!videoListElement || !targetElement || !videoListElement.contains(targetElement)) {
+        return;
+      }
+
+      const listRect = videoListElement.getBoundingClientRect();
+      const targetRect = targetElement.getBoundingClientRect();
+      const delta = targetRect.top - listRect.top;
+
+      videoListElement.scrollTop += delta;
+    });
+  }
+
+  createEffect(
+    on(
+      () => props.autoScrollKey,
+      (scrollKey) => {
+        if (!scrollKey || props.currentPlaybackIndex === null) {
+          return;
+        }
+
+        scrollToPlaybackIndex(props.currentPlaybackIndex);
+      },
+    ),
+  );
+
+  createEffect(
+    on(
+      () => props.manualScrollRequestKey,
+      (requestKey) => {
+        if (requestKey === 0 || props.currentPlaybackIndex === null) {
+          return;
+        }
+
+        scrollToPlaybackIndex(props.currentPlaybackIndex);
+      },
+    ),
+  );
+
   return (
     <ul
       ref={(element) => {
-        props.registerVideoListElement(element);
+        videoListElement = element;
       }}
       class="max-h-[32rem] space-y-2 overflow-y-auto pr-1"
     >
@@ -50,7 +101,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
           return (
             <li
               ref={(element) => {
-                props.registerVideoItemElement(index(), element);
+                videoItemElements[index()] = element;
               }}
               class={`flex items-start gap-3 rounded-xl border p-3 transition ${
                 isCurrent()

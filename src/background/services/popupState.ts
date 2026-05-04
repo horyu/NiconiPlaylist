@@ -7,6 +7,7 @@ import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export type PopupState = {
   activeTabId: number | null;
+  activeTabUrl: string | null;
   ownersMap: Record<string, OwnerMetadata>;
   playbackContexts: PlaybackContext[];
   playlists: Playlist[];
@@ -14,18 +15,24 @@ export type PopupState = {
   videoMetadataMap: Record<string, VideoMetadata>;
 };
 
-async function getActiveTabId(): Promise<number | null> {
+async function getActiveTabInfo(): Promise<{
+  activeTabId: number | null;
+  activeTabUrl: string | null;
+}> {
   const [activeTab] = await browser.tabs.query({
     active: true,
     currentWindow: true,
   });
 
-  return typeof activeTab?.id === "number" ? activeTab.id : null;
+  return {
+    activeTabId: typeof activeTab?.id === "number" ? activeTab.id : null,
+    activeTabUrl: typeof activeTab?.url === "string" ? activeTab.url : null,
+  };
 }
 
 export async function getPopupState(): Promise<PopupState> {
-  const [activeTabId, storageData] = await Promise.all([
-    getActiveTabId(),
+  const [activeTabInfo, storageData] = await Promise.all([
+    getActiveTabInfo(),
     getStorageData([
       "playlists",
       "lastActivePlaylistId",
@@ -36,7 +43,8 @@ export async function getPopupState(): Promise<PopupState> {
   ]);
 
   return {
-    activeTabId,
+    activeTabId: activeTabInfo.activeTabId,
+    activeTabUrl: activeTabInfo.activeTabUrl,
     ownersMap: Object.fromEntries(
       Object.entries(storageData.owners).filter((entry): entry is [string, OwnerMetadata] =>
         isOwnerMetadata(entry[1]),

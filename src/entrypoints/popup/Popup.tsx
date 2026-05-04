@@ -54,11 +54,10 @@ function buildWatchUrl(videoId: string): string {
 function Popup() {
   const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
+  const [manualScrollRequestKey, setManualScrollRequestKey] = createSignal(0);
   const [aliveTabIdByPlaylistId, setAliveTabIdByPlaylistId] = createSignal<
     Partial<Record<PlaylistId, number>>
   >({});
-  let videoListElement: HTMLUListElement | undefined;
-  const videoItemElements: Array<HTMLLIElement | undefined> = [];
   const activePlaylist = createActivePlaylist(() => popupState());
   const activePlaylistAliveTabId = createActivePlaylistAliveTabId(
     activePlaylist,
@@ -69,24 +68,17 @@ function Popup() {
     activePlaylist,
     activePlaylistAliveTabId,
   );
+  const autoScrollKey = () => {
+    const playlist = activePlaylist();
+    const playbackIndex = currentPlaybackIndex();
+    const activeTabUrl = popupState()?.activeTabUrl ?? null;
 
-  function scrollToPlaybackIndex(playbackIndex: number) {
-    if (!videoListElement) {
-      return;
+    if (!playlist || playbackIndex === null) {
+      return null;
     }
 
-    const targetIndex = Math.max(playbackIndex - 2, 0);
-    const targetElement = videoItemElements[targetIndex];
-
-    if (!targetElement || !videoListElement.contains(targetElement)) {
-      return;
-    }
-
-    const listRect = videoListElement.getBoundingClientRect();
-    const targetRect = targetElement.getBoundingClientRect();
-
-    videoListElement.scrollTop += targetRect.top - listRect.top;
-  }
+    return `${playlist.id}:${playbackIndex}:${activeTabUrl ?? ""}`;
+  };
 
   createEffect(() => {
     const videoIds = activePlaylist()?.videoIds ?? [];
@@ -130,13 +122,22 @@ function Popup() {
         void refetch();
       }
     };
+    const handleTabUpdated = (tabId: number, changeInfo: { url?: string }) => {
+      if (tabId !== popupState()?.activeTabId || changeInfo.url === undefined) {
+        return;
+      }
+
+      void refetch();
+    };
 
     browser.storage.onChanged.addListener(handleStorageChanged);
+    browser.tabs.onUpdated.addListener(handleTabUpdated);
     void refetch();
     void refreshAliveTabMap();
 
     onCleanup(() => {
       browser.storage.onChanged.removeListener(handleStorageChanged);
+      browser.tabs.onUpdated.removeListener(handleTabUpdated);
     });
   });
 
@@ -187,8 +188,10 @@ function Popup() {
     const state = popupState();
     const playlist = activePlaylist();
     const nextVideoId = playlist?.videoIds[index];
+    const playbackTabId = activePlaylistAliveTabId();
+    const targetTabId = playbackTabId ?? state?.activeTabId ?? null;
 
-    if (!state?.activeTabId || !playlist || !nextVideoId) {
+    if (!targetTabId || !playlist || !nextVideoId) {
       setFeedback("現在のタブ情報を取得できません。");
       return;
     }
@@ -196,8 +199,8 @@ function Popup() {
     setFeedback(null);
 
     try {
-      await setStoredPlaybackContextIndex(state.activeTabId, playlist.id, index);
-      await browser.tabs.update(state.activeTabId, {
+      await setStoredPlaybackContextIndex(targetTabId, playlist.id, index);
+      await browser.tabs.update(targetTabId, {
         url: buildWatchUrl(nextVideoId),
       });
       await refetch();
@@ -242,11 +245,11 @@ function Popup() {
             </div>
           }
         >
-          <Match when={popupState.loading}>
+          <Match when={popupState.loading && !popupState()}>
             <p class="text-sm text-stone-400">プレイリストを読み込み中...</p>
           </Match>
 
-          <Match when={popupState.error}>
+          <Match when={popupState.error && !popupState()}>
             <p class="text-sm text-red-300">プレイリストの読み込みに失敗しました。</p>
           </Match>
 
@@ -298,11 +301,7 @@ function Popup() {
                           title="再生位置へスクロール"
                           aria-label="再生位置へスクロール"
                           onClick={() => {
-                            const playbackIndex = currentPlaybackIndex();
-
-                            if (playbackIndex !== null) {
-                              scrollToPlaybackIndex(playbackIndex);
-                            }
+                            setManualScrollRequestKey((value) => value + 1);
                           }}
                         >
                           再生中: {(currentPlaybackIndex() ?? 0) + 1}
@@ -313,17 +312,13 @@ function Popup() {
                       {(memo) => <p class="text-xs leading-5 text-stone-500">{memo()}</p>}
                     </Show>
                     <PopupPlaylistVideoList
+                      autoScrollKey={autoScrollKey()}
                       currentPlaybackIndex={currentPlaybackIndex()}
                       hasAlivePlaybackTab={activePlaylistAliveTabId() !== null}
+                      manualScrollRequestKey={manualScrollRequestKey()}
                       onMovePlaybackIndex={(index) => void handleMovePlaybackIndex(index)}
                       ownersMap={popupState()?.ownersMap ?? {}}
                       playlist={playlist()}
-                      registerVideoItemElement={(index, element) => {
-                        videoItemElements[index] = element;
-                      }}
-                      registerVideoListElement={(element) => {
-                        videoListElement = element;
-                      }}
                       videoMetadataMap={popupState()?.videoMetadataMap ?? {}}
                     />
                   </div>
