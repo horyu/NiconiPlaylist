@@ -1,8 +1,9 @@
 {
-  "name": "wxt-solid-starter",
-  "version": "0.0.0",
+  "name": "niconi-playlist",
+  "displayName": "Niconi Playlist",
+  "version": "0.0.1",
   "private": true,
-  "description": "manifest.json description",
+  "description": "ニコニコ動画のURLや動画IDからプレイリストを作成・管理できるブラウザ拡張機能。",
   "type": "module",
   "scripts": {
     "dev": "wxt",
