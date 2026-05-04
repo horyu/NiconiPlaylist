@@ -15,10 +15,15 @@ export type WatchNavigateNextVideoMessage = {
   url: string;
 };
 
+export type WatchInitLocationObserverMessage = {
+  type: "watch:init-location-observer";
+};
+
 export type WatchMessage =
   | WatchSyncPlaybackContextMessage
   | WatchResolveNextVideoMessage
-  | WatchNavigateNextVideoMessage;
+  | WatchNavigateNextVideoMessage
+  | WatchInitLocationObserverMessage;
 
 export type WatchPlaybackContextResponse = {
   playbackContext: PlaybackContext | null;

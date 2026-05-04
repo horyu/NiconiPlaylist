@@ -4,6 +4,7 @@ import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
 
 const PLAYBACK_END_THRESHOLD_SECONDS = 0.5;
 const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
+const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitialized";
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
 const ADVERTISEMENT_SRC_PREFIX = "https://dcdn.cdn.nimg.jp/nicoad/instream/video";
 const WATCH_VIDEO_ID_PATH_PATTERN = /^\/watch\/((sm|so|nm|ss)[1-9][0-9]{0,8})$/u;
@@ -50,11 +51,42 @@ function buildWatchUrl(videoId: string): string {
   return `${location.origin}/watch/${videoId}`;
 }
 
+let lastSyncedVideoId: string | null = null;
+
+function syncPlaybackContextIfNeeded(): void {
+  const videoId = getCurrentWatchVideoId();
+
+  if (!videoId || videoId === lastSyncedVideoId) {
+    return;
+  }
+
+  lastSyncedVideoId = videoId;
+  void syncPlaybackContext(videoId);
+}
+
 function navigateToNextVideo(nextVideoId: string): void {
   const nextVideoUrl = buildWatchUrl(nextVideoId);
   void browser.runtime.sendMessage({
     type: "watch:navigate-next-video",
     url: nextVideoUrl,
+  });
+}
+
+function initWatchLocationObserver(): void {
+  const state = globalThis as typeof globalThis & {
+    [WATCH_LOCATION_OBSERVER_KEY]?: boolean;
+  };
+
+  if (state[WATCH_LOCATION_OBSERVER_KEY]) {
+    return;
+  }
+
+  state[WATCH_LOCATION_OBSERVER_KEY] = true;
+  window.addEventListener("niconiplaylist:locationchange", () => {
+    syncPlaybackContextIfNeeded();
+  });
+  void browser.runtime.sendMessage({
+    type: "watch:init-location-observer",
   });
 }
 
@@ -109,12 +141,8 @@ export function initWatchContent() {
 
   state[WATCH_CONTENT_INIT_KEY] = true;
   document.addEventListener("pause", handlePause, true);
-
-  const videoId = getCurrentWatchVideoId();
-
-  if (videoId) {
-    void syncPlaybackContext(videoId);
-  }
+  initWatchLocationObserver();
+  syncPlaybackContextIfNeeded();
 
   console.log("NiconiPlaylist content loaded.", { url: location.href });
 }

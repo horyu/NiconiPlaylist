@@ -61,5 +61,41 @@ export async function handleWatchMessage(
     return undefined;
   }
 
+  if (message.type === "watch:init-location-observer") {
+    await browser.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: () => {
+        const key = "__niconiPlaylistWatchLocationObserverInitialized";
+        const state = window as typeof window & {
+          [key]?: boolean;
+        };
+
+        if (state[key]) {
+          return;
+        }
+
+        state[key] = true;
+
+        const notify = () => {
+          window.dispatchEvent(new Event("niconiplaylist:locationchange"));
+        };
+        const originalPushState = history.pushState;
+        history.pushState = function (...args) {
+          originalPushState.apply(this, args as Parameters<History["pushState"]>);
+          notify();
+        };
+        const originalReplaceState = history.replaceState;
+        history.replaceState = function (...args) {
+          originalReplaceState.apply(this, args as Parameters<History["replaceState"]>);
+          notify();
+        };
+
+        window.addEventListener("popstate", notify);
+      },
+    });
+    return undefined;
+  }
+
   return undefined;
 }
