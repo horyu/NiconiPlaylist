@@ -1,17 +1,19 @@
+import { appendNvapiClientMarker, NVAPI_VIDEOS_ENDPOINT } from "@/background/services/nvapi";
 import type { VideoId } from "@/lib/types";
 import type { DevVideoMetadataRecord } from "@/lib/videoMetadataTypes";
 
 export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVideoMetadataRecord> {
-  const response = await fetch(
-    `https://nvapi.nicovideo.jp/v1/videos?watchIds=${encodeURIComponent(watchId)}`,
-    {
-      method: "GET",
-      headers: {
-        "x-Frontend-Id": "6",
-        "x-Frontend-Version": "0",
-      },
+  const url = new URL(NVAPI_VIDEOS_ENDPOINT);
+  url.searchParams.set("watchIds", watchId);
+  appendNvapiClientMarker(url);
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "x-Frontend-Id": "6",
+      "x-Frontend-Version": "0",
     },
-  );
+  });
 
   if (!response.ok) {
     throw new Error(`動画情報の取得に失敗しました: ${response.status}`);

@@ -2,6 +2,7 @@ import { browser } from "wxt/browser";
 
 import { handleWatchMessage } from "@/background/handlers/watch";
 import { getStorageData } from "@/background/services/storage";
+import { initUserAgentOverride } from "@/background/services/userAgent";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { isPlaybackContext } from "@/lib/typeGuards";
 import type { WatchMessage } from "@/lib/watchMessages";
@@ -53,6 +54,12 @@ async function refreshPlaybackBadgeFromStorage() {
 }
 
 export function initBackground() {
+  void initUserAgentOverride().catch((error: unknown) => {
+    console.error("NiconiPlaylist failed to initialize User-Agent override.", {
+      error,
+    });
+  });
+
   browser.storage.onChanged.addListener((changes) => {
     if (!changes[STORAGE_KEYS.playbackContexts]) {
       return;
