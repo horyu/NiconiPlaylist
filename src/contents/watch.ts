@@ -48,7 +48,8 @@ async function resolveNextVideo(videoId: string): Promise<WatchPlaybackContextRe
 }
 
 function buildWatchUrl(videoId: string): string {
-  return `${location.origin}/watch/${videoId}`;
+  // 前回の再生位置を引き継がないように、クエリパラメータでfrom=0を付与する
+  return `${location.origin}/watch/${videoId}?from=0`;
 }
 
 let lastSyncedVideoId: string | null = null;
