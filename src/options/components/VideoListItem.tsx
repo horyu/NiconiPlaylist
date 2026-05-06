@@ -4,6 +4,7 @@ import type { VideoId } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 type VideoListItemProps = {
+  indexLabel?: string;
   ownerMetadata?: OwnerMetadata;
   videoId: VideoId;
   videoMetadata?: VideoMetadata;
@@ -23,6 +24,14 @@ function formatDuration(duration: number | null | undefined): string {
 export function VideoListItem(props: VideoListItemProps) {
   return (
     <li class="flex items-start gap-3 rounded-xl border border-stone-800 bg-stone-950/40 p-3">
+      <Show when={props.indexLabel}>
+        {(indexLabel) => (
+          <div class="flex w-8 shrink-0 justify-center pt-4 text-sm font-semibold text-stone-400">
+            {indexLabel()}
+          </div>
+        )}
+      </Show>
+
       <a
         href={`https://www.nicovideo.jp/watch/${props.videoId}`}
         target="_blank"
