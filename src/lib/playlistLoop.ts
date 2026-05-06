@@ -1,4 +1,4 @@
-import type { RepeatPreset, RepeatPresetMode, RepeatSettings } from "@/lib/types";
+import type { PlaybackSettings, RepeatPreset, RepeatPresetMode } from "@/lib/types";
 
 type RepeatPresetInput =
   | {
@@ -12,7 +12,8 @@ type RepeatPresetInput =
       durationSeconds?: number;
     };
 
-type RepeatSettingsInput = {
+type PlaybackSettingsInput = {
+  playlistRepeatEnabled?: boolean;
   activeRepeatPresetId?: string | null;
   presets?: RepeatPresetInput[];
 };
@@ -70,11 +71,12 @@ function sanitizeRepeatPreset(preset: RepeatPresetInput): RepeatPreset | null {
   return null;
 }
 
-export function sanitizeRepeatSettings(
-  settings: RepeatSettingsInput | null | undefined,
-): RepeatSettings {
+export function sanitizePlaybackSettings(
+  settings: PlaybackSettingsInput | null | undefined,
+): PlaybackSettings {
   if (!settings) {
     return {
+      playlistRepeatEnabled: false,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS.map((preset) => ({ ...preset })),
     };
@@ -92,12 +94,13 @@ export function sanitizeRepeatSettings(
       : null;
 
   return {
+    playlistRepeatEnabled: settings.playlistRepeatEnabled === true,
     activeRepeatPresetId,
     presets: normalizedPresets.map((preset) => ({ ...preset })),
   };
 }
 
-export function resolveActiveRepeatPreset(settings: RepeatSettings): RepeatPreset | null {
+export function resolveActiveRepeatPreset(settings: PlaybackSettings): RepeatPreset | null {
   if (!settings.activeRepeatPresetId) {
     return null;
   }
@@ -125,7 +128,7 @@ export function formatRepeatPresetLabel(preset: RepeatPreset): string {
 }
 
 export function shouldRepeatCurrentVideo(
-  settings: RepeatSettings,
+  settings: PlaybackSettings,
   completedPlaybackCount: number,
   durationSeconds: number,
 ): boolean {

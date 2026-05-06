@@ -4,7 +4,7 @@ import {
   DEFAULT_REPEAT_PRESETS,
   createRepeatPreset,
   resolveActiveRepeatPreset,
-  sanitizeRepeatSettings,
+  sanitizePlaybackSettings,
   shouldRepeatCurrentVideo,
 } from "./playlistLoop";
 
@@ -13,6 +13,7 @@ describe("playlistLoop", () => {
     expect(
       shouldRepeatCurrentVideo(
         {
+          playlistRepeatEnabled: false,
           activeRepeatPresetId: "count-3",
           presets: [
             {
@@ -29,6 +30,7 @@ describe("playlistLoop", () => {
     expect(
       shouldRepeatCurrentVideo(
         {
+          playlistRepeatEnabled: false,
           activeRepeatPresetId: "count-3",
           presets: [
             {
@@ -48,6 +50,7 @@ describe("playlistLoop", () => {
     expect(
       shouldRepeatCurrentVideo(
         {
+          playlistRepeatEnabled: false,
           activeRepeatPresetId: "duration-300",
           presets: [
             {
@@ -64,6 +67,7 @@ describe("playlistLoop", () => {
     expect(
       shouldRepeatCurrentVideo(
         {
+          playlistRepeatEnabled: false,
           activeRepeatPresetId: "duration-300",
           presets: [
             {
@@ -80,23 +84,27 @@ describe("playlistLoop", () => {
   });
 
   test("sanitize は未保存時だけ初期プリセットを補完し、無効な active id を解除する", () => {
-    expect(sanitizeRepeatSettings(undefined)).toEqual({
+    expect(sanitizePlaybackSettings(undefined)).toEqual({
+      playlistRepeatEnabled: false,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS,
     });
     expect(
-      sanitizeRepeatSettings({
+      sanitizePlaybackSettings({
+        playlistRepeatEnabled: false,
         activeRepeatPresetId: "missing",
         presets: [],
       }),
     ).toEqual({
+      playlistRepeatEnabled: false,
       activeRepeatPresetId: null,
       presets: [],
     });
   });
 
   test("active なプリセットを解決できる", () => {
-    const repeatSettings = sanitizeRepeatSettings({
+    const repeatSettings = sanitizePlaybackSettings({
+      playlistRepeatEnabled: false,
       activeRepeatPresetId: "custom",
       presets: [createRepeatPreset("count", 4, "custom")],
     });

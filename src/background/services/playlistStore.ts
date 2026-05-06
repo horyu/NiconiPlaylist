@@ -190,6 +190,7 @@ export async function resolveNextVideoForPlaybackContext(
   tabId: number,
   videoId: VideoId,
 ): Promise<{
+  firstVideoId: VideoId | null;
   playbackContext: PlaybackContext | null;
   nextVideoId: VideoId | null;
 }> {
@@ -197,6 +198,7 @@ export async function resolveNextVideoForPlaybackContext(
 
   if (!playbackContext) {
     return {
+      firstVideoId: null,
       playbackContext: null,
       nextVideoId: null,
     };
@@ -208,6 +210,7 @@ export async function resolveNextVideoForPlaybackContext(
   );
 
   return {
+    firstVideoId: playlist?.videoIds[0] ?? null,
     playbackContext,
     nextVideoId: playlist?.videoIds[playbackContext.currentIndex + 1] ?? null,
   };

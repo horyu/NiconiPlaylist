@@ -1,11 +1,11 @@
 import { browser } from "wxt/browser";
 
+import { getStoredPlaybackSettings } from "@/background/services/playbackSettings";
 import {
   clearStoredPlaybackContextByTabId,
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
 } from "@/background/services/playlistStore";
-import { getStoredRepeatSettings } from "@/background/services/repeatSettings";
 import type { WatchMessage, WatchPlaybackContextResponse } from "@/lib/watchMessages";
 
 type MessageSender = {
@@ -24,7 +24,7 @@ export async function handleWatchMessage(
     return {
       playbackContext: null,
       nextVideoId: null,
-      repeatSettings: null,
+      playbackSettings: null,
     };
   }
 
@@ -32,19 +32,22 @@ export async function handleWatchMessage(
     return {
       playbackContext: await syncPlaybackContextForVideo(tabId, message.videoId),
       nextVideoId: null,
-      repeatSettings: await getStoredRepeatSettings(),
+      playbackSettings: await getStoredPlaybackSettings(),
     };
   }
 
   if (message.type === "watch:resolve-next-video") {
-    const [playbackState, repeatSettings] = await Promise.all([
+    const [playbackSettings, playbackState] = await Promise.all([
+      getStoredPlaybackSettings(),
       resolveNextVideoForPlaybackContext(tabId, message.videoId),
-      getStoredRepeatSettings(),
     ]);
 
     return {
-      ...playbackState,
-      repeatSettings,
+      playbackContext: playbackState.playbackContext,
+      nextVideoId:
+        playbackState.nextVideoId ??
+        (playbackSettings.playlistRepeatEnabled ? playbackState.firstVideoId : null),
+      playbackSettings,
     };
   }
 
@@ -53,7 +56,7 @@ export async function handleWatchMessage(
     return {
       playbackContext: null,
       nextVideoId: null,
-      repeatSettings: null,
+      playbackSettings: null,
     };
   }
 

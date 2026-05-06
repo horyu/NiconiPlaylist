@@ -140,9 +140,9 @@ async function handlePause(event: Event) {
     currentLoopVideoId === videoId ? completedPlaybackCount + 1 : 1;
 
   if (
-    playbackState?.repeatSettings &&
+    playbackState?.playbackSettings &&
     shouldRepeatCurrentVideo(
-      playbackState.repeatSettings,
+      playbackState.playbackSettings,
       nextCompletedPlaybackCount,
       target.duration,
     )
@@ -153,7 +153,7 @@ async function handlePause(event: Event) {
     console.log("NiconiPlaylist restarted current video for repeat playback.", {
       completedPlaybackCount,
       duration: target.duration,
-      repeatSettings: playbackState.repeatSettings,
+      playbackSettings: playbackState.playbackSettings,
       url: location.href,
       videoId,
     });
@@ -177,7 +177,7 @@ async function handlePause(event: Event) {
     currentTime: target.currentTime,
     completedPlaybackCount: nextCompletedPlaybackCount,
     duration: target.duration,
-    repeatSettings: playbackState?.repeatSettings ?? null,
+    playbackSettings: playbackState?.playbackSettings ?? null,
     nextVideoId: playbackState?.nextVideoId ?? null,
     playbackContext: playbackState?.playbackContext ?? null,
     url: location.href,

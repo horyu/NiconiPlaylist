@@ -1,10 +1,10 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
 
 import {
-  getStoredRepeatSettings,
-  setStoredRepeatSettings,
-} from "@/background/services/repeatSettings";
-import { createRepeatPreset, sanitizeRepeatSettings } from "@/lib/playlistLoop";
+  getStoredPlaybackSettings,
+  setStoredPlaybackSettings,
+} from "@/background/services/playbackSettings";
+import { createRepeatPreset, sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import type { RepeatPreset } from "@/lib/types";
 
 type RepeatSettingsTabProps = {
@@ -33,9 +33,9 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   const [savedPresetsJson, setSavedPresetsJson] = createSignal("[]");
 
   createEffect(() => {
-    void getStoredRepeatSettings().then((repeatSettings) => {
-      setPresets(repeatSettings.presets);
-      setSavedPresetsJson(JSON.stringify(repeatSettings.presets));
+    void getStoredPlaybackSettings().then((playbackSettings) => {
+      setPresets(playbackSettings.presets);
+      setSavedPresetsJson(JSON.stringify(playbackSettings.presets));
     });
   });
 
@@ -86,19 +86,20 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     );
   }
 
-  async function handleSaveRepeatSettings() {
+  async function handleSavePlaybackSettings() {
     props.onFeedback(null);
 
     try {
-      const currentRepeatSettings = await getStoredRepeatSettings();
-      const nextRepeatSettings = sanitizeRepeatSettings({
-        activeRepeatPresetId: currentRepeatSettings.activeRepeatPresetId,
+      const currentPlaybackSettings = await getStoredPlaybackSettings();
+      const nextPlaybackSettings = sanitizePlaybackSettings({
+        playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
+        activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
         presets: presets(),
       });
 
-      await setStoredRepeatSettings(nextRepeatSettings);
-      setPresets(nextRepeatSettings.presets);
-      setSavedPresetsJson(JSON.stringify(nextRepeatSettings.presets));
+      await setStoredPlaybackSettings(nextPlaybackSettings);
+      setPresets(nextPlaybackSettings.presets);
+      setSavedPresetsJson(JSON.stringify(nextPlaybackSettings.presets));
       props.onFeedback("リピート設定を更新しました。");
     } catch (error) {
       props.onFeedback(
@@ -222,7 +223,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
               ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
               : "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
           }`}
-          onClick={() => void handleSaveRepeatSettings()}
+          onClick={() => void handleSavePlaybackSettings()}
         >
           リピート設定を保存
         </button>

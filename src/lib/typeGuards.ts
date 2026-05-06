@@ -1,4 +1,4 @@
-import type { PlaybackContext, Playlist, RepeatPreset, RepeatSettings } from "@/lib/types";
+import type { PlaybackContext, PlaybackSettings, Playlist, RepeatPreset } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export function isPlaylist(value: unknown): value is Playlist {
@@ -33,14 +33,16 @@ export function isPlaybackContext(value: unknown): value is PlaybackContext {
   );
 }
 
-export function isRepeatSettings(value: unknown): value is RepeatSettings {
+export function isPlaybackSettings(value: unknown): value is PlaybackSettings {
   if (!value || typeof value !== "object") {
     return false;
   }
 
-  const candidate = value as Partial<RepeatSettings>;
+  const candidate = value as Partial<PlaybackSettings>;
 
   return (
+    (candidate.playlistRepeatEnabled === undefined ||
+      typeof candidate.playlistRepeatEnabled === "boolean") &&
     (candidate.activeRepeatPresetId === null ||
       candidate.activeRepeatPresetId === undefined ||
       typeof candidate.activeRepeatPresetId === "string") &&

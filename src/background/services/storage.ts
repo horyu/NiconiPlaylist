@@ -2,12 +2,12 @@ import { browser } from "wxt/browser";
 
 import { DEFAULT_REPEAT_PRESETS } from "@/lib/playlistLoop";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import type { PlaybackContext, Playlist, PlaylistId, RepeatSettings } from "@/lib/types";
+import type { PlaybackContext, PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
 import type { OwnerId, OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export interface StorageDataByKey {
   playlists: Playlist[];
-  repeatSettings: RepeatSettings;
+  playbackSettings: PlaybackSettings;
   playbackContexts: PlaybackContext[];
   lastActivePlaylistId: PlaylistId | null;
   videoMetadata: Record<string, VideoMetadata>;
@@ -18,7 +18,8 @@ export type StorageKey = keyof StorageDataByKey;
 
 const DEFAULT_BY_KEY: StorageDataByKey = {
   playlists: [],
-  repeatSettings: {
+  playbackSettings: {
+    playlistRepeatEnabled: false,
     activeRepeatPresetId: null,
     presets: DEFAULT_REPEAT_PRESETS,
   },

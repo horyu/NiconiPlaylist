@@ -1,15 +1,15 @@
 import { browser } from "wxt/browser";
 
 import { getStorageData } from "@/background/services/storage";
-import { sanitizeRepeatSettings } from "@/lib/playlistLoop";
+import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import {
+  isPlaybackSettings,
   isOwnerMetadata,
   isPlaybackContext,
   isPlaylist,
-  isRepeatSettings,
   isVideoMetadata,
 } from "@/lib/typeGuards";
-import type { PlaybackContext, Playlist, PlaylistId, RepeatSettings } from "@/lib/types";
+import type { PlaybackContext, PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export type PopupState = {
@@ -17,9 +17,9 @@ export type PopupState = {
   activeTabUrl: string | null;
   ownersMap: Record<string, OwnerMetadata>;
   playbackContexts: PlaybackContext[];
+  playbackSettings: PlaybackSettings;
   playlists: Playlist[];
   lastActivePlaylistId: PlaylistId | null;
-  repeatSettings: RepeatSettings;
   videoMetadataMap: Record<string, VideoMetadata>;
 };
 
@@ -43,7 +43,7 @@ export async function getPopupState(): Promise<PopupState> {
     getActiveTabInfo(),
     getStorageData([
       "playlists",
-      "repeatSettings",
+      "playbackSettings",
       "lastActivePlaylistId",
       "videoMetadata",
       "owners",
@@ -60,11 +60,11 @@ export async function getPopupState(): Promise<PopupState> {
       ),
     ),
     playbackContexts: storageData.playbackContexts.filter(isPlaybackContext),
+    playbackSettings: isPlaybackSettings(storageData.playbackSettings)
+      ? sanitizePlaybackSettings(storageData.playbackSettings)
+      : sanitizePlaybackSettings(undefined),
     playlists: storageData.playlists.filter(isPlaylist),
     lastActivePlaylistId: storageData.lastActivePlaylistId,
-    repeatSettings: isRepeatSettings(storageData.repeatSettings)
-      ? sanitizeRepeatSettings(storageData.repeatSettings)
-      : sanitizeRepeatSettings(undefined),
     videoMetadataMap: Object.fromEntries(
       Object.entries(storageData.videoMetadata).filter((entry): entry is [string, VideoMetadata] =>
         isVideoMetadata(entry[1]),

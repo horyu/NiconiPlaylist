@@ -16,7 +16,8 @@ export type RepeatPreset =
       durationSeconds: number;
     };
 
-export type RepeatSettings = {
+export type PlaybackSettings = {
+  playlistRepeatEnabled: boolean;
   activeRepeatPresetId: string | null;
   presets: RepeatPreset[];
 };
