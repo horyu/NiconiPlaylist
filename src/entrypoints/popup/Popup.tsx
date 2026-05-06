@@ -16,6 +16,7 @@ import {
   activateStoredPlaylist,
   getStoredPlaybackContexts,
   setStoredPlaybackContextIndex,
+  updateStoredPlaylist,
 } from "@/background/services/playlistStore";
 import { getPopupState } from "@/background/services/popupState";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
@@ -82,6 +83,9 @@ function Popup() {
     null,
   );
   const [showPlaybackSettings, setShowPlaybackSettings] = createSignal(false);
+  const [showMemoEditor, setShowMemoEditor] = createSignal(false);
+  const [memoDraftPlaylistId, setMemoDraftPlaylistId] = createSignal<PlaylistId | null>(null);
+  const [memoDraft, setMemoDraft] = createSignal("");
   const [aliveTabIdByPlaylistId, setAliveTabIdByPlaylistId] = createSignal<
     Partial<Record<PlaylistId, number>>
   >({});
@@ -158,6 +162,17 @@ function Popup() {
 
     setPlaybackSettingsDraft(playbackSettings);
     setSelectedRepeatPresetId(playbackSettings.activeRepeatPresetId ?? "none");
+  });
+
+  createEffect(() => {
+    const playlist = activePlaylist();
+
+    if (!playlist || memoDraftPlaylistId() === playlist.id) {
+      return;
+    }
+
+    setMemoDraft(playlist.memo ?? "");
+    setMemoDraftPlaylistId(playlist.id);
   });
 
   async function refreshAliveTabMap() {
@@ -364,6 +379,30 @@ function Popup() {
     }
   }
 
+  async function handleSavePlaylistMemo() {
+    const playlist = activePlaylist();
+
+    if (!playlist) {
+      setFeedback("プレイリストを取得できません。");
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      const normalizedMemo = memoDraft().trim();
+
+      await updateStoredPlaylist(playlist.id, {
+        memo: normalizedMemo === "" ? undefined : normalizedMemo,
+      });
+      await refetch();
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "プレイリストメモの更新に失敗しました。",
+      );
+    }
+  }
+
   return (
     <main class="min-h-screen min-w-[30rem] bg-stone-950 px-3 py-3 text-stone-100">
       <div class="mx-auto flex w-full max-w-2xl flex-col gap-3">
@@ -386,6 +425,19 @@ function Popup() {
               aria-label="リピート設定を表示"
             >
               ↻
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowMemoEditor((value) => !value)}
+              class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
+                showMemoEditor()
+                  ? "border-stone-300 bg-white text-stone-900"
+                  : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
+              }`}
+              title="プレイリストメモを表示"
+              aria-label="プレイリストメモを表示"
+            >
+              ✎
             </button>
           </div>
           <button
@@ -507,11 +559,47 @@ function Popup() {
                 </button>
               </div>
 
+              <Show when={showMemoEditor() && activePlaylist()}>
+                {(playlist) => {
+                  const isMemoDirty = () => (playlist().memo ?? "") !== memoDraft();
+
+                  return (
+                    <div class="space-y-2 rounded-xl bg-stone-900/40 px-3 py-3">
+                      <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-medium text-stone-200">プレイリストメモ</span>
+                        <button
+                          type="button"
+                          class={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                            isMemoDirty()
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                              : "border-stone-600 text-stone-400"
+                          }`}
+                          onClick={() => void handleSavePlaylistMemo()}
+                          disabled={!isMemoDirty()}
+                        >
+                          保存
+                        </button>
+                      </div>
+                      <textarea
+                        class="min-h-24 w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                        value={memoDraft()}
+                        onInput={(event) => setMemoDraft(event.currentTarget.value)}
+                        placeholder="このプレイリストのメモ"
+                      />
+                    </div>
+                  );
+                }}
+              </Show>
+
               <Show when={activePlaylist()}>
                 {(playlist) => (
                   <div class="space-y-3">
-                    <Show when={playlist().memo}>
-                      {(memo) => <p class="text-xs leading-5 text-stone-500">{memo()}</p>}
+                    <Show when={!showMemoEditor() && playlist().memo}>
+                      {(memo) => (
+                        <p class="overflow-hidden text-xs leading-5 text-stone-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                          {memo()}
+                        </p>
+                      )}
                     </Show>
                     <PopupPlaylistVideoList
                       autoScrollKey={autoScrollKey()}

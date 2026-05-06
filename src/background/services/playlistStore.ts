@@ -80,6 +80,30 @@ export async function activateStoredPlaylist(playlistId: PlaylistId): Promise<vo
   await setLastActivePlaylistId(playlistId);
 }
 
+export async function updateStoredPlaylist(
+  playlistId: PlaylistId,
+  updates: Partial<Pick<Playlist, "memo" | "title" | "videoIds">>,
+): Promise<Playlist> {
+  const playlists = await getStoredPlaylists();
+  const playlistIndex = playlists.findIndex((playlist) => playlist.id === playlistId);
+
+  if (playlistIndex < 0) {
+    throw new Error("指定したプレイリストは保存されていません。");
+  }
+
+  const currentPlaylist = playlists[playlistIndex]!;
+  const nextPlaylist: Playlist = {
+    ...currentPlaylist,
+    ...updates,
+  };
+  const nextPlaylists = [...playlists];
+
+  nextPlaylists[playlistIndex] = nextPlaylist;
+  await setStoredPlaylists(nextPlaylists);
+
+  return nextPlaylist;
+}
+
 export async function deleteStoredPlaylist(playlistId: PlaylistId): Promise<void> {
   const [playlists, lastActivePlaylistId, playbackContexts] = await Promise.all([
     getStoredPlaylists(),
