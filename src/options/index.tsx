@@ -4,14 +4,16 @@ import { usePlaylistsState } from "@/options/hooks/usePlaylistsState";
 import { useVideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 import { DirectInputCreateSection } from "@/options/tabs/DirectInputCreateSection";
 import { PlaylistsTab } from "@/options/tabs/PlaylistsTab";
+import { RepeatSettingsTab } from "@/options/tabs/RepeatSettingsTab";
 import { SharedUrlImportSection } from "@/options/tabs/SharedUrlImportSection";
 
-type TabKey = "import" | "create" | "playlists";
+type TabKey = "import" | "create" | "playlists" | "repeat";
 
 const TAB_LABELS: { key: TabKey; label: string }[] = [
   { key: "import", label: "インポート" },
   { key: "create", label: "作成" },
   { key: "playlists", label: "プレイリスト" },
+  { key: "repeat", label: "再生" },
 ];
 
 export default function OptionsPage() {
@@ -94,6 +96,19 @@ export default function OptionsPage() {
                 onDeleted={refreshState}
                 onFeedback={setFeedback}
               />
+            </div>
+          </Match>
+
+          <Match when={activeTab() === "repeat"}>
+            <div class="space-y-4">
+              <Show when={feedback()}>
+                {(message) => (
+                  <div class="rounded-2xl border border-stone-700 bg-stone-900/80 px-4 py-3 text-sm text-stone-300">
+                    {message()}
+                  </div>
+                )}
+              </Show>
+              <RepeatSettingsTab onFeedback={setFeedback} />
             </div>
           </Match>
         </Switch>

@@ -106,6 +106,7 @@ export function initBackground() {
         sendResponse({
           playbackContext: null,
           nextVideoId: null,
+          repeatSettings: null,
         });
       });
 

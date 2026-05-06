@@ -1,4 +1,4 @@
-import type { PlaybackContext, VideoId } from "@/lib/types";
+import type { PlaybackContext, RepeatSettings, VideoId } from "@/lib/types";
 
 export type WatchSyncPlaybackContextMessage = {
   type: "watch:sync-playback-context";
@@ -33,4 +33,5 @@ export type WatchMessage =
 export type WatchPlaybackContextResponse = {
   playbackContext: PlaybackContext | null;
   nextVideoId: VideoId | null;
+  repeatSettings: RepeatSettings | null;
 };

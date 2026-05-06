@@ -1,4 +1,4 @@
-import type { PlaybackContext, Playlist } from "@/lib/types";
+import type { PlaybackContext, Playlist, RepeatPreset, RepeatSettings } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export function isPlaylist(value: unknown): value is Playlist {
@@ -31,6 +31,52 @@ export function isPlaybackContext(value: unknown): value is PlaybackContext {
     typeof candidate.currentIndex === "number" &&
     Number.isInteger(candidate.currentIndex)
   );
+}
+
+export function isRepeatSettings(value: unknown): value is RepeatSettings {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<RepeatSettings>;
+
+  return (
+    (candidate.activeRepeatPresetId === null ||
+      candidate.activeRepeatPresetId === undefined ||
+      typeof candidate.activeRepeatPresetId === "string") &&
+    Array.isArray(candidate.presets) &&
+    candidate.presets.every(isRepeatPreset)
+  );
+}
+
+function isRepeatPreset(value: unknown): value is RepeatPreset {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<RepeatPreset>;
+
+  if (typeof candidate.id !== "string") {
+    return false;
+  }
+
+  if (candidate.mode === "count") {
+    return (
+      typeof candidate.count === "number" &&
+      Number.isInteger(candidate.count) &&
+      candidate.count >= 1
+    );
+  }
+
+  if (candidate.mode === "duration") {
+    return (
+      typeof candidate.durationSeconds === "number" &&
+      Number.isInteger(candidate.durationSeconds) &&
+      candidate.durationSeconds >= 1
+    );
+  }
+
+  return false;
 }
 
 export function isVideoMetadata(value: unknown): value is VideoMetadata {

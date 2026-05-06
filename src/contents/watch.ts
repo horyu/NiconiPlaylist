@@ -1,5 +1,6 @@
 import { browser } from "wxt/browser";
 
+import { shouldRepeatCurrentVideo } from "@/lib/playlistLoop";
 import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
 
 const PLAYBACK_END_THRESHOLD_SECONDS = 0.5;
@@ -53,6 +54,13 @@ function buildWatchUrl(videoId: string): string {
 }
 
 let lastSyncedVideoId: string | null = null;
+let currentLoopVideoId: string | null = null;
+let completedPlaybackCount = 0;
+
+function resetLoopProgress(videoId: string | null): void {
+  currentLoopVideoId = videoId;
+  completedPlaybackCount = 0;
+}
 
 function syncPlaybackContextIfNeeded(): void {
   const videoId = getCurrentWatchVideoId();
@@ -62,6 +70,7 @@ function syncPlaybackContextIfNeeded(): void {
   }
 
   lastSyncedVideoId = videoId;
+  resetLoopProgress(videoId);
   void syncPlaybackContext(videoId);
 }
 
@@ -71,6 +80,20 @@ function navigateToNextVideo(nextVideoId: string): void {
     type: "watch:navigate-next-video",
     url: nextVideoUrl,
   });
+}
+
+function restartCurrentVideo(): void {
+  // テンキーではない0キーのkeydownイベントを発火させることで、動画を最初から再生させる
+  document.body.dispatchEvent(
+    new KeyboardEvent("keydown", {
+      key: "0",
+      code: "Digit0",
+      keyCode: 48,
+      which: 48,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
 }
 
 function initWatchLocationObserver(): void {
@@ -113,6 +136,31 @@ async function handlePause(event: Event) {
   }
 
   const playbackState = await resolveNextVideo(videoId);
+  const nextCompletedPlaybackCount =
+    currentLoopVideoId === videoId ? completedPlaybackCount + 1 : 1;
+
+  if (
+    playbackState?.repeatSettings &&
+    shouldRepeatCurrentVideo(
+      playbackState.repeatSettings,
+      nextCompletedPlaybackCount,
+      target.duration,
+    )
+  ) {
+    currentLoopVideoId = videoId;
+    completedPlaybackCount = nextCompletedPlaybackCount;
+    restartCurrentVideo();
+    console.log("NiconiPlaylist restarted current video for repeat playback.", {
+      completedPlaybackCount,
+      duration: target.duration,
+      repeatSettings: playbackState.repeatSettings,
+      url: location.href,
+      videoId,
+    });
+    return;
+  }
+
+  resetLoopProgress(null);
   console.debug("NiconiPlaylist resolved next video.", {
     videoId,
     playbackState,
@@ -127,7 +175,9 @@ async function handlePause(event: Event) {
 
   console.log("NiconiPlaylist detected playback end.", {
     currentTime: target.currentTime,
+    completedPlaybackCount: nextCompletedPlaybackCount,
     duration: target.duration,
+    repeatSettings: playbackState?.repeatSettings ?? null,
     nextVideoId: playbackState?.nextVideoId ?? null,
     playbackContext: playbackState?.playbackContext ?? null,
     url: location.href,

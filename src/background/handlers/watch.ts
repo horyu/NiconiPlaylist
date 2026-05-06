@@ -5,6 +5,7 @@ import {
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
 } from "@/background/services/playlistStore";
+import { getStoredRepeatSettings } from "@/background/services/repeatSettings";
 import type { WatchMessage, WatchPlaybackContextResponse } from "@/lib/watchMessages";
 
 type MessageSender = {
@@ -23,6 +24,7 @@ export async function handleWatchMessage(
     return {
       playbackContext: null,
       nextVideoId: null,
+      repeatSettings: null,
     };
   }
 
@@ -30,11 +32,20 @@ export async function handleWatchMessage(
     return {
       playbackContext: await syncPlaybackContextForVideo(tabId, message.videoId),
       nextVideoId: null,
+      repeatSettings: await getStoredRepeatSettings(),
     };
   }
 
   if (message.type === "watch:resolve-next-video") {
-    return resolveNextVideoForPlaybackContext(tabId, message.videoId);
+    const [playbackState, repeatSettings] = await Promise.all([
+      resolveNextVideoForPlaybackContext(tabId, message.videoId),
+      getStoredRepeatSettings(),
+    ]);
+
+    return {
+      ...playbackState,
+      repeatSettings,
+    };
   }
 
   if (message.type === "watch:clear-playback-context") {
@@ -42,6 +53,7 @@ export async function handleWatchMessage(
     return {
       playbackContext: null,
       nextVideoId: null,
+      repeatSettings: null,
     };
   }
 

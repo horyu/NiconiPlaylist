@@ -189,7 +189,10 @@ export async function syncPlaybackContextForVideo(
 export async function resolveNextVideoForPlaybackContext(
   tabId: number,
   videoId: VideoId,
-): Promise<{ playbackContext: PlaybackContext | null; nextVideoId: VideoId | null }> {
+): Promise<{
+  playbackContext: PlaybackContext | null;
+  nextVideoId: VideoId | null;
+}> {
   const playbackContext = await syncPlaybackContextForVideo(tabId, videoId);
 
   if (!playbackContext) {

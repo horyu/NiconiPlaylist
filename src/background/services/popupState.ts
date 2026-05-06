@@ -1,8 +1,15 @@
 import { browser } from "wxt/browser";
 
 import { getStorageData } from "@/background/services/storage";
-import { isOwnerMetadata, isPlaybackContext, isPlaylist, isVideoMetadata } from "@/lib/typeGuards";
-import type { PlaybackContext, Playlist, PlaylistId } from "@/lib/types";
+import { sanitizeRepeatSettings } from "@/lib/playlistLoop";
+import {
+  isOwnerMetadata,
+  isPlaybackContext,
+  isPlaylist,
+  isRepeatSettings,
+  isVideoMetadata,
+} from "@/lib/typeGuards";
+import type { PlaybackContext, Playlist, PlaylistId, RepeatSettings } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export type PopupState = {
@@ -12,6 +19,7 @@ export type PopupState = {
   playbackContexts: PlaybackContext[];
   playlists: Playlist[];
   lastActivePlaylistId: PlaylistId | null;
+  repeatSettings: RepeatSettings;
   videoMetadataMap: Record<string, VideoMetadata>;
 };
 
@@ -35,6 +43,7 @@ export async function getPopupState(): Promise<PopupState> {
     getActiveTabInfo(),
     getStorageData([
       "playlists",
+      "repeatSettings",
       "lastActivePlaylistId",
       "videoMetadata",
       "owners",
@@ -53,6 +62,9 @@ export async function getPopupState(): Promise<PopupState> {
     playbackContexts: storageData.playbackContexts.filter(isPlaybackContext),
     playlists: storageData.playlists.filter(isPlaylist),
     lastActivePlaylistId: storageData.lastActivePlaylistId,
+    repeatSettings: isRepeatSettings(storageData.repeatSettings)
+      ? sanitizeRepeatSettings(storageData.repeatSettings)
+      : sanitizeRepeatSettings(undefined),
     videoMetadataMap: Object.fromEntries(
       Object.entries(storageData.videoMetadata).filter((entry): entry is [string, VideoMetadata] =>
         isVideoMetadata(entry[1]),

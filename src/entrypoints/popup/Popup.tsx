@@ -17,7 +17,9 @@ import {
   setStoredPlaybackContextIndex,
 } from "@/background/services/playlistStore";
 import { getPopupState } from "@/background/services/popupState";
+import { setStoredRepeatSettings } from "@/background/services/repeatSettings";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
+import { formatRepeatPresetLabel, sanitizeRepeatSettings } from "@/lib/playlistLoop";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { Playlist, PlaylistId } from "@/lib/types";
 import { PopupPlaylistVideoList } from "@/popup/components/PopupPlaylistVideoList";
@@ -75,6 +77,7 @@ function Popup() {
   const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
   const [manualScrollRequestKey, setManualScrollRequestKey] = createSignal(0);
+  const [pendingRepeatPresetId, setPendingRepeatPresetId] = createSignal<string | null>(null);
   const [aliveTabIdByPlaylistId, setAliveTabIdByPlaylistId] = createSignal<
     Partial<Record<PlaylistId, number>>
   >({});
@@ -120,6 +123,8 @@ function Popup() {
     playbackTabId,
   );
   const activePlaylistVideoCount = () => activePlaylist()?.videoIds.length ?? 0;
+  const currentSelectedRepeatPresetId = () =>
+    pendingRepeatPresetId() ?? popupState()?.repeatSettings.activeRepeatPresetId ?? "none";
   const autoScrollKey = () => {
     const playlist = activePlaylist();
     const playbackIndex = currentPlaybackIndex();
@@ -138,6 +143,27 @@ function Popup() {
     if (videoIds.length > 0) {
       enqueueVideoMetadataForVideoIds(videoIds);
     }
+  });
+
+  createEffect(() => {
+    const repeatSettings = popupState()?.repeatSettings;
+    const pendingId = pendingRepeatPresetId();
+
+    if (!repeatSettings) {
+      return;
+    }
+
+    if (pendingId === null) {
+      return;
+    }
+
+    const nextSelectedRepeatPresetId = repeatSettings.activeRepeatPresetId ?? "none";
+
+    if (pendingId !== nextSelectedRepeatPresetId) {
+      return;
+    }
+
+    setPendingRepeatPresetId(null);
   });
 
   async function refreshAliveTabMap() {
@@ -171,7 +197,11 @@ function Popup() {
         void refreshAliveTabMap();
       }
 
-      if (changes[STORAGE_KEYS.videoMetadata] || changes[STORAGE_KEYS.owners]) {
+      if (
+        changes[STORAGE_KEYS.videoMetadata] ||
+        changes[STORAGE_KEYS.owners] ||
+        changes[STORAGE_KEYS.repeatSettings]
+      ) {
         void refetch();
       }
     };
@@ -290,6 +320,33 @@ function Popup() {
     }
   }
 
+  async function handleSelectRepeatPreset(nextValue: string) {
+    const repeatSettings = popupState()?.repeatSettings;
+
+    setPendingRepeatPresetId(nextValue);
+
+    if (!repeatSettings) {
+      setFeedback("リピート設定を取得できません。");
+      setPendingRepeatPresetId(null);
+      return;
+    }
+
+    setFeedback(null);
+
+    try {
+      const nextRepeatSettings = sanitizeRepeatSettings({
+        activeRepeatPresetId: nextValue === "none" ? null : nextValue,
+        presets: repeatSettings.presets,
+      });
+
+      await setStoredRepeatSettings(nextRepeatSettings);
+      await refetch();
+    } catch (error) {
+      setPendingRepeatPresetId(null);
+      setFeedback(error instanceof Error ? error.message : "リピート設定の更新に失敗しました。");
+    }
+  }
+
   return (
     <main class="min-h-screen min-w-[30rem] bg-stone-950 px-3 py-3 text-stone-100">
       <div class="mx-auto flex w-full max-w-2xl flex-col gap-3">
@@ -368,6 +425,22 @@ function Popup() {
                   {" / "}
                   {activePlaylistVideoCount()}件
                 </button>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2 rounded-xl bg-stone-900/40 px-3 py-2">
+                <span class="text-xs font-medium text-stone-200">各動画のリピート再生</span>
+                <select
+                  class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                  value={currentSelectedRepeatPresetId()}
+                  onChange={(event) => void handleSelectRepeatPreset(event.currentTarget.value)}
+                >
+                  <option value="none">なし</option>
+                  <For each={popupState()?.repeatSettings.presets ?? []}>
+                    {(preset) => (
+                      <option value={preset.id}>{formatRepeatPresetLabel(preset)}</option>
+                    )}
+                  </For>
+                </select>
               </div>
 
               <Show when={activePlaylist()}>
