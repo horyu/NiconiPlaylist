@@ -1,13 +1,111 @@
-import { For } from "solid-js";
+import { createEffect, createSignal, For, Show } from "solid-js";
 
 import type { VideoId } from "@/lib/types";
-import { VideoListItem } from "@/options/components/VideoListItem";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 
 type PlaylistDetailVideoListProps = {
+  isEditing?: boolean;
+  onSetVideoDeleted?: (index: number, isDeleted: boolean) => void;
+  resetKey?: number;
   videoIds: VideoId[];
   videoMetadataState: VideoMetadataState | undefined;
 };
+
+type EditableVideoRowProps = {
+  duration?: number | null;
+  index: number;
+  isEditing?: boolean;
+  onSetDeleted?: (index: number, isDeleted: boolean) => void;
+  ownerName?: string | null;
+  resetKey?: number;
+  thumbnailUrl?: string | null;
+  title?: string;
+  videoId: VideoId;
+};
+
+function formatDuration(duration: number | null | undefined): string {
+  if (duration === null || duration === undefined) {
+    return "--:--";
+  }
+
+  const minutes = Math.floor(duration / 60);
+  const seconds = (duration % 60).toString().padStart(2, "0");
+
+  return `${minutes}:${seconds}`;
+}
+
+function EditableVideoRow(props: EditableVideoRowProps) {
+  const [isDeleted, setIsDeleted] = createSignal(false);
+
+  createEffect(() => {
+    const resetKey = props.resetKey;
+
+    if (resetKey !== undefined) {
+      setIsDeleted(false);
+    }
+  });
+
+  function handleToggleDeleted() {
+    const nextIsDeleted = !isDeleted();
+
+    setIsDeleted(nextIsDeleted);
+    props.onSetDeleted?.(props.index, nextIsDeleted);
+  }
+
+  return (
+    <li
+      class={`flex items-start gap-3 rounded-xl border p-3 ${
+        isDeleted()
+          ? "border-red-500/30 bg-red-500/5 opacity-70"
+          : "border-stone-800 bg-stone-950/40"
+      }`}
+    >
+      <div class="flex w-8 shrink-0 justify-center pt-4 text-sm font-semibold text-stone-400">
+        {props.index + 1}
+      </div>
+
+      <a
+        href={`https://www.nicovideo.jp/watch/${props.videoId}`}
+        target="_blank"
+        rel="noreferrer"
+        class="h-14 w-24 overflow-hidden rounded-lg bg-stone-900"
+      >
+        <Show when={props.thumbnailUrl}>
+          {(thumbnailUrl) => <img src={thumbnailUrl()} alt="" class="h-full w-full object-cover" />}
+        </Show>
+      </a>
+
+      <div class="min-w-0 flex-1 space-y-1">
+        <p
+          class={`truncate text-sm font-medium ${isDeleted() ? "text-red-100" : "text-stone-100"}`}
+        >
+          {props.title ?? props.videoId}
+        </p>
+        <p class="text-xs text-stone-400">{props.videoId}</p>
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
+          <span>{formatDuration(props.duration)}</span>
+          <Show when={props.ownerName}>{(ownerName) => <span>{ownerName()}</span>}</Show>
+        </div>
+      </div>
+
+      <Show when={props.isEditing}>
+        <div class="shrink-0">
+          <button
+            type="button"
+            class={`w-[5.75rem] rounded-full border px-3 py-1 text-center text-xs font-medium transition ${
+              isDeleted()
+                ? "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
+                : "border-red-500/40 text-red-200 hover:bg-red-500/10"
+            }`}
+            onClick={handleToggleDeleted}
+          >
+            {isDeleted() ? "削除取消" : "削除"}
+          </button>
+        </div>
+      </Show>
+    </li>
+  );
+}
 
 export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
   return (
@@ -20,24 +118,35 @@ export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
     >
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium text-stone-100">動画一覧</p>
-        <p class="text-xs text-stone-500">将来的に追加・削除・並び替えをここへ集約します。</p>
+        <p class="text-xs text-stone-500">
+          {props.isEditing
+            ? "編集中は各動画を削除できます。"
+            : "将来的に追加・並び替えをここへ集約します。"}
+        </p>
       </div>
 
       <ul class="space-y-2">
         <For each={props.videoIds}>
           {(videoId, index) => {
             const videoMetadata = () => props.videoMetadataState?.videoMetadataMap[videoId];
-            const ownerMetadata = () => {
+            const ownerName = () => {
               const ownerId = videoMetadata()?.ownerId;
-              return ownerId ? props.videoMetadataState?.ownersMap[ownerId] : undefined;
+              return ownerId ? props.videoMetadataState?.ownersMap[ownerId]?.name : undefined;
             };
 
             return (
-              <VideoListItem
-                indexLabel={(index() + 1).toString()}
+              <EditableVideoRow
+                index={index()}
                 videoId={videoId}
-                videoMetadata={videoMetadata()}
-                ownerMetadata={ownerMetadata()}
+                title={videoMetadata()?.title}
+                duration={videoMetadata()?.duration}
+                thumbnailUrl={
+                  videoMetadata()?.thumbnail.listingUrl ?? videoMetadata()?.thumbnail.url
+                }
+                ownerName={ownerName()}
+                isEditing={props.isEditing}
+                resetKey={props.resetKey}
+                onSetDeleted={props.onSetVideoDeleted}
               />
             );
           }}

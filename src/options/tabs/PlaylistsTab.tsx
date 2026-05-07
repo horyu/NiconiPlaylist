@@ -35,6 +35,7 @@ type ShareInfo = {
 type DetailDraft = {
   memo: string;
   title: string;
+  videoIds: string[];
 };
 
 type PlaylistsTabProps = {
@@ -87,7 +88,13 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
-  const [detailDraft, setDetailDraft] = createSignal<DetailDraft>({ memo: "", title: "" });
+  const [detailDraft, setDetailDraft] = createSignal<DetailDraft>({
+    memo: "",
+    title: "",
+    videoIds: [],
+  });
+  const [deletedDraftVideoCount, setDeletedDraftVideoCount] = createSignal(0);
+  const [detailDraftResetKey, setDetailDraftResetKey] = createSignal(0);
   const [detailDraftPlaylistId, setDetailDraftPlaylistId] = createSignal<PlaylistId | null>(null);
   const [openShareMenuPlaylistId, setOpenShareMenuPlaylistId] = createSignal<PlaylistId | null>(
     null,
@@ -97,6 +104,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   let shareCopiedTimer: ReturnType<typeof setTimeout> | null = null;
   let currentSharedUrl = "";
   let currentSharedUrlPlaylistId: PlaylistId | null = null;
+  let deletedDraftVideoIndices = new Set<number>();
 
   createEffect(() => {
     const playlists = props.state?.playlists ?? [];
@@ -164,7 +172,11 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDetailDraft({
       memo: playlist.memo ?? "",
       title: playlist.title ?? "",
+      videoIds: [...playlist.videoIds],
     });
+    deletedDraftVideoIndices = new Set<number>();
+    setDeletedDraftVideoCount(0);
+    setDetailDraftResetKey((currentKey) => currentKey + 1);
     setDetailDraftPlaylistId(playlist.id);
     setIsEditingDetail(false);
   });
@@ -178,7 +190,11 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
     const draft = detailDraft();
 
-    return draft.title !== (playlist.title ?? "") || draft.memo !== (playlist.memo ?? "");
+    return (
+      draft.title !== (playlist.title ?? "") ||
+      draft.memo !== (playlist.memo ?? "") ||
+      deletedDraftVideoCount() > 0
+    );
   });
 
   onCleanup(() => {
@@ -294,7 +310,11 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDetailDraft({
       memo: playlist.memo ?? "",
       title: playlist.title ?? "",
+      videoIds: [...playlist.videoIds],
     });
+    deletedDraftVideoIndices = new Set<number>();
+    setDeletedDraftVideoCount(0);
+    setDetailDraftResetKey((currentKey) => currentKey + 1);
     setDetailDraftPlaylistId(playlist.id);
     setIsEditingDetail(true);
     props.onFeedback(null);
@@ -310,7 +330,11 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDetailDraft({
       memo: playlist.memo ?? "",
       title: playlist.title ?? "",
+      videoIds: [...playlist.videoIds],
     });
+    deletedDraftVideoIndices = new Set<number>();
+    setDeletedDraftVideoCount(0);
+    setDetailDraftResetKey((currentKey) => currentKey + 1);
     setIsEditingDetail(false);
     props.onFeedback(null);
   }
@@ -330,7 +354,11 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       await updateStoredPlaylist(playlist.id, {
         memo: normalizeOptionalText(draft.memo),
         title: normalizeOptionalText(draft.title) ?? createTimestampTitle(),
+        videoIds: draft.videoIds.filter((_, index) => !deletedDraftVideoIndices.has(index)),
       });
+      deletedDraftVideoIndices = new Set<number>();
+      setDeletedDraftVideoCount(0);
+      setDetailDraftResetKey((currentKey) => currentKey + 1);
       setIsEditingDetail(false);
       props.onFeedback({ text: "プレイリストを更新しました。", tone: "success" });
       await props.onUpdated();
@@ -339,6 +367,21 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
         text: error instanceof Error ? error.message : "プレイリストの更新に失敗しました。",
         tone: "error",
       });
+    }
+  }
+
+  function handleSetDraftVideoDeleted(index: number, isDeleted: boolean) {
+    const hasIndex = deletedDraftVideoIndices.has(index);
+
+    if (isDeleted && !hasIndex) {
+      deletedDraftVideoIndices.add(index);
+      setDeletedDraftVideoCount((currentCount) => currentCount + 1);
+      return;
+    }
+
+    if (!isDeleted && hasIndex) {
+      deletedDraftVideoIndices.delete(index);
+      setDeletedDraftVideoCount((currentCount) => currentCount - 1);
     }
   }
 
@@ -669,8 +712,13 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                       </Show>
 
                       <PlaylistDetailVideoList
-                        videoIds={detailPlaylist.videoIds}
+                        videoIds={
+                          isEditingDetail() ? detailDraft().videoIds : detailPlaylist.videoIds
+                        }
                         videoMetadataState={props.videoMetadataState}
+                        isEditing={isEditingDetail()}
+                        resetKey={detailDraftResetKey()}
+                        onSetVideoDeleted={handleSetDraftVideoDeleted}
                       />
                     </div>
                   );
