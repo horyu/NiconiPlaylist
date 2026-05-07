@@ -18,6 +18,7 @@ import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMeta
 import { buildSharedPlaylistUrl } from "@/lib/playlistUrl";
 import { normalizeOptionalText } from "@/lib/text";
 import type { Playlist, PlaylistId } from "@/lib/types";
+import { parseVideoIdInputLines } from "@/lib/videoIdInput";
 import { PlaylistDetailVideoList } from "@/options/components/PlaylistDetailVideoList";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -88,12 +89,14 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
+  const [detailVideoInput, setDetailVideoInput] = createSignal("");
   const [detailDraft, setDetailDraft] = createSignal<DetailDraft>({
     memo: "",
     title: "",
     videoIds: [],
   });
   const [deletedDraftVideoCount, setDeletedDraftVideoCount] = createSignal(0);
+  const [hasDraftVideoChanges, setHasDraftVideoChanges] = createSignal(false);
   const [detailDraftResetKey, setDetailDraftResetKey] = createSignal(0);
   const [detailDraftPlaylistId, setDetailDraftPlaylistId] = createSignal<PlaylistId | null>(null);
   const [openShareMenuPlaylistId, setOpenShareMenuPlaylistId] = createSignal<PlaylistId | null>(
@@ -109,6 +112,18 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   createEffect(() => {
     const playlists = props.state?.playlists ?? [];
     const videoIds = playlists.flatMap((playlist) => playlist.videoIds);
+
+    if (videoIds.length > 0) {
+      enqueueVideoMetadataForVideoIds(videoIds);
+    }
+  });
+
+  createEffect(() => {
+    if (!isEditingDetail()) {
+      return;
+    }
+
+    const videoIds = detailDraft().videoIds;
 
     if (videoIds.length > 0) {
       enqueueVideoMetadataForVideoIds(videoIds);
@@ -183,6 +198,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     });
     deletedDraftVideoIndices = new Set<number>();
     setDeletedDraftVideoCount(0);
+    setHasDraftVideoChanges(false);
+    setDetailVideoInput("");
     setDetailDraftResetKey((currentKey) => currentKey + 1);
     setDetailDraftPlaylistId(playlist.id);
     setIsEditingDetail(false);
@@ -200,7 +217,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     return (
       draft.title !== (playlist.title ?? "") ||
       draft.memo !== (playlist.memo ?? "") ||
-      deletedDraftVideoCount() > 0
+      deletedDraftVideoCount() > 0 ||
+      hasDraftVideoChanges()
     );
   });
 
@@ -321,6 +339,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     });
     deletedDraftVideoIndices = new Set<number>();
     setDeletedDraftVideoCount(0);
+    setHasDraftVideoChanges(false);
+    setDetailVideoInput("");
     setDetailDraftResetKey((currentKey) => currentKey + 1);
     setDetailDraftPlaylistId(playlist.id);
     setIsEditingDetail(true);
@@ -341,6 +361,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     });
     deletedDraftVideoIndices = new Set<number>();
     setDeletedDraftVideoCount(0);
+    setHasDraftVideoChanges(false);
+    setDetailVideoInput("");
     setDetailDraftResetKey((currentKey) => currentKey + 1);
     setIsEditingDetail(false);
     props.onFeedback(null);
@@ -372,6 +394,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       );
       deletedDraftVideoIndices = new Set<number>();
       setDeletedDraftVideoCount(0);
+      setHasDraftVideoChanges(false);
+      setDetailVideoInput("");
       setDetailDraftResetKey((currentKey) => currentKey + 1);
       setIsEditingDetail(false);
       props.onFeedback({ text: "プレイリストを更新しました。", tone: "success" });
@@ -390,12 +414,46 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     if (isDeleted && !hasIndex) {
       deletedDraftVideoIndices.add(index);
       setDeletedDraftVideoCount((currentCount) => currentCount + 1);
+      setHasDraftVideoChanges(true);
       return;
     }
 
     if (!isDeleted && hasIndex) {
       deletedDraftVideoIndices.delete(index);
       setDeletedDraftVideoCount((currentCount) => currentCount - 1);
+      setHasDraftVideoChanges(true);
+    }
+  }
+
+  function handleAppendDraftVideos() {
+    const value = detailVideoInput().trim();
+
+    if (!value) {
+      props.onFeedback({
+        text: "watch URL または動画IDを入力してください。",
+        tone: "error",
+      });
+      return;
+    }
+
+    try {
+      const nextVideoIds = parseVideoIdInputLines(value);
+
+      setDetailDraft((currentDraft) => ({
+        ...currentDraft,
+        videoIds: [...currentDraft.videoIds, ...nextVideoIds],
+      }));
+      setHasDraftVideoChanges(true);
+      setDetailVideoInput("");
+      props.onFeedback(null);
+    } catch (error) {
+      props.onFeedback({
+        text:
+          error instanceof Error
+            ? error.message
+            : "watch URL または動画IDの入力を解析できませんでした。",
+        tone: "error",
+      });
     }
   }
 
@@ -696,6 +754,39 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                           />
                         </Show>
                       </div>
+
+                      <Show when={isEditingDetail()}>
+                        <div class="rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3">
+                          <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="space-y-1">
+                              <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                                Append Videos
+                              </p>
+                              <p class="text-sm text-stone-300">
+                                watch URL / 動画ID を複数行で末尾に追加できます。
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                              onClick={handleAppendDraftVideos}
+                            >
+                              追加
+                            </button>
+                          </div>
+                          <textarea
+                            rows="3"
+                            class="mt-3 w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm leading-6 text-stone-200 outline-none transition focus:border-stone-500"
+                            value={detailVideoInput()}
+                            onInput={(event) => setDetailVideoInput(event.currentTarget.value)}
+                            placeholder={[
+                              "sm9",
+                              "https://www.nicovideo.jp/watch/so5364283",
+                              "nm2829323",
+                            ].join("\n")}
+                          />
+                        </div>
+                      </Show>
 
                       <Show when={playlistShareInfo()}>
                         {(info) => (
