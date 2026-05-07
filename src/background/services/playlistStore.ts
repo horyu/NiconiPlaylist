@@ -83,8 +83,14 @@ export async function activateStoredPlaylist(playlistId: PlaylistId): Promise<vo
 export async function updateStoredPlaylist(
   playlistId: PlaylistId,
   updates: Partial<Pick<Playlist, "memo" | "title" | "videoIds">>,
+  options?: {
+    deletedVideoIndices?: number[];
+  },
 ): Promise<Playlist> {
-  const playlists = await getStoredPlaylists();
+  const [playlists, playbackContexts] = await Promise.all([
+    getStoredPlaylists(),
+    getStoredPlaybackContexts(),
+  ]);
   const playlistIndex = playlists.findIndex((playlist) => playlist.id === playlistId);
 
   if (playlistIndex < 0) {
@@ -99,7 +105,47 @@ export async function updateStoredPlaylist(
   const nextPlaylists = [...playlists];
 
   nextPlaylists[playlistIndex] = nextPlaylist;
-  await setStoredPlaylists(nextPlaylists);
+  const deletedVideoIndices = [...(options?.deletedVideoIndices ?? [])].sort((a, b) => a - b);
+  const nextPlaybackContexts =
+    deletedVideoIndices.length > 0
+      ? playbackContexts.flatMap((playbackContext) => {
+          if (playbackContext.playlistId !== playlistId) {
+            return [playbackContext];
+          }
+
+          const deletedBeforeCount = deletedVideoIndices.filter(
+            (deletedIndex) => deletedIndex < playbackContext.currentIndex,
+          ).length;
+          const isCurrentVideoDeleted = deletedVideoIndices.includes(playbackContext.currentIndex);
+
+          if (nextPlaylist.videoIds.length === 0) {
+            return [];
+          }
+
+          if (!isCurrentVideoDeleted) {
+            return [
+              {
+                ...playbackContext,
+                currentIndex: playbackContext.currentIndex - deletedBeforeCount,
+              },
+            ];
+          }
+
+          const nextCurrentIndex = playbackContext.currentIndex - deletedBeforeCount;
+
+          return [
+            {
+              ...playbackContext,
+              currentIndex: Math.min(nextCurrentIndex, nextPlaylist.videoIds.length - 1),
+            },
+          ];
+        })
+      : playbackContexts;
+
+  await Promise.all([
+    setStoredPlaylists(nextPlaylists),
+    setStoredPlaybackContexts(nextPlaybackContexts),
+  ]);
 
   return nextPlaylist;
 }

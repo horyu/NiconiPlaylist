@@ -157,6 +157,13 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   const selectedPlaylist = createMemo(
     () => props.state?.playlists.find((playlist) => playlist.id === selectedPlaylistId()) ?? null,
   );
+  const selectedPlaybackContext = createMemo(
+    () =>
+      props.state?.playbackContexts.find(
+        (playbackContext) => playbackContext.playlistId === selectedPlaylistId(),
+      ) ?? null,
+  );
+  const currentPlaybackIndex = createMemo(() => selectedPlaybackContext()?.currentIndex ?? null);
 
   createEffect(() => {
     const playlist = selectedPlaylist();
@@ -350,12 +357,19 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
     try {
       const draft = detailDraft();
+      const deletedVideoIndices = [...deletedDraftVideoIndices].sort((a, b) => a - b);
 
-      await updateStoredPlaylist(playlist.id, {
-        memo: normalizeOptionalText(draft.memo),
-        title: normalizeOptionalText(draft.title) ?? createTimestampTitle(),
-        videoIds: draft.videoIds.filter((_, index) => !deletedDraftVideoIndices.has(index)),
-      });
+      await updateStoredPlaylist(
+        playlist.id,
+        {
+          memo: normalizeOptionalText(draft.memo),
+          title: normalizeOptionalText(draft.title) ?? createTimestampTitle(),
+          videoIds: draft.videoIds.filter((_, index) => !deletedDraftVideoIndices.has(index)),
+        },
+        {
+          deletedVideoIndices,
+        },
+      );
       deletedDraftVideoIndices = new Set<number>();
       setDeletedDraftVideoCount(0);
       setDetailDraftResetKey((currentKey) => currentKey + 1);
@@ -517,6 +531,12 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                           </Show>
                           <div class="flex flex-wrap items-center gap-2 text-xs text-stone-400">
                             <span>{detailPlaylist.videoIds.length} videos</span>
+                            <Show when={currentPlaybackIndex() !== null}>
+                              <>
+                                <span class="text-stone-600">•</span>
+                                <span>再生中: {(currentPlaybackIndex() ?? 0) + 1}</span>
+                              </>
+                            </Show>
                             <span class="text-stone-600">•</span>
                             <span>{detailPlaylist.id}</span>
                             <Show when={detailPlaylist.id === props.state?.lastActivePlaylistId}>
@@ -716,6 +736,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                           isEditingDetail() ? detailDraft().videoIds : detailPlaylist.videoIds
                         }
                         videoMetadataState={props.videoMetadataState}
+                        currentPlaybackIndex={currentPlaybackIndex()}
                         isEditing={isEditingDetail()}
                         resetKey={detailDraftResetKey()}
                         onSetVideoDeleted={handleSetDraftVideoDeleted}

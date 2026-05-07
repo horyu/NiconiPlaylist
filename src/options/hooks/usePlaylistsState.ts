@@ -1,22 +1,29 @@
 import { createResource } from "solid-js";
 
-import { getLastActivePlaylistId, getStoredPlaylists } from "@/background/services/playlistStore";
-import type { Playlist } from "@/lib/types";
+import {
+  getLastActivePlaylistId,
+  getStoredPlaybackContexts,
+  getStoredPlaylists,
+} from "@/background/services/playlistStore";
+import type { PlaybackContext, Playlist } from "@/lib/types";
 
 export type PlaylistsState = {
-  playlists: Playlist[];
   lastActivePlaylistId: string | null;
+  playbackContexts: PlaybackContext[];
+  playlists: Playlist[];
 };
 
 async function fetchPlaylistsState(): Promise<PlaylistsState> {
-  const [playlists, lastActivePlaylistId] = await Promise.all([
+  const [playlists, lastActivePlaylistId, playbackContexts] = await Promise.all([
     getStoredPlaylists(),
     getLastActivePlaylistId(),
+    getStoredPlaybackContexts(),
   ]);
 
   return {
-    playlists,
     lastActivePlaylistId,
+    playbackContexts,
+    playlists,
   };
 }
 

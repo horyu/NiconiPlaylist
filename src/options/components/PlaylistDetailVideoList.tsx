@@ -4,6 +4,7 @@ import type { VideoId } from "@/lib/types";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 
 type PlaylistDetailVideoListProps = {
+  currentPlaybackIndex?: number | null;
   isEditing?: boolean;
   onSetVideoDeleted?: (index: number, isDeleted: boolean) => void;
   resetKey?: number;
@@ -12,6 +13,7 @@ type PlaylistDetailVideoListProps = {
 };
 
 type EditableVideoRowProps = {
+  currentPlaybackIndex?: number | null;
   duration?: number | null;
   index: number;
   isEditing?: boolean;
@@ -36,6 +38,7 @@ function formatDuration(duration: number | null | undefined): string {
 
 function EditableVideoRow(props: EditableVideoRowProps) {
   const [isDeleted, setIsDeleted] = createSignal(false);
+  const isCurrent = () => props.currentPlaybackIndex === props.index;
 
   createEffect(() => {
     const resetKey = props.resetKey;
@@ -57,11 +60,24 @@ function EditableVideoRow(props: EditableVideoRowProps) {
       class={`flex items-start gap-3 rounded-xl border p-3 ${
         isDeleted()
           ? "border-red-500/30 bg-red-500/5 opacity-70"
-          : "border-stone-800 bg-stone-950/40"
+          : isCurrent()
+            ? "border-emerald-500/40 bg-emerald-500/10"
+            : "border-stone-800 bg-stone-950/40"
       }`}
     >
-      <div class="flex w-8 shrink-0 justify-center pt-4 text-sm font-semibold text-stone-400">
-        {props.index + 1}
+      <div class="flex w-8 shrink-0 flex-col items-center pt-1 text-center">
+        <span
+          class={`text-sm font-semibold ${
+            isCurrent() && !isDeleted() ? "text-emerald-200" : "text-stone-400"
+          }`}
+        >
+          {props.index + 1}
+        </span>
+        <Show when={isCurrent()}>
+          <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+            NOW
+          </span>
+        </Show>
       </div>
 
       <a
@@ -136,6 +152,7 @@ export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
 
             return (
               <EditableVideoRow
+                currentPlaybackIndex={props.currentPlaybackIndex}
                 index={index()}
                 videoId={videoId}
                 title={videoMetadata()?.title}
