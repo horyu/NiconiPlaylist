@@ -33,10 +33,16 @@ type ShareInfo = {
   formatLabel: string;
 };
 
+type DetailDraftVideoRow = {
+  originalIndex: number | null;
+  rowId: string;
+  videoId: string;
+};
+
 type DetailDraft = {
   memo: string;
   title: string;
-  videoIds: string[];
+  videoRows: DetailDraftVideoRow[];
 };
 
 type PlaylistsTabProps = {
@@ -85,15 +91,34 @@ function getShareFormatLabel(kind: ShareUrlKind): string {
   }
 }
 
+function createDetailDraftVideoRow(
+  videoId: string,
+  originalIndex: number | null,
+): DetailDraftVideoRow {
+  return {
+    originalIndex,
+    rowId: crypto.randomUUID(),
+    videoId,
+  };
+}
+
+function createDetailDraftVideoRows(videoIds: string[]): DetailDraftVideoRow[] {
+  return videoIds.map((videoId, index) => createDetailDraftVideoRow(videoId, index));
+}
+
 export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
   const [detailVideoInput, setDetailVideoInput] = createSignal("");
+  const [detailReadonlyVideoRows, setDetailReadonlyVideoRows] = createSignal<DetailDraftVideoRow[]>(
+    [],
+  );
+  const [detailReadonlyVideoRowsKey, setDetailReadonlyVideoRowsKey] = createSignal("");
   const [detailDraft, setDetailDraft] = createSignal<DetailDraft>({
     memo: "",
     title: "",
-    videoIds: [],
+    videoRows: [],
   });
   const [deletedDraftVideoCount, setDeletedDraftVideoCount] = createSignal(0);
   const [hasDraftVideoChanges, setHasDraftVideoChanges] = createSignal(false);
@@ -107,7 +132,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   let shareCopiedTimer: ReturnType<typeof setTimeout> | null = null;
   let currentSharedUrl = "";
   let currentSharedUrlPlaylistId: PlaylistId | null = null;
-  let deletedDraftVideoIndices = new Set<number>();
+  let deletedDraftVideoRowIds = new Set<string>();
 
   createEffect(() => {
     const playlists = props.state?.playlists ?? [];
@@ -123,7 +148,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       return;
     }
 
-    const videoIds = detailDraft().videoIds;
+    const videoIds = detailDraft().videoRows.map((videoRow) => videoRow.videoId);
 
     if (videoIds.length > 0) {
       enqueueVideoMetadataForVideoIds(videoIds);
@@ -194,15 +219,34 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDetailDraft({
       memo: playlist.memo ?? "",
       title: playlist.title ?? "",
-      videoIds: [...playlist.videoIds],
+      videoRows: createDetailDraftVideoRows(playlist.videoIds),
     });
-    deletedDraftVideoIndices = new Set<number>();
+    deletedDraftVideoRowIds = new Set<string>();
     setDeletedDraftVideoCount(0);
     setHasDraftVideoChanges(false);
     setDetailVideoInput("");
     setDetailDraftResetKey((currentKey) => currentKey + 1);
     setDetailDraftPlaylistId(playlist.id);
     setIsEditingDetail(false);
+  });
+
+  createEffect(() => {
+    const playlist = selectedPlaylist();
+
+    if (!playlist) {
+      setDetailReadonlyVideoRows([]);
+      setDetailReadonlyVideoRowsKey("");
+      return;
+    }
+
+    const nextKey = `${playlist.id}:${playlist.videoIds.join("\u0000")}`;
+
+    if (detailReadonlyVideoRowsKey() === nextKey) {
+      return;
+    }
+
+    setDetailReadonlyVideoRows(createDetailDraftVideoRows(playlist.videoIds));
+    setDetailReadonlyVideoRowsKey(nextKey);
   });
 
   const hasDetailUnsavedChanges = createMemo(() => {
@@ -335,9 +379,9 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDetailDraft({
       memo: playlist.memo ?? "",
       title: playlist.title ?? "",
-      videoIds: [...playlist.videoIds],
+      videoRows: createDetailDraftVideoRows(playlist.videoIds),
     });
-    deletedDraftVideoIndices = new Set<number>();
+    deletedDraftVideoRowIds = new Set<string>();
     setDeletedDraftVideoCount(0);
     setHasDraftVideoChanges(false);
     setDetailVideoInput("");
@@ -357,9 +401,9 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDetailDraft({
       memo: playlist.memo ?? "",
       title: playlist.title ?? "",
-      videoIds: [...playlist.videoIds],
+      videoRows: createDetailDraftVideoRows(playlist.videoIds),
     });
-    deletedDraftVideoIndices = new Set<number>();
+    deletedDraftVideoRowIds = new Set<string>();
     setDeletedDraftVideoCount(0);
     setHasDraftVideoChanges(false);
     setDetailVideoInput("");
@@ -379,20 +423,28 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
     try {
       const draft = detailDraft();
-      const deletedVideoIndices = [...deletedDraftVideoIndices].sort((a, b) => a - b);
+      const deletedVideoIndices = draft.videoRows
+        .filter(
+          (videoRow) =>
+            videoRow.originalIndex !== null && deletedDraftVideoRowIds.has(videoRow.rowId),
+        )
+        .map((videoRow) => videoRow.originalIndex!)
+        .sort((a, b) => a - b);
 
       await updateStoredPlaylist(
         playlist.id,
         {
           memo: normalizeOptionalText(draft.memo),
           title: normalizeOptionalText(draft.title) ?? createTimestampTitle(),
-          videoIds: draft.videoIds.filter((_, index) => !deletedDraftVideoIndices.has(index)),
+          videoIds: draft.videoRows
+            .filter((videoRow) => !deletedDraftVideoRowIds.has(videoRow.rowId))
+            .map((videoRow) => videoRow.videoId),
         },
         {
           deletedVideoIndices,
         },
       );
-      deletedDraftVideoIndices = new Set<number>();
+      deletedDraftVideoRowIds = new Set<string>();
       setDeletedDraftVideoCount(0);
       setHasDraftVideoChanges(false);
       setDetailVideoInput("");
@@ -408,18 +460,18 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     }
   }
 
-  function handleSetDraftVideoDeleted(index: number, isDeleted: boolean) {
-    const hasIndex = deletedDraftVideoIndices.has(index);
+  function handleSetDraftVideoDeleted(rowId: string, isDeleted: boolean) {
+    const hasRowId = deletedDraftVideoRowIds.has(rowId);
 
-    if (isDeleted && !hasIndex) {
-      deletedDraftVideoIndices.add(index);
+    if (isDeleted && !hasRowId) {
+      deletedDraftVideoRowIds.add(rowId);
       setDeletedDraftVideoCount((currentCount) => currentCount + 1);
       setHasDraftVideoChanges(true);
       return;
     }
 
-    if (!isDeleted && hasIndex) {
-      deletedDraftVideoIndices.delete(index);
+    if (!isDeleted && hasRowId) {
+      deletedDraftVideoRowIds.delete(rowId);
       setDeletedDraftVideoCount((currentCount) => currentCount - 1);
       setHasDraftVideoChanges(true);
     }
@@ -441,7 +493,10 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
       setDetailDraft((currentDraft) => ({
         ...currentDraft,
-        videoIds: [...currentDraft.videoIds, ...nextVideoIds],
+        videoRows: [
+          ...currentDraft.videoRows,
+          ...nextVideoIds.map((videoId) => createDetailDraftVideoRow(videoId, null)),
+        ],
       }));
       setHasDraftVideoChanges(true);
       setDetailVideoInput("");
@@ -455,6 +510,33 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
         tone: "error",
       });
     }
+  }
+
+  function handleMoveDraftVideo(rowId: string, direction: "up" | "down") {
+    const currentIndex = detailDraft().videoRows.findIndex((videoRow) => videoRow.rowId === rowId);
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+    if (currentIndex < 0) {
+      return;
+    }
+
+    setDetailDraft((currentDraft) => {
+      if (targetIndex < 0 || targetIndex >= currentDraft.videoRows.length) {
+        return currentDraft;
+      }
+
+      const nextVideoRows = [...currentDraft.videoRows];
+      const [movedVideoRow] = nextVideoRows.splice(currentIndex, 1);
+
+      nextVideoRows.splice(targetIndex, 0, movedVideoRow!);
+
+      return {
+        ...currentDraft,
+        videoRows: nextVideoRows,
+      };
+    });
+    setHasDraftVideoChanges(true);
+    props.onFeedback(null);
   }
 
   return (
@@ -823,12 +905,13 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                       </Show>
 
                       <PlaylistDetailVideoList
-                        videoIds={
-                          isEditingDetail() ? detailDraft().videoIds : detailPlaylist.videoIds
+                        videoRows={
+                          isEditingDetail() ? detailDraft().videoRows : detailReadonlyVideoRows()
                         }
                         videoMetadataState={props.videoMetadataState}
                         currentPlaybackIndex={currentPlaybackIndex()}
                         isEditing={isEditingDetail()}
+                        onMoveVideo={handleMoveDraftVideo}
                         resetKey={detailDraftResetKey()}
                         onSetVideoDeleted={handleSetDraftVideoDeleted}
                       />

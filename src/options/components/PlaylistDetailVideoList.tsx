@@ -3,23 +3,35 @@ import { createEffect, createSignal, For, Show } from "solid-js";
 import type { VideoId } from "@/lib/types";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 
+type PlaylistDetailVideoRow = {
+  originalIndex: number | null;
+  rowId: string;
+  videoId: VideoId;
+};
+
 type PlaylistDetailVideoListProps = {
   currentPlaybackIndex?: number | null;
   isEditing?: boolean;
-  onSetVideoDeleted?: (index: number, isDeleted: boolean) => void;
+  onMoveVideo?: (rowId: string, direction: "up" | "down") => void;
+  onSetVideoDeleted?: (rowId: string, isDeleted: boolean) => void;
   resetKey?: number;
-  videoIds: VideoId[];
+  videoRows: PlaylistDetailVideoRow[];
   videoMetadataState: VideoMetadataState | undefined;
 };
 
 type EditableVideoRowProps = {
+  canMoveDown?: boolean;
+  canMoveUp?: boolean;
   currentPlaybackIndex?: number | null;
   duration?: number | null;
-  index: number;
+  index: () => number;
   isEditing?: boolean;
-  onSetDeleted?: (index: number, isDeleted: boolean) => void;
+  onMove?: (rowId: string, direction: "up" | "down") => void;
+  onSetDeleted?: (rowId: string, isDeleted: boolean) => void;
   ownerName?: string | null;
+  originalIndex: number | null;
   resetKey?: number;
+  rowId: string;
   thumbnailUrl?: string | null;
   title?: string;
   videoId: VideoId;
@@ -38,7 +50,8 @@ function formatDuration(duration: number | null | undefined): string {
 
 function EditableVideoRow(props: EditableVideoRowProps) {
   const [isDeleted, setIsDeleted] = createSignal(false);
-  const isCurrent = () => props.currentPlaybackIndex === props.index;
+  const isCurrent = () =>
+    props.currentPlaybackIndex !== null && props.currentPlaybackIndex === props.originalIndex;
 
   createEffect(() => {
     const resetKey = props.resetKey;
@@ -52,7 +65,11 @@ function EditableVideoRow(props: EditableVideoRowProps) {
     const nextIsDeleted = !isDeleted();
 
     setIsDeleted(nextIsDeleted);
-    props.onSetDeleted?.(props.index, nextIsDeleted);
+    props.onSetDeleted?.(props.rowId, nextIsDeleted);
+  }
+
+  function handleMove(direction: "up" | "down") {
+    props.onMove?.(props.rowId, direction);
   }
 
   return (
@@ -71,7 +88,7 @@ function EditableVideoRow(props: EditableVideoRowProps) {
             isCurrent() && !isDeleted() ? "text-emerald-200" : "text-stone-400"
           }`}
         >
-          {props.index + 1}
+          {props.index() + 1}
         </span>
         <Show when={isCurrent()}>
           <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
@@ -105,7 +122,29 @@ function EditableVideoRow(props: EditableVideoRowProps) {
       </div>
 
       <Show when={props.isEditing}>
-        <div class="shrink-0">
+        <div class="shrink-0 space-y-2">
+          <div class="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+              onClick={() => handleMove("up")}
+              disabled={!props.canMoveUp}
+              title="上へ移動"
+              aria-label="上へ移動"
+            >
+              ↑
+            </button>
+            <button
+              type="button"
+              class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+              onClick={() => handleMove("down")}
+              disabled={!props.canMoveDown}
+              title="下へ移動"
+              aria-label="下へ移動"
+            >
+              ↓
+            </button>
+          </div>
           <button
             type="button"
             class={`w-[5.75rem] rounded-full border px-3 py-1 text-center text-xs font-medium transition ${
@@ -124,6 +163,11 @@ function EditableVideoRow(props: EditableVideoRowProps) {
 }
 
 export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
+  const reorderHelpText = () =>
+    props.isEditing
+      ? "編集中は各動画を削除・上下移動できます。"
+      : "将来的に追加・並び替えをここへ集約します。";
+
   return (
     <div
       class="space-y-3"
@@ -134,17 +178,14 @@ export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
     >
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium text-stone-100">動画一覧</p>
-        <p class="text-xs text-stone-500">
-          {props.isEditing
-            ? "編集中は各動画を削除できます。"
-            : "将来的に追加・並び替えをここへ集約します。"}
-        </p>
+        <p class="text-xs text-stone-500">{reorderHelpText()}</p>
       </div>
 
       <ul class="space-y-2">
-        <For each={props.videoIds}>
-          {(videoId, index) => {
-            const videoMetadata = () => props.videoMetadataState?.videoMetadataMap[videoId];
+        <For each={props.videoRows}>
+          {(videoRow, index) => {
+            const videoMetadata = () =>
+              props.videoMetadataState?.videoMetadataMap[videoRow.videoId];
             const ownerName = () => {
               const ownerId = videoMetadata()?.ownerId;
               return ownerId ? props.videoMetadataState?.ownersMap[ownerId]?.name : undefined;
@@ -152,9 +193,13 @@ export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
 
             return (
               <EditableVideoRow
+                canMoveDown={index() < props.videoRows.length - 1}
+                canMoveUp={index() > 0}
                 currentPlaybackIndex={props.currentPlaybackIndex}
-                index={index()}
-                videoId={videoId}
+                index={index}
+                originalIndex={videoRow.originalIndex}
+                rowId={videoRow.rowId}
+                videoId={videoRow.videoId}
                 title={videoMetadata()?.title}
                 duration={videoMetadata()?.duration}
                 thumbnailUrl={
@@ -162,6 +207,7 @@ export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
                 }
                 ownerName={ownerName()}
                 isEditing={props.isEditing}
+                onMove={props.onMoveVideo}
                 resetKey={props.resetKey}
                 onSetDeleted={props.onSetVideoDeleted}
               />

@@ -2,6 +2,24 @@ import { getStorageData, setStorageData } from "@/background/services/storage";
 import { isPlaybackContext, isPlaylist } from "@/lib/typeGuards";
 import type { PlaybackContext, Playlist, PlaylistId, VideoId } from "@/lib/types";
 
+function buildVideoOccurrenceKeys(videoIds: VideoId[]): string[] {
+  const counts = new Map<VideoId, number>();
+
+  return videoIds.map((videoId) => {
+    const occurrence = (counts.get(videoId) ?? 0) + 1;
+
+    counts.set(videoId, occurrence);
+    return `${videoId}#${occurrence}`;
+  });
+}
+
+function countDeletedIndicesBefore(
+  deletedVideoIndices: readonly number[],
+  currentIndex: number,
+): number {
+  return deletedVideoIndices.filter((deletedIndex) => deletedIndex < currentIndex).length;
+}
+
 function resolvePlaybackIndex(
   playlist: Playlist,
   videoId: VideoId,
@@ -106,27 +124,51 @@ export async function updateStoredPlaylist(
 
   nextPlaylists[playlistIndex] = nextPlaylist;
   const deletedVideoIndices = [...(options?.deletedVideoIndices ?? [])].sort((a, b) => a - b);
+  const currentVideoOccurrenceKeys = buildVideoOccurrenceKeys(currentPlaylist.videoIds);
+  const nextVideoOccurrenceKeys = buildVideoOccurrenceKeys(nextPlaylist.videoIds);
+  const nextVideoIndexByOccurrenceKey = new Map(
+    nextVideoOccurrenceKeys.map((occurrenceKey, index) => [occurrenceKey, index] as const),
+  );
   const nextPlaybackContexts =
-    deletedVideoIndices.length > 0
+    updates.videoIds !== undefined
       ? playbackContexts.flatMap((playbackContext) => {
           if (playbackContext.playlistId !== playlistId) {
             return [playbackContext];
           }
 
-          const deletedBeforeCount = deletedVideoIndices.filter(
-            (deletedIndex) => deletedIndex < playbackContext.currentIndex,
-          ).length;
-          const isCurrentVideoDeleted = deletedVideoIndices.includes(playbackContext.currentIndex);
-
           if (nextPlaylist.videoIds.length === 0) {
             return [];
           }
+
+          const currentOccurrenceKey = currentVideoOccurrenceKeys[playbackContext.currentIndex];
+
+          if (currentOccurrenceKey) {
+            const movedCurrentIndex = nextVideoIndexByOccurrenceKey.get(currentOccurrenceKey);
+
+            if (movedCurrentIndex !== undefined) {
+              return [
+                {
+                  ...playbackContext,
+                  currentIndex: movedCurrentIndex,
+                },
+              ];
+            }
+          }
+
+          const deletedBeforeCount = countDeletedIndicesBefore(
+            deletedVideoIndices,
+            playbackContext.currentIndex,
+          );
+          const isCurrentVideoDeleted = deletedVideoIndices.includes(playbackContext.currentIndex);
 
           if (!isCurrentVideoDeleted) {
             return [
               {
                 ...playbackContext,
-                currentIndex: playbackContext.currentIndex - deletedBeforeCount,
+                currentIndex: Math.min(
+                  playbackContext.currentIndex - deletedBeforeCount,
+                  nextPlaylist.videoIds.length - 1,
+                ),
               },
             ];
           }
