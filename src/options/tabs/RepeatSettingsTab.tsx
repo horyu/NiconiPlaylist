@@ -6,9 +6,10 @@ import {
 } from "@/background/services/playbackSettings";
 import { createRepeatPreset, sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import type { RepeatPreset } from "@/lib/types";
+import type { OptionsToast } from "@/options/toast";
 
 type RepeatSettingsTabProps = {
-  onFeedback: (message: string | null) => void;
+  onFeedback: (toast: OptionsToast | null) => void;
 };
 
 function splitDurationSeconds(durationSeconds: number): { minutes: string; seconds: string } {
@@ -100,11 +101,12 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       await setStoredPlaybackSettings(nextPlaybackSettings);
       setPresets(nextPlaybackSettings.presets);
       setSavedPresetsJson(JSON.stringify(nextPlaybackSettings.presets));
-      props.onFeedback("リピート設定を更新しました。");
+      props.onFeedback({ text: "リピート設定を更新しました。", tone: "success" });
     } catch (error) {
-      props.onFeedback(
-        error instanceof Error ? error.message : "リピート設定の更新に失敗しました。",
-      );
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "リピート設定の更新に失敗しました。",
+        tone: "error",
+      });
     }
   }
 

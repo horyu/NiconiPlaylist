@@ -1,4 +1,4 @@
-import { createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 
 import { usePlaylistsState } from "@/options/hooks/usePlaylistsState";
 import { useVideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -6,6 +6,7 @@ import { DirectInputCreateSection } from "@/options/tabs/DirectInputCreateSectio
 import { PlaylistsTab } from "@/options/tabs/PlaylistsTab";
 import { RepeatSettingsTab } from "@/options/tabs/RepeatSettingsTab";
 import { SharedUrlImportSection } from "@/options/tabs/SharedUrlImportSection";
+import type { OptionsToast } from "@/options/toast";
 
 type TabKey = "import" | "create" | "playlists" | "repeat";
 
@@ -18,7 +19,7 @@ const TAB_LABELS: { key: TabKey; label: string }[] = [
 
 export default function OptionsPage() {
   const [activeTab, setActiveTab] = createSignal<TabKey>("import");
-  const [feedback, setFeedback] = createSignal<string | null>(null);
+  const [toast, setToast] = createSignal<OptionsToast | null>(null);
   const [state, { refetch }] = usePlaylistsState();
   const [videoMetadataState, { refetch: refetchVideoMetadataState }] = useVideoMetadataState();
 
@@ -26,8 +27,49 @@ export default function OptionsPage() {
     await Promise.all([refetch(), refetchVideoMetadataState()]);
   }
 
+  createEffect(() => {
+    const currentToast = toast();
+
+    if (!currentToast) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setToast(null);
+    }, 4000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  });
+
   return (
     <main class="min-h-screen bg-stone-950 text-stone-100">
+      <Show when={toast()}>
+        {(currentToast) => (
+          <div class="fixed right-10 top-[5.5rem] z-50">
+            <div
+              class={[
+                "flex items-center gap-3 rounded-md px-4 py-2 text-sm shadow-lg shadow-black/25",
+                currentToast().tone === "success"
+                  ? "bg-emerald-100 text-emerald-900"
+                  : "bg-rose-100 text-rose-900",
+              ].join(" ")}
+            >
+              <span>{currentToast().text}</span>
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                aria-label="トーストを閉じる"
+                class="text-base leading-none opacity-70 transition hover:opacity-100"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+      </Show>
+
       <div class="flex min-h-screen w-full flex-col gap-6 px-6 py-6 lg:px-10">
         <header class="flex flex-col gap-4 border-b border-stone-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
           <div class="space-y-1">
@@ -47,7 +89,7 @@ export default function OptionsPage() {
                   type="button"
                   onClick={() => {
                     setActiveTab(tab.key);
-                    setFeedback(null);
+                    setToast(null);
                   }}
                   class={[
                     "rounded-md border px-4 py-2 text-sm font-medium transition",
@@ -79,37 +121,19 @@ export default function OptionsPage() {
           </Match>
 
           <Match when={activeTab() === "playlists"}>
-            <div class="space-y-4">
-              <Show when={feedback()}>
-                {(message) => (
-                  <div class="rounded-2xl border border-stone-700 bg-stone-900/80 px-4 py-3 text-sm text-stone-300">
-                    {message()}
-                  </div>
-                )}
-              </Show>
-              <PlaylistsTab
-                state={state()}
-                videoMetadataState={videoMetadataState()}
-                loading={state.loading}
-                error={state.error}
-                onActivated={refreshState}
-                onDeleted={refreshState}
-                onFeedback={setFeedback}
-              />
-            </div>
+            <PlaylistsTab
+              state={state()}
+              videoMetadataState={videoMetadataState()}
+              loading={state.loading}
+              error={state.error}
+              onActivated={refreshState}
+              onDeleted={refreshState}
+              onFeedback={setToast}
+            />
           </Match>
 
           <Match when={activeTab() === "repeat"}>
-            <div class="space-y-4">
-              <Show when={feedback()}>
-                {(message) => (
-                  <div class="rounded-2xl border border-stone-700 bg-stone-900/80 px-4 py-3 text-sm text-stone-300">
-                    {message()}
-                  </div>
-                )}
-              </Show>
-              <RepeatSettingsTab onFeedback={setFeedback} />
-            </div>
+            <RepeatSettingsTab onFeedback={setToast} />
           </Match>
         </Switch>
       </div>

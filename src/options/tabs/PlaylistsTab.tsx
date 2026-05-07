@@ -17,6 +17,7 @@ import type { Playlist, PlaylistId } from "@/lib/types";
 import { PlaylistDetailVideoList } from "@/options/components/PlaylistDetailVideoList";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
+import type { OptionsToast } from "@/options/toast";
 
 type ShareUrlKind = "id-only" | "with-title" | "with-title-and-memo";
 
@@ -34,7 +35,7 @@ type PlaylistsTabProps = {
   error: unknown;
   onActivated: () => Promise<void> | void;
   onDeleted: () => Promise<void> | void;
-  onFeedback: (message: string | null) => void;
+  onFeedback: (toast: OptionsToast | null) => void;
 };
 
 function getPlaylistLabel(playlist: Playlist): string {
@@ -127,12 +128,16 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
     try {
       await activateStoredPlaylist(playlistId);
-      props.onFeedback("アクティブなプレイリストを更新しました。");
+      props.onFeedback({
+        text: "アクティブなプレイリストを更新しました。",
+        tone: "success",
+      });
       await props.onActivated();
     } catch (error) {
-      props.onFeedback(
-        error instanceof Error ? error.message : "プレイリストの選択に失敗しました。",
-      );
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "プレイリストの選択に失敗しました。",
+        tone: "error",
+      });
     }
   }
 
@@ -144,7 +149,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
     try {
       await deleteStoredPlaylist(playlistId);
-      props.onFeedback("プレイリストを削除しました。");
+      props.onFeedback({ text: "プレイリストを削除しました。", tone: "success" });
       setOpenShareMenuPlaylistId((currentId) => (currentId === playlistId ? null : currentId));
       setShareInfo((currentInfo) => (currentInfo?.playlistId === playlistId ? null : currentInfo));
       if (currentSharedUrlPlaylistId === playlistId) {
@@ -153,9 +158,10 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       }
       await props.onDeleted();
     } catch (error) {
-      props.onFeedback(
-        error instanceof Error ? error.message : "プレイリストの削除に失敗しました。",
-      );
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "プレイリストの削除に失敗しました。",
+        tone: "error",
+      });
     }
   }
 
@@ -200,9 +206,10 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       }, 1500);
     } catch (error) {
       setShareCopied(false);
-      props.onFeedback(
-        error instanceof Error ? error.message : "共有 URL のコピーに失敗しました。",
-      );
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "共有 URL のコピーに失敗しました。",
+        tone: "error",
+      });
     }
   }
 
