@@ -23,7 +23,8 @@ type ShareUrlKind = "id-only" | "with-title" | "with-title-and-memo";
 type ShareInfo = {
   playlistId: PlaylistId;
   byteCount: number;
-  previewText: string;
+  displayUrl: string;
+  formatLabel: string;
 };
 
 type PlaylistsTabProps = {
@@ -40,12 +41,15 @@ function getPlaylistLabel(playlist: Playlist): string {
   return playlist.title ?? playlist.id;
 }
 
-function formatSharedUrlPreview(url: string): string {
-  if (url.length <= 96) {
-    return url;
+function getShareFormatLabel(kind: ShareUrlKind): string {
+  switch (kind) {
+    case "id-only":
+      return "動画IDのみ";
+    case "with-title":
+      return "タイトル付き";
+    case "with-title-and-memo":
+      return "タイトル・メモ付き";
   }
-
-  return `${url.slice(0, 64)} ... ${url.slice(-24)}`;
 }
 
 export function PlaylistsTab(props: PlaylistsTabProps) {
@@ -175,7 +179,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setShareInfo({
       playlistId,
       byteCount: url.length,
-      previewText: formatSharedUrlPreview(url),
+      displayUrl: url,
+      formatLabel: getShareFormatLabel(kind),
     });
   }
 
@@ -201,8 +206,11 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     }
   }
 
-  function handleOpenSharedUrl() {
-    window.open(currentSharedUrl, "_blank", "noopener,noreferrer");
+  function handleCloseSharedUrl() {
+    currentSharedUrl = "";
+    currentSharedUrlPlaylistId = null;
+    setShareCopied(false);
+    setShareInfo(null);
   }
 
   return (
@@ -368,7 +376,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 }
                                 class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
                               >
-                                IDのみ
+                                動画IDのみ
                               </button>
                               <button
                                 type="button"
@@ -427,27 +435,34 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
                       <Show when={playlistShareInfo()}>
                         {(info) => (
-                          <div class="flex flex-wrap items-center gap-2 text-sm text-stone-400">
-                            <button
-                              type="button"
-                              class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
-                              onClick={() => void handleCopySharedUrl()}
-                              disabled={shareCopied() || !hasCurrentSharedUrl()}
+                          <div class="space-y-2 rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3 text-sm text-stone-400">
+                            <div class="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50"
+                                onClick={handleCloseSharedUrl}
+                              >
+                                閉じる
+                              </button>
+                              <button
+                                type="button"
+                                class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                                onClick={() => void handleCopySharedUrl()}
+                                disabled={shareCopied() || !hasCurrentSharedUrl()}
+                              >
+                                {shareCopied() ? "コピー済み" : "コピー"}
+                              </button>
+                              <span>{info().formatLabel}</span>
+                              <span>{info().byteCount} byte</span>
+                            </div>
+                            <a
+                              href={hasCurrentSharedUrl() ? currentSharedUrl : undefined}
+                              target="_blank"
+                              rel="noreferrer"
+                              class="break-all text-stone-200 underline decoration-stone-500 underline-offset-4 transition hover:text-white"
                             >
-                              {shareCopied() ? "コピー済み" : "コピー"}
-                            </button>
-                            <button
-                              type="button"
-                              class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50"
-                              onClick={() => handleOpenSharedUrl()}
-                              disabled={!hasCurrentSharedUrl()}
-                            >
-                              URLを開く
-                            </button>
-                            <span>{info().byteCount} byte:</span>
-                            <span class="max-w-full truncate text-stone-200">
-                              {info().previewText}
-                            </span>
+                              {info().displayUrl}
+                            </a>
                           </div>
                         )}
                       </Show>
