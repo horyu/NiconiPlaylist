@@ -9,7 +9,11 @@ import {
   Switch,
 } from "solid-js";
 
-import { activateStoredPlaylist, deleteStoredPlaylist } from "@/background/services/playlistStore";
+import {
+  activateStoredPlaylist,
+  deleteStoredPlaylist,
+  updateStoredPlaylist,
+} from "@/background/services/playlistStore";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { buildSharedPlaylistUrl } from "@/lib/playlistUrl";
 import { normalizeOptionalText } from "@/lib/text";
@@ -28,6 +32,11 @@ type ShareInfo = {
   formatLabel: string;
 };
 
+type DetailDraft = {
+  memo: string;
+  title: string;
+};
+
 type PlaylistsTabProps = {
   state: PlaylistsState | undefined;
   videoMetadataState: VideoMetadataState | undefined;
@@ -35,11 +44,32 @@ type PlaylistsTabProps = {
   error: unknown;
   onActivated: () => Promise<void> | void;
   onDeleted: () => Promise<void> | void;
+  onUpdated: () => Promise<void> | void;
   onFeedback: (toast: OptionsToast | null) => void;
 };
 
 function getPlaylistLabel(playlist: Playlist): string {
   return playlist.title ?? playlist.id;
+}
+
+function formatDatePart(value: number): string {
+  return value.toString().padStart(2, "0");
+}
+
+function createTimestampTitle(): string {
+  const now = new Date();
+  const timestamp = [
+    now.getFullYear(),
+    formatDatePart(now.getMonth() + 1),
+    formatDatePart(now.getDate()),
+  ].join("/");
+  const time = [
+    formatDatePart(now.getHours()),
+    formatDatePart(now.getMinutes()),
+    formatDatePart(now.getSeconds()),
+  ].join(":");
+
+  return `${timestamp} ${time}`;
 }
 
 function getShareFormatLabel(kind: ShareUrlKind): string {
@@ -56,6 +86,9 @@ function getShareFormatLabel(kind: ShareUrlKind): string {
 export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
+  const [isEditingDetail, setIsEditingDetail] = createSignal(false);
+  const [detailDraft, setDetailDraft] = createSignal<DetailDraft>({ memo: "", title: "" });
+  const [detailDraftPlaylistId, setDetailDraftPlaylistId] = createSignal<PlaylistId | null>(null);
   const [openShareMenuPlaylistId, setOpenShareMenuPlaylistId] = createSignal<PlaylistId | null>(
     null,
   );
@@ -116,6 +149,37 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   const selectedPlaylist = createMemo(
     () => props.state?.playlists.find((playlist) => playlist.id === selectedPlaylistId()) ?? null,
   );
+
+  createEffect(() => {
+    const playlist = selectedPlaylist();
+
+    if (!playlist) {
+      return;
+    }
+
+    if (detailDraftPlaylistId() === playlist.id) {
+      return;
+    }
+
+    setDetailDraft({
+      memo: playlist.memo ?? "",
+      title: playlist.title ?? "",
+    });
+    setDetailDraftPlaylistId(playlist.id);
+    setIsEditingDetail(false);
+  });
+
+  const hasDetailUnsavedChanges = createMemo(() => {
+    const playlist = selectedPlaylist();
+
+    if (!playlist) {
+      return false;
+    }
+
+    const draft = detailDraft();
+
+    return draft.title !== (playlist.title ?? "") || draft.memo !== (playlist.memo ?? "");
+  });
 
   onCleanup(() => {
     if (shareCopiedTimer) {
@@ -218,6 +282,64 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     currentSharedUrlPlaylistId = null;
     setShareCopied(false);
     setShareInfo(null);
+  }
+
+  function handleStartEditingDetail() {
+    const playlist = selectedPlaylist();
+
+    if (!playlist) {
+      return;
+    }
+
+    setDetailDraft({
+      memo: playlist.memo ?? "",
+      title: playlist.title ?? "",
+    });
+    setDetailDraftPlaylistId(playlist.id);
+    setIsEditingDetail(true);
+    props.onFeedback(null);
+  }
+
+  function handleCancelEditingDetail() {
+    const playlist = selectedPlaylist();
+
+    if (!playlist) {
+      return;
+    }
+
+    setDetailDraft({
+      memo: playlist.memo ?? "",
+      title: playlist.title ?? "",
+    });
+    setIsEditingDetail(false);
+    props.onFeedback(null);
+  }
+
+  async function handleSaveDetail() {
+    const playlist = selectedPlaylist();
+
+    if (!playlist) {
+      return;
+    }
+
+    props.onFeedback(null);
+
+    try {
+      const draft = detailDraft();
+
+      await updateStoredPlaylist(playlist.id, {
+        memo: normalizeOptionalText(draft.memo),
+        title: normalizeOptionalText(draft.title) ?? createTimestampTitle(),
+      });
+      setIsEditingDetail(false);
+      props.onFeedback({ text: "プレイリストを更新しました。", tone: "success" });
+      await props.onUpdated();
+    } catch (error) {
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "プレイリストの更新に失敗しました。",
+        tone: "error",
+      });
+    }
   }
 
   return (
@@ -325,13 +447,31 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                   return (
                     <div class="space-y-4">
                       <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div class="min-w-0 space-y-1">
+                        <div class="min-w-0 flex-1 space-y-1">
                           <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                             Playlist Detail
                           </p>
-                          <h3 class="break-words text-xl font-semibold text-stone-50">
-                            {getPlaylistLabel(detailPlaylist)}
-                          </h3>
+                          <Show
+                            when={isEditingDetail()}
+                            fallback={
+                              <h3 class="break-words text-xl font-semibold text-stone-50">
+                                {getPlaylistLabel(detailPlaylist)}
+                              </h3>
+                            }
+                          >
+                            <input
+                              type="text"
+                              class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-xl font-semibold text-stone-50 outline-none transition focus:border-stone-500"
+                              value={detailDraft().title}
+                              onInput={(event) =>
+                                setDetailDraft((currentDraft) => ({
+                                  ...currentDraft,
+                                  title: event.currentTarget.value,
+                                }))
+                              }
+                              placeholder="プレイリスト名"
+                            />
+                          </Show>
                           <div class="flex flex-wrap items-center gap-2 text-xs text-stone-400">
                             <span>{detailPlaylist.videoIds.length} videos</span>
                             <span class="text-stone-600">•</span>
@@ -349,96 +489,150 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                       </div>
 
                       <div class="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                          onClick={() => void handleActivate(detailPlaylist.id)}
+                        <Show
+                          when={isEditingDetail()}
+                          fallback={
+                            <>
+                              <button
+                                type="button"
+                                class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                onClick={handleStartEditingDetail}
+                              >
+                                編集
+                              </button>
+                              <button
+                                type="button"
+                                class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                onClick={() => void handleActivate(detailPlaylist.id)}
+                              >
+                                選択
+                              </button>
+                              <div class="relative">
+                                <button
+                                  type="button"
+                                  class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                  onClick={() =>
+                                    setOpenShareMenuPlaylistId((currentId) =>
+                                      currentId === detailPlaylist.id ? null : detailPlaylist.id,
+                                    )
+                                  }
+                                >
+                                  共有
+                                </button>
+                                <Show when={openShareMenuPlaylistId() === detailPlaylist.id}>
+                                  <div class="absolute left-0 z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-stone-700 bg-stone-950 shadow-lg shadow-black/30">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleCreateSharedUrl(
+                                          detailPlaylist.id,
+                                          detailPlaylist.videoIds,
+                                          detailPlaylist.title,
+                                          detailPlaylist.memo,
+                                          "id-only",
+                                        )
+                                      }
+                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
+                                    >
+                                      動画IDのみ
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleCreateSharedUrl(
+                                          detailPlaylist.id,
+                                          detailPlaylist.videoIds,
+                                          detailPlaylist.title,
+                                          detailPlaylist.memo,
+                                          "with-title",
+                                        )
+                                      }
+                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
+                                    >
+                                      タイトル付き
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleCreateSharedUrl(
+                                          detailPlaylist.id,
+                                          detailPlaylist.videoIds,
+                                          detailPlaylist.title,
+                                          detailPlaylist.memo,
+                                          "with-title-and-memo",
+                                        )
+                                      }
+                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
+                                    >
+                                      タイトル・メモ付き
+                                    </button>
+                                  </div>
+                                </Show>
+                              </div>
+                              <button
+                                type="button"
+                                class="rounded-full border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-400/50 hover:bg-red-500/10"
+                                onClick={() =>
+                                  void handleDelete(
+                                    detailPlaylist.id,
+                                    getPlaylistLabel(detailPlaylist),
+                                  )
+                                }
+                              >
+                                削除
+                              </button>
+                            </>
+                          }
                         >
-                          選択
-                        </button>
-                        <div class="relative">
+                          <button
+                            type="button"
+                            class={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                              hasDetailUnsavedChanges()
+                                ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
+                                : "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
+                            }`}
+                            onClick={() => void handleSaveDetail()}
+                          >
+                            保存
+                          </button>
                           <button
                             type="button"
                             class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                            onClick={() =>
-                              setOpenShareMenuPlaylistId((currentId) =>
-                                currentId === detailPlaylist.id ? null : detailPlaylist.id,
-                              )
-                            }
+                            onClick={handleCancelEditingDetail}
                           >
-                            共有
+                            キャンセル
                           </button>
-                          <Show when={openShareMenuPlaylistId() === detailPlaylist.id}>
-                            <div class="absolute left-0 z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-stone-700 bg-stone-950 shadow-lg shadow-black/30">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleCreateSharedUrl(
-                                    detailPlaylist.id,
-                                    detailPlaylist.videoIds,
-                                    detailPlaylist.title,
-                                    detailPlaylist.memo,
-                                    "id-only",
-                                  )
-                                }
-                                class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                              >
-                                動画IDのみ
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleCreateSharedUrl(
-                                    detailPlaylist.id,
-                                    detailPlaylist.videoIds,
-                                    detailPlaylist.title,
-                                    detailPlaylist.memo,
-                                    "with-title",
-                                  )
-                                }
-                                class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                              >
-                                タイトル付き
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleCreateSharedUrl(
-                                    detailPlaylist.id,
-                                    detailPlaylist.videoIds,
-                                    detailPlaylist.title,
-                                    detailPlaylist.memo,
-                                    "with-title-and-memo",
-                                  )
-                                }
-                                class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                              >
-                                タイトル・メモ付き
-                              </button>
-                            </div>
-                          </Show>
-                        </div>
-                        <button
-                          type="button"
-                          class="rounded-full border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-400/50 hover:bg-red-500/10"
-                          onClick={() =>
-                            void handleDelete(detailPlaylist.id, getPlaylistLabel(detailPlaylist))
-                          }
-                        >
-                          削除
-                        </button>
+                        </Show>
                       </div>
 
-                      <Show when={detailPlaylist.memo}>
-                        <div class="rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3">
-                          <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                            Memo
-                          </p>
-                          <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-300">
-                            {detailPlaylist.memo}
-                          </p>
-                        </div>
-                      </Show>
+                      <div class="rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3">
+                        <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                          Memo
+                        </p>
+                        <Show
+                          when={isEditingDetail()}
+                          fallback={
+                            <Show when={detailPlaylist.memo}>
+                              <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-300">
+                                {detailPlaylist.memo}
+                              </p>
+                            </Show>
+                          }
+                        >
+                          <textarea
+                            rows="5"
+                            class="mt-2 w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm leading-6 text-stone-200 outline-none transition focus:border-stone-500"
+                            value={detailDraft().memo}
+                            onInput={(event) =>
+                              setDetailDraft((currentDraft) => ({
+                                ...currentDraft,
+                                memo: event.currentTarget.value,
+                              }))
+                            }
+                            placeholder="メモ"
+                          />
+                        </Show>
+                      </div>
 
                       <Show when={playlistShareInfo()}>
                         {(info) => (

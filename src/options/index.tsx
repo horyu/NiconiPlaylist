@@ -128,6 +128,7 @@ export default function OptionsPage() {
               error={state.error}
               onActivated={refreshState}
               onDeleted={refreshState}
+              onUpdated={refreshState}
               onFeedback={setToast}
             />
           </Match>
