@@ -422,8 +422,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
         </Match>
 
         <Match when={props.state?.playlists.length}>
-          <div class="grid gap-5 xl:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
-            <section class="space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
+          <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
+            <section class="min-w-0 space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
               <div class="space-y-2">
                 <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                   Playlist List
@@ -485,7 +485,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
               </div>
             </section>
 
-            <section class="space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
+            <section class="min-w-0 space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
               <Show
                 when={selectedPlaylist()}
                 keyed
@@ -502,7 +502,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                     currentSharedUrlPlaylistId === detailPlaylist.id;
 
                   return (
-                    <div class="space-y-4">
+                    <div class="min-w-0 space-y-4">
                       <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1 space-y-1">
                           <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
