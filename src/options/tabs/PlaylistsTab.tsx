@@ -45,6 +45,8 @@ type DetailDraft = {
   videoRows: DetailDraftVideoRow[];
 };
 
+type VideoInsertPosition = "append" | "prepend" | "after-current" | "before-index" | "after-index";
+
 type PlaylistsTabProps = {
   state: PlaylistsState | undefined;
   videoMetadataState: VideoMetadataState | undefined;
@@ -106,11 +108,18 @@ function createDetailDraftVideoRows(videoIds: string[]): DetailDraftVideoRow[] {
   return videoIds.map((videoId, index) => createDetailDraftVideoRow(videoId, index));
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
   const [detailVideoInput, setDetailVideoInput] = createSignal("");
+  const [detailVideoInsertPosition, setDetailVideoInsertPosition] =
+    createSignal<VideoInsertPosition>("append");
+  const [detailVideoInsertIndexInput, setDetailVideoInsertIndexInput] = createSignal("1");
   const [detailReadonlyVideoRows, setDetailReadonlyVideoRows] = createSignal<DetailDraftVideoRow[]>(
     [],
   );
@@ -225,6 +234,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDeletedDraftVideoCount(0);
     setHasDraftVideoChanges(false);
     setDetailVideoInput("");
+    setDetailVideoInsertPosition("append");
+    setDetailVideoInsertIndexInput("1");
     setDetailDraftResetKey((currentKey) => currentKey + 1);
     setDetailDraftPlaylistId(playlist.id);
     setIsEditingDetail(false);
@@ -385,6 +396,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDeletedDraftVideoCount(0);
     setHasDraftVideoChanges(false);
     setDetailVideoInput("");
+    setDetailVideoInsertPosition("append");
+    setDetailVideoInsertIndexInput("1");
     setDetailDraftResetKey((currentKey) => currentKey + 1);
     setDetailDraftPlaylistId(playlist.id);
     setIsEditingDetail(true);
@@ -407,6 +420,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setDeletedDraftVideoCount(0);
     setHasDraftVideoChanges(false);
     setDetailVideoInput("");
+    setDetailVideoInsertPosition("append");
+    setDetailVideoInsertIndexInput("1");
     setDetailDraftResetKey((currentKey) => currentKey + 1);
     setIsEditingDetail(false);
     props.onFeedback(null);
@@ -490,13 +505,59 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
     try {
       const nextVideoIds = parseVideoIdInputLines(value);
+      const nextVideoRows = nextVideoIds.map((videoId) => createDetailDraftVideoRow(videoId, null));
 
       setDetailDraft((currentDraft) => ({
         ...currentDraft,
-        videoRows: [
-          ...currentDraft.videoRows,
-          ...nextVideoIds.map((videoId) => createDetailDraftVideoRow(videoId, null)),
-        ],
+        videoRows: (() => {
+          const currentVideoRows = currentDraft.videoRows;
+          const currentLength = currentVideoRows.length;
+
+          const insertAt = (() => {
+            switch (detailVideoInsertPosition()) {
+              case "prepend":
+                return 0;
+              case "after-current": {
+                const playbackIndex = currentPlaybackIndex();
+
+                if (playbackIndex === null) {
+                  return currentLength;
+                }
+
+                const currentRowIndex = currentVideoRows.findIndex(
+                  (videoRow) => videoRow.originalIndex === playbackIndex,
+                );
+
+                return currentRowIndex >= 0 ? currentRowIndex + 1 : currentLength;
+              }
+              case "before-index":
+              case "after-index": {
+                const parsedIndex = Number.parseInt(detailVideoInsertIndexInput().trim(), 10);
+
+                if (!Number.isFinite(parsedIndex)) {
+                  return currentLength;
+                }
+
+                const normalizedIndex = clamp(parsedIndex, 1, Math.max(currentLength, 1));
+
+                return detailVideoInsertPosition() === "before-index"
+                  ? normalizedIndex - 1
+                  : normalizedIndex;
+              }
+              case "append":
+              default:
+                return currentLength;
+            }
+          })();
+
+          const safeInsertAt = clamp(insertAt, 0, currentLength);
+
+          return [
+            ...currentVideoRows.slice(0, safeInsertAt),
+            ...nextVideoRows,
+            ...currentVideoRows.slice(safeInsertAt),
+          ];
+        })(),
       }));
       setHasDraftVideoChanges(true);
       setDetailVideoInput("");
@@ -886,7 +947,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 Append Videos
                               </p>
                               <p class="text-sm text-stone-300">
-                                watch URL / 動画ID を複数行で末尾に追加できます。
+                                watch URL / 動画ID を複数行で追加できます。
                               </p>
                             </div>
                             <button
@@ -896,6 +957,47 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                             >
                               追加
                             </button>
+                          </div>
+                          <div class="mt-3 grid gap-3 md:grid-cols-[180px_8rem]">
+                            <label>
+                              <select
+                                aria-label="動画追加位置"
+                                class="w-[170px] rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none transition focus:border-stone-500"
+                                value={detailVideoInsertPosition()}
+                                onChange={(event) =>
+                                  setDetailVideoInsertPosition(
+                                    event.currentTarget.value as VideoInsertPosition,
+                                  )
+                                }
+                              >
+                                <option value="append">末尾に追加</option>
+                                <option value="prepend">先頭に追加</option>
+                                <option value="after-current">再生中の次に追加</option>
+                                <option value="before-index">指定位置の前に追加</option>
+                                <option value="after-index">指定位置の後に追加</option>
+                              </select>
+                            </label>
+                            <Show
+                              when={
+                                detailVideoInsertPosition() === "before-index" ||
+                                detailVideoInsertPosition() === "after-index"
+                              }
+                              fallback={<div />}
+                            >
+                              <label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  aria-label="動画追加位置の番号"
+                                  class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none transition focus:border-stone-500"
+                                  value={detailVideoInsertIndexInput()}
+                                  onInput={(event) =>
+                                    setDetailVideoInsertIndexInput(event.currentTarget.value)
+                                  }
+                                  placeholder="1"
+                                />
+                              </label>
+                            </Show>
                           </div>
                           <textarea
                             rows="3"
