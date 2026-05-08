@@ -203,10 +203,6 @@ export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
     placement: "before" | "after";
     rowId: string;
   } | null>(null);
-  const reorderHelpText = () =>
-    props.isEditing
-      ? "編集中は各動画を削除・上下移動・ドラッグ移動できます。"
-      : "将来的に追加・並び替えをここへ集約します。";
 
   createEffect(() => {
     const resetKey = props.resetKey;
@@ -291,7 +287,6 @@ export function PlaylistDetailVideoList(props: PlaylistDetailVideoListProps) {
     >
       <div class="flex items-center justify-between gap-3">
         <p class="text-sm font-medium text-stone-100">動画一覧</p>
-        <p class="text-xs text-stone-500">{reorderHelpText()}</p>
       </div>
 
       <ul class="space-y-2">
