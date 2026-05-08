@@ -10,6 +10,11 @@ import {
 } from "solid-js";
 
 import {
+  createPlaylistJsonFilename,
+  exportPlaylistJson,
+  importPlaylistJson,
+} from "@/background/services/playlistJson";
+import {
   activateStoredPlaylist,
   createStoredPlaylistCopy,
   createShuffledStoredPlaylistCopy,
@@ -28,6 +33,7 @@ import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 import type { OptionsToast } from "@/options/toast";
 
 type ShareUrlKind = "id-only" | "with-title" | "with-title-and-memo";
+type PlaylistJsonExportKind = "without-title" | "with-title" | "with-title-and-memo";
 
 type ShareInfo = {
   playlistId: PlaylistId;
@@ -80,6 +86,17 @@ function getShareFormatLabel(kind: ShareUrlKind): string {
   }
 }
 
+function getPlaylistJsonFormatLabel(kind: PlaylistJsonExportKind): string {
+  switch (kind) {
+    case "without-title":
+      return "タイトルなし";
+    case "with-title":
+      return "タイトル付き";
+    case "with-title-and-memo":
+      return "タイトル・メモ付き";
+  }
+}
+
 function createDetailDraftVideoRow(
   videoId: string,
   originalIndex: number | null,
@@ -102,6 +119,8 @@ function clamp(value: number, min: number, max: number): number {
 export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
+  const [exportingPlaylistJson, setExportingPlaylistJson] = createSignal(false);
+  const [importingPlaylistJson, setImportingPlaylistJson] = createSignal(false);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
   const [detailVideoInput, setDetailVideoInput] = createSignal("");
   const [detailVideoInsertPosition, setDetailVideoInsertPosition] =
@@ -125,10 +144,13 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   );
   const [shareInfo, setShareInfo] = createSignal<ShareInfo | null>(null);
   const [shareCopied, setShareCopied] = createSignal(false);
+  const [openPlaylistJsonExportMenuPlaylistId, setOpenPlaylistJsonExportMenuPlaylistId] =
+    createSignal<PlaylistId | null>(null);
   let shareCopiedTimer: ReturnType<typeof setTimeout> | null = null;
   let currentSharedUrl = "";
   let currentSharedUrlPlaylistId: PlaylistId | null = null;
   let deletedDraftVideoRowIds = new Set<string>();
+  let playlistJsonImportFileInput: HTMLInputElement | undefined;
 
   createEffect(() => {
     const playlists = props.state?.playlists ?? [];
@@ -298,6 +320,9 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       await deleteStoredPlaylist(playlistId);
       props.onFeedback({ text: "プレイリストを削除しました。", tone: "success" });
       setOpenShareMenuPlaylistId((currentId) => (currentId === playlistId ? null : currentId));
+      setOpenPlaylistJsonExportMenuPlaylistId((currentId) =>
+        currentId === playlistId ? null : currentId,
+      );
       setShareInfo((currentInfo) => (currentInfo?.playlistId === playlistId ? null : currentInfo));
       if (currentSharedUrlPlaylistId === playlistId) {
         currentSharedUrl = "";
@@ -408,6 +433,72 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     currentSharedUrlPlaylistId = null;
     setShareCopied(false);
     setShareInfo(null);
+  }
+
+  async function handleExportPlaylistJson(playlistId: PlaylistId, kind: PlaylistJsonExportKind) {
+    props.onFeedback(null);
+    setExportingPlaylistJson(true);
+    setOpenPlaylistJsonExportMenuPlaylistId(null);
+
+    try {
+      const exportedPlaylist = await exportPlaylistJson(playlistId, {
+        includeTitle: kind !== "without-title",
+        includeMemo: kind === "with-title-and-memo",
+      });
+      const blob = new Blob([JSON.stringify(exportedPlaylist, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+
+      anchor.href = url;
+      anchor.download = createPlaylistJsonFilename();
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      props.onFeedback({
+        text:
+          error instanceof Error
+            ? error.message
+            : "プレイリスト JSON のエクスポートに失敗しました。",
+        tone: "error",
+      });
+    } finally {
+      setExportingPlaylistJson(false);
+    }
+  }
+
+  async function handleImportPlaylistJson(file: File | null | undefined) {
+    if (!file) {
+      return;
+    }
+
+    props.onFeedback(null);
+    setImportingPlaylistJson(true);
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+      const nextPlaylist = await importPlaylistJson(parsed);
+
+      await props.onUpdated();
+      setSelectedPlaylistId(nextPlaylist.id);
+      props.onFeedback({
+        text: "プレイリスト JSON をインポートしました。",
+        tone: "success",
+      });
+    } catch (error) {
+      props.onFeedback({
+        text:
+          error instanceof Error ? error.message : "プレイリスト JSON のインポートに失敗しました。",
+        tone: "error",
+      });
+    } finally {
+      if (playlistJsonImportFileInput) {
+        playlistJsonImportFileInput.value = "";
+      }
+      setImportingPlaylistJson(false);
+    }
   }
 
   function handleStartEditingDetail() {
@@ -673,15 +764,38 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
   return (
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
-      <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h2 class="text-lg font-semibold text-stone-50">保存済みプレイリスト</h2>
-        <p class="text-sm text-stone-400">一覧から選択したプレイリストだけを詳しく表示します。</p>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <h2 class="text-lg font-semibold text-stone-50">保存済みプレイリスト</h2>
+          <p class="text-sm text-stone-400">一覧から選択したプレイリストだけを詳しく表示します。</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <input
+            ref={(element) => {
+              playlistJsonImportFileInput = element;
+            }}
+            type="file"
+            accept="application/json"
+            class="hidden"
+            onChange={(event) => void handleImportPlaylistJson(event.currentTarget.files?.[0])}
+          />
+          <button
+            type="button"
+            onClick={() => playlistJsonImportFileInput?.click()}
+            disabled={importingPlaylistJson()}
+            class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+          >
+            JSON インポート
+          </button>
+        </div>
       </div>
 
       <Switch
         fallback={
           <p class="text-sm leading-6 text-stone-400">
-            保存済みプレイリストはまだありません。共有 URL をインポートしてください。
+            保存済みプレイリストはまだありません。共有 URL またはプレイリスト JSON
+            をインポートしてください。
           </p>
         }
       >
@@ -911,6 +1025,64 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                               >
                                 複製
                               </button>
+                              <div class="relative">
+                                <button
+                                  type="button"
+                                  class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                                  onClick={() =>
+                                    setOpenPlaylistJsonExportMenuPlaylistId((currentId) =>
+                                      currentId === detailPlaylist.id ? null : detailPlaylist.id,
+                                    )
+                                  }
+                                  disabled={exportingPlaylistJson()}
+                                >
+                                  JSON エクスポート
+                                </button>
+                                <Show
+                                  when={
+                                    openPlaylistJsonExportMenuPlaylistId() === detailPlaylist.id
+                                  }
+                                >
+                                  <div class="absolute left-0 z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-stone-700 bg-stone-950 shadow-lg shadow-black/30">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleExportPlaylistJson(
+                                          detailPlaylist.id,
+                                          "without-title",
+                                        )
+                                      }
+                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
+                                    >
+                                      {getPlaylistJsonFormatLabel("without-title")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleExportPlaylistJson(
+                                          detailPlaylist.id,
+                                          "with-title",
+                                        )
+                                      }
+                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
+                                    >
+                                      {getPlaylistJsonFormatLabel("with-title")}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleExportPlaylistJson(
+                                          detailPlaylist.id,
+                                          "with-title-and-memo",
+                                        )
+                                      }
+                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
+                                    >
+                                      {getPlaylistJsonFormatLabel("with-title-and-memo")}
+                                    </button>
+                                  </div>
+                                </Show>
+                              </div>
                               <button
                                 type="button"
                                 class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"

@@ -5,6 +5,7 @@ import type { Playlist } from "@/lib/types";
 import { getStoredPlaylists, setLastActivePlaylistId, setStoredPlaylists } from "./playlistStore";
 
 export const DEFAULT_PLAYLIST_TITLE_SOURCE = {
+  playlistJsonImport: "プレイリストJSONインポート",
   sharedUrlImport: "共有URLインポート",
   videoIdInput: "動画ID入力",
 } as const;
