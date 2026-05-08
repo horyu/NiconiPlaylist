@@ -150,21 +150,10 @@ async function handlePause(event: Event) {
     currentLoopVideoId = videoId;
     completedPlaybackCount = nextCompletedPlaybackCount;
     restartCurrentVideo();
-    console.log("NiconiPlaylist restarted current video for repeat playback.", {
-      completedPlaybackCount,
-      duration: target.duration,
-      playbackSettings: playbackState.playbackSettings,
-      url: location.href,
-      videoId,
-    });
     return;
   }
 
   resetLoopProgress(null);
-  console.debug("NiconiPlaylist resolved next video.", {
-    videoId,
-    playbackState,
-  });
   if (playbackState?.nextVideoId) {
     navigateToNextVideo(playbackState.nextVideoId);
   } else {
@@ -172,17 +161,6 @@ async function handlePause(event: Event) {
       type: "watch:clear-playback-context",
     });
   }
-
-  console.log("NiconiPlaylist detected playback end.", {
-    currentTime: target.currentTime,
-    completedPlaybackCount: nextCompletedPlaybackCount,
-    duration: target.duration,
-    playbackSettings: playbackState?.playbackSettings ?? null,
-    nextVideoId: playbackState?.nextVideoId ?? null,
-    playbackContext: playbackState?.playbackContext ?? null,
-    url: location.href,
-    videoId,
-  });
 }
 
 export function initWatchContent() {
@@ -199,6 +177,4 @@ export function initWatchContent() {
   initWatchLocationObserver();
   syncPlaybackContextIfNeeded();
   void browser.runtime.sendMessage({ type: "badge:refresh" });
-
-  console.log("NiconiPlaylist content loaded.", { url: location.href });
 }

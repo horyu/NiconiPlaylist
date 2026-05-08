@@ -112,6 +112,4 @@ export function initBackground() {
 
     return true;
   });
-
-  console.log("NiconiPlaylist background loaded.", { id: browser.runtime.id });
 }
