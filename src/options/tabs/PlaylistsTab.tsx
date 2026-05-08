@@ -539,6 +539,47 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     props.onFeedback(null);
   }
 
+  function handleDropDraftVideo(
+    sourceRowId: string,
+    targetRowId: string,
+    placement: "before" | "after",
+  ) {
+    if (sourceRowId === targetRowId) {
+      return;
+    }
+
+    setDetailDraft((currentDraft) => {
+      const sourceIndex = currentDraft.videoRows.findIndex(
+        (videoRow) => videoRow.rowId === sourceRowId,
+      );
+      const targetIndex = currentDraft.videoRows.findIndex(
+        (videoRow) => videoRow.rowId === targetRowId,
+      );
+
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return currentDraft;
+      }
+
+      const nextVideoRows = [...currentDraft.videoRows];
+      const [movedVideoRow] = nextVideoRows.splice(sourceIndex, 1);
+
+      let insertIndex = placement === "before" ? targetIndex : targetIndex + 1;
+
+      if (sourceIndex < insertIndex) {
+        insertIndex -= 1;
+      }
+
+      nextVideoRows.splice(insertIndex, 0, movedVideoRow!);
+
+      return {
+        ...currentDraft,
+        videoRows: nextVideoRows,
+      };
+    });
+    setHasDraftVideoChanges(true);
+    props.onFeedback(null);
+  }
+
   return (
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -911,6 +952,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                         videoMetadataState={props.videoMetadataState}
                         currentPlaybackIndex={currentPlaybackIndex()}
                         isEditing={isEditingDetail()}
+                        onDropVideo={handleDropDraftVideo}
                         onMoveVideo={handleMoveDraftVideo}
                         resetKey={detailDraftResetKey()}
                         onSetVideoDeleted={handleSetDraftVideoDeleted}
