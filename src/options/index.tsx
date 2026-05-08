@@ -2,19 +2,21 @@ import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
 
 import { usePlaylistsState } from "@/options/hooks/usePlaylistsState";
 import { useVideoMetadataState } from "@/options/hooks/useVideoMetadataState";
+import { DataTab } from "@/options/tabs/DataTab";
 import { DirectInputCreateSection } from "@/options/tabs/DirectInputCreateSection";
 import { PlaylistsTab } from "@/options/tabs/PlaylistsTab";
 import { RepeatSettingsTab } from "@/options/tabs/RepeatSettingsTab";
 import { SharedUrlImportSection } from "@/options/tabs/SharedUrlImportSection";
 import type { OptionsToast } from "@/options/toast";
 
-type TabKey = "import" | "create" | "playlists" | "repeat";
+type TabKey = "import" | "create" | "playlists" | "repeat" | "data";
 
 const TAB_LABELS: { key: TabKey; label: string }[] = [
   { key: "import", label: "インポート" },
   { key: "create", label: "作成" },
   { key: "playlists", label: "プレイリスト" },
   { key: "repeat", label: "再生" },
+  { key: "data", label: "データ" },
 ];
 
 export default function OptionsPage() {
@@ -135,6 +137,10 @@ export default function OptionsPage() {
 
           <Match when={activeTab() === "repeat"}>
             <RepeatSettingsTab onFeedback={setToast} />
+          </Match>
+
+          <Match when={activeTab() === "data"}>
+            <DataTab onFeedback={setToast} onUpdated={refreshState} />
           </Match>
         </Switch>
       </div>

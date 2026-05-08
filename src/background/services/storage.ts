@@ -29,6 +29,21 @@ const DEFAULT_BY_KEY: StorageDataByKey = {
   owners: {},
 };
 
+function cloneDefaultValue<K extends StorageKey>(key: K): StorageDataByKey[K] {
+  return structuredClone(DEFAULT_BY_KEY[key]);
+}
+
+export function getDefaultStorageData(): StorageDataByKey {
+  return {
+    playlists: cloneDefaultValue("playlists"),
+    playbackSettings: cloneDefaultValue("playbackSettings"),
+    playbackContexts: cloneDefaultValue("playbackContexts"),
+    lastActivePlaylistId: cloneDefaultValue("lastActivePlaylistId"),
+    videoMetadata: cloneDefaultValue("videoMetadata"),
+    owners: cloneDefaultValue("owners"),
+  };
+}
+
 function ensureStorageAvailable(): typeof browser.storage.local {
   const storage = browser?.storage?.local;
 
@@ -49,7 +64,7 @@ export async function getStorageData<K extends StorageKey>(
 
   for (const key of keys) {
     const storageKey = STORAGE_KEYS[key];
-    data[key] = (result[storageKey] ?? DEFAULT_BY_KEY[key]) as StorageDataByKey[K];
+    data[key] = (result[storageKey] ?? cloneDefaultValue(key)) as StorageDataByKey[K];
   }
 
   return data;
