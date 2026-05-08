@@ -2,6 +2,52 @@ import { getStorageData, setStorageData } from "@/background/services/storage";
 import { isPlaybackContext, isPlaylist } from "@/lib/typeGuards";
 import type { PlaybackContext, Playlist, PlaylistId, VideoId } from "@/lib/types";
 
+function createPlaylistId(): PlaylistId {
+  return crypto.randomUUID();
+}
+
+function formatDatePart(value: number): string {
+  return value.toString().padStart(2, "0");
+}
+
+function createShuffledPlaylistTitle(sourceTitle: string): string {
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    formatDatePart(now.getMonth() + 1),
+    formatDatePart(now.getDate()),
+  ].join("-");
+  const time = [formatDatePart(now.getHours()), formatDatePart(now.getMinutes())].join(":");
+
+  return `${sourceTitle} / shuffled ${date} ${time}`;
+}
+
+function createCopiedPlaylistTitle(sourceTitle: string): string {
+  const now = new Date();
+  const date = [
+    now.getFullYear(),
+    formatDatePart(now.getMonth() + 1),
+    formatDatePart(now.getDate()),
+  ].join("-");
+  const time = [formatDatePart(now.getHours()), formatDatePart(now.getMinutes())].join(":");
+
+  return `${sourceTitle} / copied ${date} ${time}`;
+}
+
+function shuffleVideoIds(videoIds: VideoId[]): VideoId[] {
+  const nextVideoIds = [...videoIds];
+
+  for (let index = nextVideoIds.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    const currentVideoId = nextVideoIds[index]!;
+
+    nextVideoIds[index] = nextVideoIds[randomIndex]!;
+    nextVideoIds[randomIndex] = currentVideoId;
+  }
+
+  return nextVideoIds;
+}
+
 function buildVideoOccurrenceKeys(videoIds: VideoId[]): string[] {
   const counts = new Map<VideoId, number>();
 
@@ -211,6 +257,52 @@ export async function deleteStoredPlaylist(playlistId: PlaylistId): Promise<void
   if (lastActivePlaylistId === playlistId) {
     await setLastActivePlaylistId(nextPlaylists[0]?.id ?? null);
   }
+}
+
+export async function createShuffledStoredPlaylistCopy(playlistId: PlaylistId): Promise<Playlist> {
+  const playlists = await getStoredPlaylists();
+  const sourcePlaylist = playlists.find((playlist) => playlist.id === playlistId);
+
+  if (!sourcePlaylist) {
+    throw new Error("指定したプレイリストは保存されていません。");
+  }
+
+  const nextPlaylist: Playlist = {
+    id: createPlaylistId(),
+    title: createShuffledPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
+    memo: sourcePlaylist.memo,
+    videoIds: shuffleVideoIds(sourcePlaylist.videoIds),
+  };
+
+  await Promise.all([
+    setStoredPlaylists([...playlists, nextPlaylist]),
+    setLastActivePlaylistId(nextPlaylist.id),
+  ]);
+
+  return nextPlaylist;
+}
+
+export async function createStoredPlaylistCopy(playlistId: PlaylistId): Promise<Playlist> {
+  const playlists = await getStoredPlaylists();
+  const sourcePlaylist = playlists.find((playlist) => playlist.id === playlistId);
+
+  if (!sourcePlaylist) {
+    throw new Error("指定したプレイリストは保存されていません。");
+  }
+
+  const nextPlaylist: Playlist = {
+    id: createPlaylistId(),
+    title: createCopiedPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
+    memo: sourcePlaylist.memo,
+    videoIds: [...sourcePlaylist.videoIds],
+  };
+
+  await Promise.all([
+    setStoredPlaylists([...playlists, nextPlaylist]),
+    setLastActivePlaylistId(nextPlaylist.id),
+  ]);
+
+  return nextPlaylist;
 }
 
 export async function getStoredPlaybackContextByTabId(

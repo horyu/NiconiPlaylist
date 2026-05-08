@@ -11,6 +11,8 @@ import {
 
 import {
   activateStoredPlaylist,
+  createStoredPlaylistCopy,
+  createShuffledStoredPlaylistCopy,
   deleteStoredPlaylist,
   updateStoredPlaylist,
 } from "@/background/services/playlistStore";
@@ -320,6 +322,49 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     } catch (error) {
       props.onFeedback({
         text: error instanceof Error ? error.message : "プレイリストの削除に失敗しました。",
+        tone: "error",
+      });
+    }
+  }
+
+  async function handleCreateShuffledCopy(playlistId: PlaylistId) {
+    props.onFeedback(null);
+
+    try {
+      const nextPlaylist = await createShuffledStoredPlaylistCopy(playlistId);
+
+      await props.onUpdated();
+      setSelectedPlaylistId(nextPlaylist.id);
+      props.onFeedback({
+        text: "シャッフル済みプレイリストを作成しました。",
+        tone: "success",
+      });
+    } catch (error) {
+      props.onFeedback({
+        text:
+          error instanceof Error
+            ? error.message
+            : "シャッフル済みプレイリストの作成に失敗しました。",
+        tone: "error",
+      });
+    }
+  }
+
+  async function handleCreateCopy(playlistId: PlaylistId) {
+    props.onFeedback(null);
+
+    try {
+      const nextPlaylist = await createStoredPlaylistCopy(playlistId);
+
+      await props.onUpdated();
+      setSelectedPlaylistId(nextPlaylist.id);
+      props.onFeedback({
+        text: "プレイリストを複製しました。",
+        tone: "success",
+      });
+    } catch (error) {
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "プレイリストの複製に失敗しました。",
         tone: "error",
       });
     }
@@ -874,6 +919,20 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                   </div>
                                 </Show>
                               </div>
+                              <button
+                                type="button"
+                                class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                onClick={() => void handleCreateCopy(detailPlaylist.id)}
+                              >
+                                複製
+                              </button>
+                              <button
+                                type="button"
+                                class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                onClick={() => void handleCreateShuffledCopy(detailPlaylist.id)}
+                              >
+                                シャッフル複製
+                              </button>
                               <button
                                 type="button"
                                 class="rounded-full border border-red-500/30 px-3 py-1.5 text-xs font-medium text-red-300 transition hover:border-red-400/50 hover:bg-red-500/10"
