@@ -7,26 +7,13 @@ import {
   getStorageUsageBytes,
   importStorageData,
 } from "@/background/services/dataManagement";
+import { formatCompactTimestamp } from "@/lib/dateTime";
 import type { OptionsToast } from "@/options/toast";
 
 type DataTabProps = {
   onFeedback: (toast: OptionsToast | null) => void;
   onUpdated: () => Promise<void> | void;
 };
-
-function formatCompactTimestamp(date: Date): string {
-  const pad = (value: number) => value.toString().padStart(2, "0");
-
-  return [
-    date.getFullYear(),
-    pad(date.getMonth() + 1),
-    pad(date.getDate()),
-    "-",
-    pad(date.getHours()),
-    pad(date.getMinutes()),
-    pad(date.getSeconds()),
-  ].join("");
-}
 
 function formatStorageUsageLabel(bytes: number | null): string {
   if (bytes === null) {

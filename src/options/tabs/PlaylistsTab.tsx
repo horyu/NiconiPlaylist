@@ -17,6 +17,7 @@ import {
   updateStoredPlaylist,
 } from "@/background/services/playlistStore";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
+import { formatSlashTimestampWithSeconds } from "@/lib/dateTime";
 import { buildSharedPlaylistUrl } from "@/lib/playlistUrl";
 import { normalizeOptionalText } from "@/lib/text";
 import type { Playlist, PlaylistId } from "@/lib/types";
@@ -64,24 +65,8 @@ function getPlaylistLabel(playlist: Playlist): string {
   return playlist.title ?? playlist.id;
 }
 
-function formatDatePart(value: number): string {
-  return value.toString().padStart(2, "0");
-}
-
 function createTimestampTitle(): string {
-  const now = new Date();
-  const timestamp = [
-    now.getFullYear(),
-    formatDatePart(now.getMonth() + 1),
-    formatDatePart(now.getDate()),
-  ].join("/");
-  const time = [
-    formatDatePart(now.getHours()),
-    formatDatePart(now.getMinutes()),
-    formatDatePart(now.getSeconds()),
-  ].join(":");
-
-  return `${timestamp} ${time}`;
+  return formatSlashTimestampWithSeconds(new Date());
 }
 
 function getShareFormatLabel(kind: ShareUrlKind): string {

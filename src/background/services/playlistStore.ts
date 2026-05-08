@@ -1,4 +1,5 @@
 import { getStorageData, setStorageData } from "@/background/services/storage";
+import { formatDashedTimestampWithMinutes } from "@/lib/dateTime";
 import { isPlaybackContext, isPlaylist } from "@/lib/typeGuards";
 import type { PlaybackContext, Playlist, PlaylistId, VideoId } from "@/lib/types";
 
@@ -6,32 +7,12 @@ function createPlaylistId(): PlaylistId {
   return crypto.randomUUID();
 }
 
-function formatDatePart(value: number): string {
-  return value.toString().padStart(2, "0");
-}
-
 function createShuffledPlaylistTitle(sourceTitle: string): string {
-  const now = new Date();
-  const date = [
-    now.getFullYear(),
-    formatDatePart(now.getMonth() + 1),
-    formatDatePart(now.getDate()),
-  ].join("-");
-  const time = [formatDatePart(now.getHours()), formatDatePart(now.getMinutes())].join(":");
-
-  return `${sourceTitle} / shuffled ${date} ${time}`;
+  return `${sourceTitle} / shuffled ${formatDashedTimestampWithMinutes(new Date())}`;
 }
 
 function createCopiedPlaylistTitle(sourceTitle: string): string {
-  const now = new Date();
-  const date = [
-    now.getFullYear(),
-    formatDatePart(now.getMonth() + 1),
-    formatDatePart(now.getDate()),
-  ].join("-");
-  const time = [formatDatePart(now.getHours()), formatDatePart(now.getMinutes())].join(":");
-
-  return `${sourceTitle} / copied ${date} ${time}`;
+  return `${sourceTitle} / copied ${formatDashedTimestampWithMinutes(new Date())}`;
 }
 
 function shuffleVideoIds(videoIds: VideoId[]): VideoId[] {
