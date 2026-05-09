@@ -11,15 +11,15 @@ export default defineConfig({
     }) as WxtViteConfig,
   manifestVersion: 3,
   targetBrowsers: ["chrome", "firefox"],
-  manifest: {
+  manifest: ({ browser }) => ({
     permissions: [
       "storage",
       "tabs",
       "scripting",
-      "declarativeNetRequestWithHostAccess",
-      "webRequest",
-      "webRequestBlocking",
+      ...(browser === "firefox"
+        ? ["webRequest", "webRequestBlocking"]
+        : ["declarativeNetRequestWithHostAccess"]),
     ],
     host_permissions: ["https://www.nicovideo.jp/watch/*", "https://nvapi.nicovideo.jp/*"],
-  },
+  }),
 });
