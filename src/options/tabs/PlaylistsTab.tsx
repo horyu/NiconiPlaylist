@@ -9,11 +9,7 @@ import {
   Switch,
 } from "solid-js";
 
-import {
-  createPlaylistJsonFilename,
-  exportPlaylistJson,
-  importPlaylistJson,
-} from "@/background/services/playlistJson";
+import { createPlaylistJsonFilename, exportPlaylistJson } from "@/background/services/playlistJson";
 import {
   activateStoredPlaylist,
   createStoredPlaylistCopy,
@@ -120,7 +116,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
   const [exportingPlaylistJson, setExportingPlaylistJson] = createSignal(false);
-  const [importingPlaylistJson, setImportingPlaylistJson] = createSignal(false);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
   const [detailVideoInput, setDetailVideoInput] = createSignal("");
   const [detailVideoInsertPosition, setDetailVideoInsertPosition] =
@@ -150,7 +145,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   let currentSharedUrl = "";
   let currentSharedUrlPlaylistId: PlaylistId | null = null;
   let deletedDraftVideoRowIds = new Set<string>();
-  let playlistJsonImportFileInput: HTMLInputElement | undefined;
 
   createEffect(() => {
     const playlists = props.state?.playlists ?? [];
@@ -468,39 +462,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     }
   }
 
-  async function handleImportPlaylistJson(file: File | null | undefined) {
-    if (!file) {
-      return;
-    }
-
-    props.onFeedback(null);
-    setImportingPlaylistJson(true);
-
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text) as unknown;
-      const nextPlaylist = await importPlaylistJson(parsed);
-
-      await props.onUpdated();
-      setSelectedPlaylistId(nextPlaylist.id);
-      props.onFeedback({
-        text: "プレイリスト JSON をインポートしました。",
-        tone: "success",
-      });
-    } catch (error) {
-      props.onFeedback({
-        text:
-          error instanceof Error ? error.message : "プレイリスト JSON のインポートに失敗しました。",
-        tone: "error",
-      });
-    } finally {
-      if (playlistJsonImportFileInput) {
-        playlistJsonImportFileInput.value = "";
-      }
-      setImportingPlaylistJson(false);
-    }
-  }
-
   function handleStartEditingDetail() {
     const playlist = selectedPlaylist();
 
@@ -764,31 +725,9 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
   return (
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h2 class="text-lg font-semibold text-stone-50">保存済みプレイリスト</h2>
-          <p class="text-sm text-stone-400">一覧から選択したプレイリストだけを詳しく表示します。</p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <input
-            ref={(element) => {
-              playlistJsonImportFileInput = element;
-            }}
-            type="file"
-            accept="application/json"
-            class="hidden"
-            onChange={(event) => void handleImportPlaylistJson(event.currentTarget.files?.[0])}
-          />
-          <button
-            type="button"
-            onClick={() => playlistJsonImportFileInput?.click()}
-            disabled={importingPlaylistJson()}
-            class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
-          >
-            JSON インポート
-          </button>
-        </div>
+      <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <h2 class="text-lg font-semibold text-stone-50">保存済みプレイリスト</h2>
+        <p class="text-sm text-stone-400">一覧から選択したプレイリストだけを詳しく表示します。</p>
       </div>
 
       <Switch

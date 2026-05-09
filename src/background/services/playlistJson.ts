@@ -14,9 +14,9 @@ import {
 
 const PLAYLIST_JSON_VERSION = 1;
 
-type PlaylistJsonDraft = Pick<Playlist, "memo" | "title" | "videoIds">;
+export type PlaylistJsonDraft = Pick<Playlist, "memo" | "title" | "videoIds">;
 
-type PlaylistJsonPayload = {
+export type PlaylistJsonPayload = {
   exportedAt: string;
   owners: Record<OwnerId, OwnerMetadata>;
   playlist: PlaylistJsonDraft;
@@ -75,7 +75,7 @@ function normalizeOwnersMap(value: unknown): Record<OwnerId, OwnerMetadata> {
   );
 }
 
-function normalizePlaylistJsonPayload(payload: unknown): PlaylistJsonPayload {
+export function parsePlaylistJsonPayload(payload: unknown): PlaylistJsonPayload {
   if (!isRecord(payload)) {
     throw new Error("プレイリスト JSON の形式が不正です。");
   }
@@ -145,7 +145,7 @@ export async function exportPlaylistJson(
 }
 
 export async function importPlaylistJson(payload: unknown): Promise<Playlist> {
-  const normalizedPayload = normalizePlaylistJsonPayload(payload);
+  const normalizedPayload = parsePlaylistJsonPayload(payload);
   const nextPlaylist = await createStoredPlaylist(normalizedPayload.playlist, {
     defaultTitleSource: DEFAULT_PLAYLIST_TITLE_SOURCE.playlistJsonImport,
   });

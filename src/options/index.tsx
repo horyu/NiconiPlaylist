@@ -4,6 +4,7 @@ import { usePlaylistsState } from "@/options/hooks/usePlaylistsState";
 import { useVideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 import { DataTab } from "@/options/tabs/DataTab";
 import { DirectInputCreateSection } from "@/options/tabs/DirectInputCreateSection";
+import { PlaylistJsonImportSection } from "@/options/tabs/PlaylistJsonImportSection";
 import { PlaylistsTab } from "@/options/tabs/PlaylistsTab";
 import { RepeatSettingsTab } from "@/options/tabs/RepeatSettingsTab";
 import { SharedUrlImportSection } from "@/options/tabs/SharedUrlImportSection";
@@ -109,10 +110,16 @@ export default function OptionsPage() {
 
         <Switch>
           <Match when={activeTab() === "import"}>
-            <SharedUrlImportSection
-              onImported={refreshState}
-              videoMetadataState={videoMetadataState()}
-            />
+            <div class="space-y-6">
+              <SharedUrlImportSection
+                onImported={refreshState}
+                videoMetadataState={videoMetadataState()}
+              />
+              <PlaylistJsonImportSection
+                onImported={refreshState}
+                videoMetadataState={videoMetadataState()}
+              />
+            </div>
           </Match>
 
           <Match when={activeTab() === "create"}>
