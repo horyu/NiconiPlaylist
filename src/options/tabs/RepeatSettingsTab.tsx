@@ -234,104 +234,115 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            class="flex w-[310px] flex-col items-start rounded-2xl border border-stone-700 bg-stone-950/70 px-3 py-2 text-left transition hover:border-stone-500 hover:bg-stone-900"
-            onClick={handleAddCountPreset}
-          >
-            <span class="text-xs font-medium text-stone-100">回数リピートを追加</span>
-            <span class="text-xs text-stone-500">
-              各動画を指定回数ぶん再生してから次へ進みます。
-            </span>
-          </button>
-          <button
-            type="button"
-            class="flex w-[310px] flex-col items-start rounded-2xl border border-stone-700 bg-stone-950/70 px-3 py-2 text-left transition hover:border-stone-500 hover:bg-stone-900"
-            onClick={handleAddDurationPreset}
-          >
-            <span class="text-xs font-medium text-stone-100">時間リピートを追加</span>
-            <span class="text-xs text-stone-500">各動画を指定時間以上になるまで繰り返します。</span>
-          </button>
-        </div>
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+          <div class="space-y-1">
+            <p class="text-xs font-medium text-stone-100">各動画のリピート</p>
+            <p class="text-xs text-stone-500">
+              popup から選ぶ各動画リピートの候補を追加・編集します。
+            </p>
+          </div>
 
-        <div class="space-y-2">
-          <For each={presets()}>
-            {(preset) => (
-              <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-2 text-xs text-stone-300">
-                <Show
-                  when={preset.mode === "count"}
-                  fallback={
-                    <div class="flex flex-wrap items-center gap-2">
-                      <span>時間リピート</span>
+          <div class="flex flex-wrap gap-2">
+            <button
+              type="button"
+              class="flex w-[310px] flex-col items-start rounded-2xl border border-stone-700 bg-stone-900 px-3 py-2 text-left transition hover:border-stone-500 hover:bg-stone-800"
+              onClick={handleAddCountPreset}
+            >
+              <span class="text-xs font-medium text-stone-100">回数リピートを追加</span>
+              <span class="text-xs text-stone-500">
+                各動画を指定回数ぶん再生してから次へ進みます。
+              </span>
+            </button>
+            <button
+              type="button"
+              class="flex w-[310px] flex-col items-start rounded-2xl border border-stone-700 bg-stone-900 px-3 py-2 text-left transition hover:border-stone-500 hover:bg-stone-800"
+              onClick={handleAddDurationPreset}
+            >
+              <span class="text-xs font-medium text-stone-100">時間リピートを追加</span>
+              <span class="text-xs text-stone-500">
+                各動画を指定時間以上になるまで繰り返します。
+              </span>
+            </button>
+          </div>
+
+          <div class="space-y-2">
+            <For each={presets()}>
+              {(preset) => (
+                <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-800 bg-stone-900 px-3 py-2 text-xs text-stone-300">
+                  <Show
+                    when={preset.mode === "count"}
+                    fallback={
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span>時間リピート</span>
+                        <input
+                          type="number"
+                          min="0"
+                          inputMode="numeric"
+                          value={
+                            preset.mode === "duration"
+                              ? splitDurationSeconds(preset.durationSeconds).minutes
+                              : "0"
+                          }
+                          onInput={(event) =>
+                            handleUpdateDurationPreset(
+                              preset.id,
+                              "minutes",
+                              event.currentTarget.value,
+                            )
+                          }
+                          class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                        />
+                        <span>分</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="59"
+                          inputMode="numeric"
+                          value={
+                            preset.mode === "duration"
+                              ? splitDurationSeconds(preset.durationSeconds).seconds
+                              : "0"
+                          }
+                          onInput={(event) =>
+                            handleUpdateDurationPreset(
+                              preset.id,
+                              "seconds",
+                              event.currentTarget.value,
+                            )
+                          }
+                          class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                        />
+                        <span>秒</span>
+                      </div>
+                    }
+                  >
+                    <div class="flex items-center gap-2">
+                      <span>回数リピート</span>
                       <input
                         type="number"
-                        min="0"
+                        min="1"
                         inputMode="numeric"
-                        value={
-                          preset.mode === "duration"
-                            ? splitDurationSeconds(preset.durationSeconds).minutes
-                            : "0"
-                        }
+                        value={preset.mode === "count" ? preset.count.toString() : "1"}
                         onInput={(event) =>
-                          handleUpdateDurationPreset(
-                            preset.id,
-                            "minutes",
-                            event.currentTarget.value,
-                          )
+                          handleUpdateCountPreset(preset.id, event.currentTarget.value)
                         }
-                        class="w-14 rounded-md border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100"
+                        class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
                       />
-                      <span>分</span>
-                      <input
-                        type="number"
-                        min="0"
-                        max="59"
-                        inputMode="numeric"
-                        value={
-                          preset.mode === "duration"
-                            ? splitDurationSeconds(preset.durationSeconds).seconds
-                            : "0"
-                        }
-                        onInput={(event) =>
-                          handleUpdateDurationPreset(
-                            preset.id,
-                            "seconds",
-                            event.currentTarget.value,
-                          )
-                        }
-                        class="w-14 rounded-md border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100"
-                      />
-                      <span>秒</span>
+                      <span>回</span>
                     </div>
-                  }
-                >
-                  <div class="flex items-center gap-2">
-                    <span>回数リピート</span>
-                    <input
-                      type="number"
-                      min="1"
-                      inputMode="numeric"
-                      value={preset.mode === "count" ? preset.count.toString() : "1"}
-                      onInput={(event) =>
-                        handleUpdateCountPreset(preset.id, event.currentTarget.value)
-                      }
-                      class="w-14 rounded-md border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100"
-                    />
-                    <span>回</span>
-                  </div>
-                </Show>
+                  </Show>
 
-                <button
-                  type="button"
-                  class="rounded-full border border-red-500/40 px-3 py-1 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
-                  onClick={() => handleDeletePreset(preset.id)}
-                >
-                  削除
-                </button>
-              </div>
-            )}
-          </For>
+                  <button
+                    type="button"
+                    class="rounded-full border border-red-500/40 px-3 py-1 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
+                    onClick={() => handleDeletePreset(preset.id)}
+                  >
+                    削除
+                  </button>
+                </div>
+              )}
+            </For>
+          </div>
         </div>
 
         <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
