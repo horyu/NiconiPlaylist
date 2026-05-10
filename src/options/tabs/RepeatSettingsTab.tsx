@@ -66,6 +66,20 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     JSON.stringify(presets()) !== savedPresetsJson() ||
     JSON.stringify(completionSettings()) !== savedCompletionSettingsJson();
 
+  const completionNotificationMode = () => {
+    const settings = completionSettings();
+
+    if (settings.alertEnabled) {
+      return "alert";
+    }
+
+    if (settings.playSoundEnabled) {
+      return "sound";
+    }
+
+    return "none";
+  };
+
   function handleAddCountPreset() {
     setPresets((currentPresets) => [...currentPresets, createRepeatPreset("count", 2)]);
   }
@@ -116,6 +130,13 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       ...currentSettings,
       ...partial,
     }));
+  }
+
+  function setCompletionNotificationMode(mode: "none" | "sound" | "alert") {
+    updateCompletionSettings({
+      playSoundEnabled: mode === "sound",
+      alertEnabled: mode === "alert",
+    });
   }
 
   async function handlePreviewCompletionSound() {
@@ -278,22 +299,40 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
             </p>
           </div>
 
-          <div class="flex flex-wrap items-center gap-2">
-            <label class="flex items-center gap-2 text-xs text-stone-300">
-              <input
-                type="checkbox"
-                checked={completionSettings().playSoundEnabled}
-                onChange={(event) =>
-                  updateCompletionSettings({
-                    playSoundEnabled: event.currentTarget.checked,
-                  })
-                }
-              />
-              <span>音を再生する</span>
-            </label>
+          <div class="space-y-2">
+            <p class="text-xs text-stone-300">通知方法</p>
+            <div class="flex flex-wrap items-center gap-4">
+              <label class="flex items-center gap-2 text-xs text-stone-300">
+                <input
+                  type="radio"
+                  name="playlist-completion-notification"
+                  checked={completionNotificationMode() === "none"}
+                  onChange={() => setCompletionNotificationMode("none")}
+                />
+                <span>何もしない</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-stone-300">
+                <input
+                  type="radio"
+                  name="playlist-completion-notification"
+                  checked={completionNotificationMode() === "sound"}
+                  onChange={() => setCompletionNotificationMode("sound")}
+                />
+                <span>音を再生</span>
+              </label>
+              <label class="flex items-center gap-2 text-xs text-stone-300">
+                <input
+                  type="radio"
+                  name="playlist-completion-notification"
+                  checked={completionNotificationMode() === "alert"}
+                  onChange={() => setCompletionNotificationMode("alert")}
+                />
+                <span>確認ダイアログを表示</span>
+              </label>
+            </div>
           </div>
 
-          <Show when={completionSettings().playSoundEnabled}>
+          <Show when={completionNotificationMode() === "sound"}>
             <div class="flex flex-wrap items-center gap-2 text-xs text-stone-300">
               <span>音量</span>
               <input
@@ -347,20 +386,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 })
               }
             />
-            <span>タブをフォーカスする</span>
-          </label>
-
-          <label class="flex items-center gap-2 text-xs text-stone-300">
-            <input
-              type="checkbox"
-              checked={completionSettings().alertEnabled}
-              onChange={(event) =>
-                updateCompletionSettings({
-                  alertEnabled: event.currentTarget.checked,
-                })
-              }
-            />
-            <span>ブラウザの確認ダイアログを表示する</span>
+            <span>通知前に再生タブを前面に出す</span>
           </label>
         </div>
 

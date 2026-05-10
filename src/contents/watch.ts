@@ -7,7 +7,7 @@ import type { PlaybackCompletionSettings } from "@/lib/types";
 import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
 import completionSoundPath from "~/assets/ui-soft-glass-ping.mp3";
 
-const PLAYBACK_END_THRESHOLD_SECONDS = 0.5;
+const PLAYBACK_END_THRESHOLD_SECONDS = 1;
 const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
 const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitialized";
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
@@ -27,6 +27,10 @@ function isAdvertisementVideo(video: HTMLVideoElement): boolean {
 }
 
 function isPlaybackEndedByPause(video: HTMLVideoElement): boolean {
+  if (video.ended) {
+    return true;
+  }
+
   if (!Number.isFinite(video.duration) || video.duration <= 0) {
     return false;
   }
@@ -121,7 +125,11 @@ async function handlePlaylistCompleted(
       .sendMessage({
         type: "watch:focus-tab",
       })
-      .catch(() => undefined);
+      .catch((error) => {
+        console.error("NiconiPlaylist failed to focus playback tab on playlist completion.", {
+          error,
+        });
+      });
   }
 
   if (completion.alertEnabled) {
@@ -130,10 +138,19 @@ async function handlePlaylistCompleted(
         type: "watch:show-completion-alert",
         message: PLAYLIST_COMPLETED_ALERT_MESSAGE,
       })
-      .catch(() => undefined);
+      .catch((error) => {
+        console.error("NiconiPlaylist failed to show completion alert.", {
+          error,
+        });
+      });
   }
 
-  await playCompletionSound(completion);
+  await playCompletionSound(completion).catch((error) => {
+    console.error("NiconiPlaylist failed to play completion sound.", {
+      error,
+      completion,
+    });
+  });
 }
 
 function initWatchLocationObserver(): void {

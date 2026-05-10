@@ -88,12 +88,14 @@ function sanitizeRepeatPreset(preset: RepeatPresetInput): RepeatPreset | null {
 function sanitizePlaybackCompletionSettings(
   settings: Partial<PlaybackCompletionSettings> | null | undefined,
 ): PlaybackCompletionSettings {
+  const alertEnabled = settings?.alertEnabled === true;
+
   return {
-    playSoundEnabled: settings?.playSoundEnabled === true,
+    playSoundEnabled: !alertEnabled && settings?.playSoundEnabled === true,
     soundVolume: Math.min(Math.max(Math.trunc(settings?.soundVolume ?? 50), 0), 100),
     soundRepeatCount: Math.max(Math.trunc(settings?.soundRepeatCount ?? 1), 1),
     focusTabEnabled: settings?.focusTabEnabled === true,
-    alertEnabled: settings?.alertEnabled === true,
+    alertEnabled,
   };
 }
 
