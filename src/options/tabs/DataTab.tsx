@@ -175,7 +175,9 @@ export function DataTab(props: DataTabProps) {
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">データ操作</h2>
-        <p class="text-sm text-stone-400">バックアップ、復元、クリーンアップを行います。</p>
+        <p class="text-sm text-stone-400">
+          拡張機能全体のバックアップ、復元、不要データ削除を行います。
+        </p>
       </div>
 
       <div class="grid gap-6 xl:grid-cols-2">

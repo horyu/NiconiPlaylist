@@ -727,7 +727,9 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">保存済みプレイリスト</h2>
-        <p class="text-sm text-stone-400">一覧から選択したプレイリストだけを詳しく表示します。</p>
+        <p class="text-sm text-stone-400">
+          保存済みプレイリストの編集、共有、複製、書き出しを行います。
+        </p>
       </div>
 
       <Switch

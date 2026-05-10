@@ -200,7 +200,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">再生設定</h2>
-        <p class="text-sm text-stone-400">リピート条件とプレイリスト完了後の動作を編集します。</p>
+        <p class="text-sm text-stone-400">再開方法、リピート条件、完了後の動作を編集します。</p>
       </div>
 
       <div class="space-y-3">

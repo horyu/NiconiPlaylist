@@ -80,7 +80,7 @@ export default function OptionsPage() {
             </p>
             <h1 class="text-2xl font-semibold text-stone-50">Options</h1>
             <p class="text-sm text-stone-400">
-              プレイリストのインポートと保存済みプレイリストの管理を行います。
+              プレイリストの取り込み、作成、保存済みプレイリストの管理を行います。
             </p>
           </div>
 

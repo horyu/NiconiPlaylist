@@ -258,7 +258,7 @@ export function ImportSection(props: ImportSectionProps) {
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">プレイリストをインポート</h2>
         <p class="text-sm leading-6 text-stone-400">
-          保存前に内容を確認しながらプレイリストとして取り込みます。
+          共有URLやプレイリストJSONを、内容を確認しながら取り込みます。
         </p>
       </div>
 
