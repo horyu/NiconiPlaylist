@@ -61,14 +61,6 @@ function formatPlaylistOptionLabel(playlist: Playlist): string {
   return playlist.title ?? playlist.id;
 }
 
-function isNewTabUrl(url: string | null): boolean {
-  if (!url) {
-    return false;
-  }
-
-  return !/^https?:\/\//u.test(url);
-}
-
 function Popup() {
   const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
@@ -273,7 +265,6 @@ function Popup() {
     const playlist = activePlaylist();
     const nextVideoId = playlist?.videoIds[index];
     const activeTabId = state?.activeTabId ?? null;
-    const activeTabUrl = state?.activeTabUrl ?? null;
     const playbackTabIdValue = playbackTabId();
 
     if (!playlist || !nextVideoId) {
@@ -295,7 +286,7 @@ function Popup() {
         return;
       }
 
-      if (activeTabId && isNewTabUrl(activeTabUrl)) {
+      if (activeTabId && currentPlaybackSettings()?.resumeTabMode === "replace-current-tab") {
         await setStoredPlaybackContextIndex(activeTabId, playlist.id, index);
         await browser.tabs.update(activeTabId, {
           url: watchUrl,

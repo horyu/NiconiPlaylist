@@ -18,10 +18,13 @@ export type RepeatPreset =
 
 export type PlaybackSettings = {
   playlistRepeatEnabled: boolean;
+  resumeTabMode: PlaybackResumeTabMode;
   activeRepeatPresetId: string | null;
   presets: RepeatPreset[];
   completion: PlaybackCompletionSettings;
 };
+
+export type PlaybackResumeTabMode = "new-tab" | "replace-current-tab";
 
 export type PlaybackCompletionSettings = {
   playSoundEnabled: boolean;

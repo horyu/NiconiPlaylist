@@ -7,10 +7,11 @@ import {
 import {
   createRepeatPreset,
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
+  DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   sanitizePlaybackSettings,
 } from "@/lib/playlistLoop";
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
-import type { PlaybackCompletionSettings, RepeatPreset } from "@/lib/types";
+import type { PlaybackCompletionSettings, PlaybackResumeTabMode, RepeatPreset } from "@/lib/types";
 import type { OptionsToast } from "@/options/toast";
 import completionSoundPath from "~/assets/ui-soft-glass-ping.mp3";
 
@@ -51,7 +52,13 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   const [completionSettings, setCompletionSettings] = createSignal<PlaybackCompletionSettings>({
     ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   });
+  const [resumeTabMode, setResumeTabMode] = createSignal<PlaybackResumeTabMode>(
+    DEFAULT_PLAYBACK_RESUME_TAB_MODE,
+  );
   const [savedCompletionSettingsJson, setSavedCompletionSettingsJson] = createSignal("{}");
+  const [savedResumeTabMode, setSavedResumeTabMode] = createSignal<PlaybackResumeTabMode>(
+    DEFAULT_PLAYBACK_RESUME_TAB_MODE,
+  );
 
   createEffect(() => {
     void getStoredPlaybackSettings().then((playbackSettings) => {
@@ -59,12 +66,15 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       setSavedPresetsJson(JSON.stringify(playbackSettings.presets));
       setCompletionSettings(playbackSettings.completion);
       setSavedCompletionSettingsJson(JSON.stringify(playbackSettings.completion));
+      setResumeTabMode(playbackSettings.resumeTabMode);
+      setSavedResumeTabMode(playbackSettings.resumeTabMode);
     });
   });
 
   const hasUnsavedChanges = () =>
     JSON.stringify(presets()) !== savedPresetsJson() ||
-    JSON.stringify(completionSettings()) !== savedCompletionSettingsJson();
+    JSON.stringify(completionSettings()) !== savedCompletionSettingsJson() ||
+    resumeTabMode() !== savedResumeTabMode();
 
   const completionNotificationMode = () => {
     const settings = completionSettings();
@@ -164,6 +174,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       const currentPlaybackSettings = await getStoredPlaybackSettings();
       const nextPlaybackSettings = sanitizePlaybackSettings({
         playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
+        resumeTabMode: resumeTabMode(),
         activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
         presets: presets(),
         completion: completionSettings(),
@@ -174,6 +185,8 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       setSavedPresetsJson(JSON.stringify(nextPlaybackSettings.presets));
       setCompletionSettings(nextPlaybackSettings.completion);
       setSavedCompletionSettingsJson(JSON.stringify(nextPlaybackSettings.completion));
+      setResumeTabMode(nextPlaybackSettings.resumeTabMode);
+      setSavedResumeTabMode(nextPlaybackSettings.resumeTabMode);
       props.onFeedback({ text: "リピート設定を更新しました。", tone: "success" });
     } catch (error) {
       props.onFeedback({
@@ -191,6 +204,36 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       </div>
 
       <div class="space-y-3">
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+          <div class="space-y-1">
+            <p class="text-xs font-medium text-stone-100">再生タブが無い時の開き方</p>
+            <p class="text-xs text-stone-500">
+              再生中のタブが見つからない時に、現在のタブを使うか新しいタブを開くかを選びます。
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4">
+            <label class="flex items-center gap-2 text-xs text-stone-300">
+              <input
+                type="radio"
+                name="resume-tab-mode"
+                checked={resumeTabMode() === "new-tab"}
+                onChange={() => setResumeTabMode("new-tab")}
+              />
+              <span>新しいタブで開く</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-stone-300">
+              <input
+                type="radio"
+                name="resume-tab-mode"
+                checked={resumeTabMode() === "replace-current-tab"}
+                onChange={() => setResumeTabMode("replace-current-tab")}
+              />
+              <span>現在のタブを上書きして開く</span>
+            </label>
+          </div>
+        </div>
+
         <div class="flex flex-wrap gap-2">
           <button
             type="button"

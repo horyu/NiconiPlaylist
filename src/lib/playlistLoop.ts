@@ -1,5 +1,6 @@
 import type {
   PlaybackCompletionSettings,
+  PlaybackResumeTabMode,
   PlaybackSettings,
   RepeatPreset,
   RepeatPresetMode,
@@ -19,6 +20,7 @@ type RepeatPresetInput =
 
 type PlaybackSettingsInput = {
   playlistRepeatEnabled?: boolean;
+  resumeTabMode?: PlaybackResumeTabMode;
   activeRepeatPresetId?: string | null;
   presets?: RepeatPresetInput[];
   completion?: Partial<PlaybackCompletionSettings>;
@@ -44,6 +46,8 @@ export const DEFAULT_PLAYBACK_COMPLETION_SETTINGS: PlaybackCompletionSettings = 
   focusTabEnabled: false,
   alertEnabled: false,
 };
+
+export const DEFAULT_PLAYBACK_RESUME_TAB_MODE: PlaybackResumeTabMode = "new-tab";
 
 function createRepeatPresetId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -105,6 +109,7 @@ export function sanitizePlaybackSettings(
   if (!settings) {
     return {
       playlistRepeatEnabled: false,
+      resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS.map((preset) => ({ ...preset })),
       completion: { ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS },
@@ -124,6 +129,8 @@ export function sanitizePlaybackSettings(
 
   return {
     playlistRepeatEnabled: settings.playlistRepeatEnabled === true,
+    resumeTabMode:
+      settings.resumeTabMode === "replace-current-tab" ? "replace-current-tab" : "new-tab",
     activeRepeatPresetId,
     presets: normalizedPresets.map((preset) => ({ ...preset })),
     completion: sanitizePlaybackCompletionSettings(settings.completion),

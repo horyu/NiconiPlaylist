@@ -43,6 +43,9 @@ export function isPlaybackSettings(value: unknown): value is PlaybackSettings {
   return (
     (candidate.playlistRepeatEnabled === undefined ||
       typeof candidate.playlistRepeatEnabled === "boolean") &&
+    (candidate.resumeTabMode === undefined ||
+      candidate.resumeTabMode === "new-tab" ||
+      candidate.resumeTabMode === "replace-current-tab") &&
     (candidate.activeRepeatPresetId === null ||
       candidate.activeRepeatPresetId === undefined ||
       typeof candidate.activeRepeatPresetId === "string") &&
