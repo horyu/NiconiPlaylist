@@ -20,6 +20,7 @@ import {
 } from "@/background/services/playlistStore";
 import { getPopupState } from "@/background/services/popupState";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
+import { buildWatchUrl, isWatchUrl } from "@/lib/nicovideoUrl";
 import { formatRepeatPresetLabel, sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
@@ -40,7 +41,7 @@ async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
           return null;
         }
 
-        if (!tab.url || !tab.url.startsWith(WATCH_URL_PREFIX)) {
+        if (!isWatchUrl(tab.url)) {
           return null;
         }
 
@@ -59,12 +60,6 @@ async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
 function formatPlaylistOptionLabel(playlist: Playlist): string {
   return playlist.title ?? playlist.id;
 }
-
-function buildWatchUrl(videoId: string): string {
-  return `https://www.nicovideo.jp/watch/${videoId}?from=0`;
-}
-
-const WATCH_URL_PREFIX = "https://www.nicovideo.jp/watch/";
 
 function isNewTabUrl(url: string | null): boolean {
   if (!url) {
@@ -111,7 +106,7 @@ function Popup() {
     const activeTabId = state.activeTabId;
     const activeTabUrl = state.activeTabUrl ?? null;
 
-    if (!activeTabId || !activeTabUrl?.startsWith(WATCH_URL_PREFIX)) {
+    if (!activeTabId || !isWatchUrl(activeTabUrl)) {
       return null;
     }
 

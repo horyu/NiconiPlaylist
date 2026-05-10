@@ -1,5 +1,6 @@
 import { browser } from "wxt/browser";
 
+import { buildWatchUrl } from "@/lib/nicovideoUrl";
 import { shouldRepeatCurrentVideo } from "@/lib/playlistLoop";
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
 import type { PlaybackCompletionSettings } from "@/lib/types";
@@ -50,11 +51,6 @@ async function resolveNextVideo(videoId: string): Promise<WatchPlaybackContextRe
     type: "watch:resolve-next-video",
     videoId,
   });
-}
-
-function buildWatchUrl(videoId: string): string {
-  // 前回の再生位置を引き継がないように、クエリパラメータでfrom=0を付与する
-  return `${location.origin}/watch/${videoId}?from=0`;
 }
 
 let lastSyncedVideoId: string | null = null;
