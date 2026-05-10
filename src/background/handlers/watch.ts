@@ -28,130 +28,130 @@ export async function handleWatchMessage(
     };
   }
 
-  if (message.type === "watch:sync-playback-context") {
-    return {
-      playbackContext: await syncPlaybackContextForVideo(tabId, message.videoId),
-      nextVideoId: null,
-      playbackSettings: await getStoredPlaybackSettings(),
-    };
-  }
+  switch (message.type) {
+    case "watch:sync-playback-context":
+      return {
+        playbackContext: await syncPlaybackContextForVideo(tabId, message.videoId),
+        nextVideoId: null,
+        playbackSettings: await getStoredPlaybackSettings(),
+      };
 
-  if (message.type === "watch:resolve-next-video") {
-    const [playbackSettings, playbackState] = await Promise.all([
-      getStoredPlaybackSettings(),
-      resolveNextVideoForPlaybackContext(tabId, message.videoId),
-    ]);
+    case "watch:resolve-next-video": {
+      const [playbackSettings, playbackState] = await Promise.all([
+        getStoredPlaybackSettings(),
+        resolveNextVideoForPlaybackContext(tabId, message.videoId),
+      ]);
 
-    return {
-      playbackContext: playbackState.playbackContext,
-      nextVideoId:
-        playbackState.nextVideoId ??
-        (playbackSettings.playlistRepeatEnabled ? playbackState.firstVideoId : null),
-      playbackSettings,
-    };
-  }
-
-  if (message.type === "watch:clear-playback-context") {
-    await clearStoredPlaybackContextByTabId(tabId);
-    return {
-      playbackContext: null,
-      nextVideoId: null,
-      playbackSettings: null,
-    };
-  }
-
-  if (message.type === "watch:navigate-next-video") {
-    await browser.scripting.executeScript({
-      target: { tabId },
-      world: "MAIN",
-      func: (nextVideoUrl: string) => {
-        const nav = (
-          window as typeof window & {
-            __reactRouterDataRouter?: { navigate?: (to: string, options?: unknown) => void };
-          }
-        ).__reactRouterDataRouter?.navigate;
-        const url = new URL(nextVideoUrl, location.href);
-
-        if (typeof nav === "function") {
-          nav(url.pathname + url.search + url.hash, {
-            preventScrollReset: true,
-          });
-        } else {
-          location.href = url.href;
-        }
-      },
-      args: [message.url],
-    });
-    return undefined;
-  }
-
-  if (message.type === "watch:focus-tab") {
-    const tab = await browser.tabs.get(tabId);
-    const tasks: Promise<unknown>[] = [
-      browser.tabs.update(tabId, {
-        active: true,
-      }),
-    ];
-
-    if (typeof tab.windowId === "number") {
-      tasks.push(
-        browser.windows.update(tab.windowId, {
-          focused: true,
-        }),
-      );
+      return {
+        playbackContext: playbackState.playbackContext,
+        nextVideoId:
+          playbackState.nextVideoId ??
+          (playbackSettings.playlistRepeatEnabled ? playbackState.firstVideoId : null),
+        playbackSettings,
+      };
     }
 
-    await Promise.all(tasks);
-    return undefined;
+    case "watch:clear-playback-context":
+      await clearStoredPlaybackContextByTabId(tabId);
+      return {
+        playbackContext: null,
+        nextVideoId: null,
+        playbackSettings: null,
+      };
+
+    case "watch:navigate-next-video":
+      await browser.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN",
+        func: (nextVideoUrl: string) => {
+          const nav = (
+            window as typeof window & {
+              __reactRouterDataRouter?: { navigate?: (to: string, options?: unknown) => void };
+            }
+          ).__reactRouterDataRouter?.navigate;
+          const url = new URL(nextVideoUrl, location.href);
+
+          if (typeof nav === "function") {
+            nav(url.pathname + url.search + url.hash, {
+              preventScrollReset: true,
+            });
+          } else {
+            location.href = url.href;
+          }
+        },
+        args: [message.url],
+      });
+      return undefined;
+
+    case "watch:focus-tab": {
+      const tab = await browser.tabs.get(tabId);
+      const tasks: Promise<unknown>[] = [
+        browser.tabs.update(tabId, {
+          active: true,
+        }),
+      ];
+
+      if (typeof tab.windowId === "number") {
+        tasks.push(
+          browser.windows.update(tab.windowId, {
+            focused: true,
+          }),
+        );
+      }
+
+      await Promise.all(tasks);
+      return undefined;
+    }
+
+    case "watch:show-completion-alert":
+      await browser.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN",
+        func: (alertMessage: string) => {
+          alert(alertMessage);
+        },
+        args: [message.message],
+      });
+      return undefined;
+
+    case "watch:init-location-observer":
+      await browser.scripting.executeScript({
+        target: { tabId },
+        world: "MAIN",
+        func: () => {
+          const key = "__niconiPlaylistWatchLocationObserverInitialized";
+          const state = window as typeof window & {
+            [key]?: boolean;
+          };
+
+          if (state[key]) {
+            return;
+          }
+
+          state[key] = true;
+
+          const notify = () => {
+            window.dispatchEvent(new Event("niconiplaylist:locationchange"));
+          };
+          const originalPushState = history.pushState;
+          history.pushState = function (...args) {
+            originalPushState.apply(this, args as Parameters<History["pushState"]>);
+            notify();
+          };
+          const originalReplaceState = history.replaceState;
+          history.replaceState = function (...args) {
+            originalReplaceState.apply(this, args as Parameters<History["replaceState"]>);
+            notify();
+          };
+
+          window.addEventListener("popstate", notify);
+        },
+      });
+      return undefined;
+
+    default: {
+      message satisfies never;
+      return undefined;
+    }
   }
-
-  if (message.type === "watch:show-completion-alert") {
-    await browser.scripting.executeScript({
-      target: { tabId },
-      world: "MAIN",
-      func: (alertMessage: string) => {
-        alert(alertMessage);
-      },
-      args: [message.message],
-    });
-    return undefined;
-  }
-
-  if (message.type === "watch:init-location-observer") {
-    await browser.scripting.executeScript({
-      target: { tabId },
-      world: "MAIN",
-      func: () => {
-        const key = "__niconiPlaylistWatchLocationObserverInitialized";
-        const state = window as typeof window & {
-          [key]?: boolean;
-        };
-
-        if (state[key]) {
-          return;
-        }
-
-        state[key] = true;
-
-        const notify = () => {
-          window.dispatchEvent(new Event("niconiplaylist:locationchange"));
-        };
-        const originalPushState = history.pushState;
-        history.pushState = function (...args) {
-          originalPushState.apply(this, args as Parameters<History["pushState"]>);
-          notify();
-        };
-        const originalReplaceState = history.replaceState;
-        history.replaceState = function (...args) {
-          originalReplaceState.apply(this, args as Parameters<History["replaceState"]>);
-          notify();
-        };
-
-        window.addEventListener("popstate", notify);
-      },
-    });
-    return undefined;
-  }
-
-  return undefined;
 }
