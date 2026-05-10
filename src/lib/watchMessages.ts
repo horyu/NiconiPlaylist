@@ -23,6 +23,11 @@ export type WatchFocusTabMessage = {
   type: "watch:focus-tab";
 };
 
+export type WatchShowCompletionAlertMessage = {
+  type: "watch:show-completion-alert";
+  message: string;
+};
+
 export type WatchInitLocationObserverMessage = {
   type: "watch:init-location-observer";
 };
@@ -33,7 +38,8 @@ export type WatchMessage =
   | WatchNavigateNextVideoMessage
   | WatchInitLocationObserverMessage
   | WatchClearPlaybackContextMessage
-  | WatchFocusTabMessage;
+  | WatchFocusTabMessage
+  | WatchShowCompletionAlertMessage;
 
 export type WatchPlaybackContextResponse = {
   playbackContext: PlaybackContext | null;

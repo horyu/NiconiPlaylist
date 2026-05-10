@@ -125,7 +125,12 @@ async function handlePlaylistCompleted(
   }
 
   if (completion.alertEnabled) {
-    alert(PLAYLIST_COMPLETED_ALERT_MESSAGE);
+    await browser.runtime
+      .sendMessage({
+        type: "watch:show-completion-alert",
+        message: PLAYLIST_COMPLETED_ALERT_MESSAGE,
+      })
+      .catch(() => undefined);
   }
 
   await playCompletionSound(completion);

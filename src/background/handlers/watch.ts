@@ -105,6 +105,18 @@ export async function handleWatchMessage(
     return undefined;
   }
 
+  if (message.type === "watch:show-completion-alert") {
+    await browser.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: (alertMessage: string) => {
+        alert(alertMessage);
+      },
+      args: [message.message],
+    });
+    return undefined;
+  }
+
   if (message.type === "watch:init-location-observer") {
     await browser.scripting.executeScript({
       target: { tabId },
