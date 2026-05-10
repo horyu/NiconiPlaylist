@@ -146,10 +146,10 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                   {videoMetadata()?.title ?? videoId}
                 </p>
                 <p class="text-xs text-stone-400">{videoId}</p>
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
-                  <span>{formatDuration(videoMetadata()?.duration)}</span>
+                <div class="flex min-w-0 items-center gap-x-3 text-xs text-stone-500">
+                  <span class="shrink-0">{formatDuration(videoMetadata()?.duration)}</span>
                   <Show when={ownerMetadata()?.name}>
-                    {(ownerName) => <span>{ownerName()}</span>}
+                    {(ownerName) => <span class="min-w-0 truncate">{ownerName()}</span>}
                   </Show>
                 </div>
               </div>
