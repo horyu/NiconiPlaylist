@@ -12,6 +12,7 @@ const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
 const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitialized";
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
 const ADVERTISEMENT_SRC_PREFIX = "https://dcdn.cdn.nimg.jp/nicoad/instream/video";
+const CURRENT_TIME_SLIDER_SELECTOR = '[aria-label="video - currentTime"][role="slider"]';
 const WATCH_VIDEO_ID_PATH_PATTERN = /^\/watch\/((sm|so|nm|ss)[1-9][0-9]{0,8})$/u;
 const PLAYLIST_COMPLETED_ALERT_MESSAGE = "プレイリストの再生が終了しました。";
 
@@ -26,6 +27,18 @@ function isAdvertisementVideo(video: HTMLVideoElement): boolean {
   return title.includes(ADVERTISEMENT_TITLE_FRAGMENT) || src.startsWith(ADVERTISEMENT_SRC_PREFIX);
 }
 
+function getCurrentTimeSliderValue(): number | null {
+  const slider = document.querySelector(CURRENT_TIME_SLIDER_SELECTOR);
+
+  if (!(slider instanceof HTMLElement)) {
+    return null;
+  }
+
+  const value = Number(slider.getAttribute("aria-valuenow"));
+
+  return Number.isFinite(value) ? value : null;
+}
+
 function isPlaybackEndedByPause(video: HTMLVideoElement): boolean {
   if (video.ended) {
     return true;
@@ -35,7 +48,17 @@ function isPlaybackEndedByPause(video: HTMLVideoElement): boolean {
     return false;
   }
 
-  return video.duration - video.currentTime <= PLAYBACK_END_THRESHOLD_SECONDS;
+  if (video.duration - video.currentTime <= PLAYBACK_END_THRESHOLD_SECONDS) {
+    return true;
+  }
+
+  const sliderCurrentTime = getCurrentTimeSliderValue();
+
+  if (sliderCurrentTime === null) {
+    return false;
+  }
+
+  return sliderCurrentTime >= video.duration;
 }
 
 function getCurrentWatchVideoId(): string | null {
