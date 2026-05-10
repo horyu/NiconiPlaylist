@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
+  DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   DEFAULT_REPEAT_PRESETS,
   createRepeatPreset,
   resolveActiveRepeatPreset,
@@ -15,6 +16,7 @@ describe("playlistLoop", () => {
       shouldRepeatCurrentVideo(
         {
           playlistRepeatEnabled: false,
+          resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
           activeRepeatPresetId: "count-3",
           presets: [
             {
@@ -33,6 +35,7 @@ describe("playlistLoop", () => {
       shouldRepeatCurrentVideo(
         {
           playlistRepeatEnabled: false,
+          resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
           activeRepeatPresetId: "count-3",
           presets: [
             {
@@ -54,6 +57,7 @@ describe("playlistLoop", () => {
       shouldRepeatCurrentVideo(
         {
           playlistRepeatEnabled: false,
+          resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
           activeRepeatPresetId: "duration-300",
           presets: [
             {
@@ -72,6 +76,7 @@ describe("playlistLoop", () => {
       shouldRepeatCurrentVideo(
         {
           playlistRepeatEnabled: false,
+          resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
           activeRepeatPresetId: "duration-300",
           presets: [
             {
@@ -91,6 +96,7 @@ describe("playlistLoop", () => {
   test("sanitize は未保存時だけ初期プリセットを補完し、無効な active id を解除する", () => {
     expect(sanitizePlaybackSettings(undefined)).toEqual({
       playlistRepeatEnabled: false,
+      resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS,
       completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
@@ -103,6 +109,7 @@ describe("playlistLoop", () => {
       }),
     ).toEqual({
       playlistRepeatEnabled: false,
+      resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
       activeRepeatPresetId: null,
       presets: [],
       completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
@@ -136,7 +143,7 @@ describe("playlistLoop", () => {
         },
       }).completion,
     ).toEqual({
-      playSoundEnabled: true,
+      playSoundEnabled: false,
       soundVolume: 100,
       soundRepeatCount: 1,
       focusTabEnabled: true,
