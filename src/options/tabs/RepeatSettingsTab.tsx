@@ -1,5 +1,6 @@
 import { createEffect, createSignal, For, Show } from "solid-js";
 
+import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import {
   getStoredPlaybackSettings,
   setStoredPlaybackSettings,
@@ -13,7 +14,6 @@ import {
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
 import type { PlaybackCompletionSettings, PlaybackResumeTabMode, RepeatPreset } from "@/lib/types";
 import type { OptionsToast } from "@/options/toast";
-import completionSoundPath from "~/assets/ui-soft-glass-ping.mp3";
 
 type RepeatSettingsTabProps = {
   onFeedback: (toast: OptionsToast | null) => void;

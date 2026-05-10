@@ -1,11 +1,11 @@
 import { browser } from "wxt/browser";
 
+import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import { buildWatchUrl } from "@/lib/nicovideoUrl";
 import { shouldRepeatCurrentVideo } from "@/lib/playlistLoop";
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
 import type { PlaybackCompletionSettings } from "@/lib/types";
 import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
-import completionSoundPath from "~/assets/ui-soft-glass-ping.mp3";
 
 const PLAYBACK_END_THRESHOLD_SECONDS = 1;
 const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
