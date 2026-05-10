@@ -20,6 +20,15 @@ export type PlaybackSettings = {
   playlistRepeatEnabled: boolean;
   activeRepeatPresetId: string | null;
   presets: RepeatPreset[];
+  completion: PlaybackCompletionSettings;
+};
+
+export type PlaybackCompletionSettings = {
+  playSoundEnabled: boolean;
+  soundVolume: number;
+  soundRepeatCount: number;
+  focusTabEnabled: boolean;
+  alertEnabled: boolean;
 };
 
 export type Playlist = {

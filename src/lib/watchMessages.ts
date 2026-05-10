@@ -19,6 +19,10 @@ export type WatchClearPlaybackContextMessage = {
   type: "watch:clear-playback-context";
 };
 
+export type WatchFocusTabMessage = {
+  type: "watch:focus-tab";
+};
+
 export type WatchInitLocationObserverMessage = {
   type: "watch:init-location-observer";
 };
@@ -28,7 +32,8 @@ export type WatchMessage =
   | WatchResolveNextVideoMessage
   | WatchNavigateNextVideoMessage
   | WatchInitLocationObserverMessage
-  | WatchClearPlaybackContextMessage;
+  | WatchClearPlaybackContextMessage
+  | WatchFocusTabMessage;
 
 export type WatchPlaybackContextResponse = {
   playbackContext: PlaybackContext | null;

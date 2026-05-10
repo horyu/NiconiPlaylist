@@ -46,8 +46,32 @@ export function isPlaybackSettings(value: unknown): value is PlaybackSettings {
     (candidate.activeRepeatPresetId === null ||
       candidate.activeRepeatPresetId === undefined ||
       typeof candidate.activeRepeatPresetId === "string") &&
+    (candidate.completion === undefined || isPlaybackCompletionSettings(candidate.completion)) &&
     Array.isArray(candidate.presets) &&
     candidate.presets.every(isRepeatPreset)
+  );
+}
+
+function isPlaybackCompletionSettings(value: unknown): value is PlaybackSettings["completion"] {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PlaybackSettings["completion"]>;
+
+  return (
+    (candidate.playSoundEnabled === undefined || typeof candidate.playSoundEnabled === "boolean") &&
+    (candidate.soundVolume === undefined ||
+      (typeof candidate.soundVolume === "number" &&
+        Number.isInteger(candidate.soundVolume) &&
+        candidate.soundVolume >= 0 &&
+        candidate.soundVolume <= 100)) &&
+    (candidate.soundRepeatCount === undefined ||
+      (typeof candidate.soundRepeatCount === "number" &&
+        Number.isInteger(candidate.soundRepeatCount) &&
+        candidate.soundRepeatCount >= 1)) &&
+    (candidate.focusTabEnabled === undefined || typeof candidate.focusTabEnabled === "boolean") &&
+    (candidate.alertEnabled === undefined || typeof candidate.alertEnabled === "boolean")
   );
 }
 

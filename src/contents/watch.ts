@@ -1,7 +1,10 @@
 import { browser } from "wxt/browser";
 
 import { shouldRepeatCurrentVideo } from "@/lib/playlistLoop";
+import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
+import type { PlaybackCompletionSettings } from "@/lib/types";
 import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
+import completionSoundPath from "~/assets/ui-soft-glass-ping.mp3";
 
 const PLAYBACK_END_THRESHOLD_SECONDS = 0.5;
 const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
@@ -9,6 +12,7 @@ const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitia
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
 const ADVERTISEMENT_SRC_PREFIX = "https://dcdn.cdn.nimg.jp/nicoad/instream/video";
 const WATCH_VIDEO_ID_PATH_PATTERN = /^\/watch\/((sm|so|nm|ss)[1-9][0-9]{0,8})$/u;
+const PLAYLIST_COMPLETED_ALERT_MESSAGE = "プレイリストの再生が終了しました。";
 
 function isVideoElement(target: EventTarget | null): target is HTMLVideoElement {
   return target instanceof HTMLVideoElement;
@@ -96,6 +100,41 @@ function restartCurrentVideo(): void {
   );
 }
 
+async function playCompletionSound(settings: PlaybackCompletionSettings): Promise<void> {
+  if (!settings.playSoundEnabled) {
+    return;
+  }
+
+  await playRepeatedAudio(completionSoundPath, {
+    repeatCount: settings.soundRepeatCount,
+    volume: settings.soundVolume / 100,
+  });
+}
+
+async function handlePlaylistCompleted(
+  playbackState: WatchPlaybackContextResponse | null,
+): Promise<void> {
+  const completion = playbackState?.playbackSettings?.completion;
+
+  if (!completion) {
+    return;
+  }
+
+  if (completion.focusTabEnabled) {
+    await browser.runtime
+      .sendMessage({
+        type: "watch:focus-tab",
+      })
+      .catch(() => undefined);
+  }
+
+  if (completion.alertEnabled) {
+    alert(PLAYLIST_COMPLETED_ALERT_MESSAGE);
+  }
+
+  await playCompletionSound(completion);
+}
+
 function initWatchLocationObserver(): void {
   const state = globalThis as typeof globalThis & {
     [WATCH_LOCATION_OBSERVER_KEY]?: boolean;
@@ -157,6 +196,9 @@ async function handlePause(event: Event) {
   if (playbackState?.nextVideoId) {
     navigateToNextVideo(playbackState.nextVideoId);
   } else {
+    if (playbackState?.playbackSettings && !playbackState.playbackSettings.playlistRepeatEnabled) {
+      await handlePlaylistCompleted(playbackState);
+    }
     void browser.runtime.sendMessage({
       type: "watch:clear-playback-context",
     });

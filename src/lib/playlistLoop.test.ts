@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   DEFAULT_REPEAT_PRESETS,
   createRepeatPreset,
   resolveActiveRepeatPreset,
@@ -22,6 +23,7 @@ describe("playlistLoop", () => {
               count: 3,
             },
           ],
+          completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         1,
         120,
@@ -39,6 +41,7 @@ describe("playlistLoop", () => {
               count: 3,
             },
           ],
+          completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         3,
         120,
@@ -59,6 +62,7 @@ describe("playlistLoop", () => {
               durationSeconds: 300,
             },
           ],
+          completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         2,
         120,
@@ -76,6 +80,7 @@ describe("playlistLoop", () => {
               durationSeconds: 300,
             },
           ],
+          completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         3,
         120,
@@ -88,6 +93,7 @@ describe("playlistLoop", () => {
       playlistRepeatEnabled: false,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS,
+      completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
     });
     expect(
       sanitizePlaybackSettings({
@@ -99,6 +105,7 @@ describe("playlistLoop", () => {
       playlistRepeatEnabled: false,
       activeRepeatPresetId: null,
       presets: [],
+      completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
     });
   });
 
@@ -113,6 +120,27 @@ describe("playlistLoop", () => {
       id: "custom",
       mode: "count",
       count: 4,
+    });
+  });
+
+  test("completion 設定は範囲内に正規化する", () => {
+    expect(
+      sanitizePlaybackSettings({
+        presets: [],
+        completion: {
+          playSoundEnabled: true,
+          soundVolume: 120,
+          soundRepeatCount: 0,
+          focusTabEnabled: true,
+          alertEnabled: true,
+        },
+      }).completion,
+    ).toEqual({
+      playSoundEnabled: true,
+      soundVolume: 100,
+      soundRepeatCount: 1,
+      focusTabEnabled: true,
+      alertEnabled: true,
     });
   });
 });

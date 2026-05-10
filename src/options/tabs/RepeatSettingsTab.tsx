@@ -4,9 +4,15 @@ import {
   getStoredPlaybackSettings,
   setStoredPlaybackSettings,
 } from "@/background/services/playbackSettings";
-import { createRepeatPreset, sanitizePlaybackSettings } from "@/lib/playlistLoop";
-import type { RepeatPreset } from "@/lib/types";
+import {
+  createRepeatPreset,
+  DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
+  sanitizePlaybackSettings,
+} from "@/lib/playlistLoop";
+import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
+import type { PlaybackCompletionSettings, RepeatPreset } from "@/lib/types";
 import type { OptionsToast } from "@/options/toast";
+import completionSoundPath from "~/assets/ui-soft-glass-ping.mp3";
 
 type RepeatSettingsTabProps = {
   onFeedback: (toast: OptionsToast | null) => void;
@@ -29,18 +35,36 @@ function parsePositiveInteger(value: string, fallback: number): number {
   return Math.max(parsed, 0);
 }
 
+function clampInteger(value: string, minimum: number, maximum: number, fallback: number): number {
+  const parsed = Number.parseInt(value, 10);
+
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(parsed, minimum), maximum);
+}
+
 export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   const [presets, setPresets] = createSignal<RepeatPreset[]>([]);
   const [savedPresetsJson, setSavedPresetsJson] = createSignal("[]");
+  const [completionSettings, setCompletionSettings] = createSignal<PlaybackCompletionSettings>({
+    ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
+  });
+  const [savedCompletionSettingsJson, setSavedCompletionSettingsJson] = createSignal("{}");
 
   createEffect(() => {
     void getStoredPlaybackSettings().then((playbackSettings) => {
       setPresets(playbackSettings.presets);
       setSavedPresetsJson(JSON.stringify(playbackSettings.presets));
+      setCompletionSettings(playbackSettings.completion);
+      setSavedCompletionSettingsJson(JSON.stringify(playbackSettings.completion));
     });
   });
 
-  const hasUnsavedChanges = () => JSON.stringify(presets()) !== savedPresetsJson();
+  const hasUnsavedChanges = () =>
+    JSON.stringify(presets()) !== savedPresetsJson() ||
+    JSON.stringify(completionSettings()) !== savedCompletionSettingsJson();
 
   function handleAddCountPreset() {
     setPresets((currentPresets) => [...currentPresets, createRepeatPreset("count", 2)]);
@@ -87,6 +111,31 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     );
   }
 
+  function updateCompletionSettings(partial: Partial<PlaybackCompletionSettings>) {
+    setCompletionSettings((currentSettings) => ({
+      ...currentSettings,
+      ...partial,
+    }));
+  }
+
+  async function handlePreviewCompletionSound() {
+    const settings = completionSettings();
+
+    if (!settings.playSoundEnabled) {
+      props.onFeedback({
+        text: "音を再生するを有効にしてください。",
+        tone: "error",
+      });
+      return;
+    }
+
+    props.onFeedback(null);
+    await playRepeatedAudio(completionSoundPath, {
+      repeatCount: settings.soundRepeatCount,
+      volume: settings.soundVolume / 100,
+    });
+  }
+
   async function handleSavePlaybackSettings() {
     props.onFeedback(null);
 
@@ -96,11 +145,14 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
         playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
         activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
         presets: presets(),
+        completion: completionSettings(),
       });
 
       await setStoredPlaybackSettings(nextPlaybackSettings);
       setPresets(nextPlaybackSettings.presets);
       setSavedPresetsJson(JSON.stringify(nextPlaybackSettings.presets));
+      setCompletionSettings(nextPlaybackSettings.completion);
+      setSavedCompletionSettingsJson(JSON.stringify(nextPlaybackSettings.completion));
       props.onFeedback({ text: "リピート設定を更新しました。", tone: "success" });
     } catch (error) {
       props.onFeedback({
@@ -114,7 +166,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">再生設定</h2>
-        <p class="text-sm text-stone-400">popup から選ぶリピート条件を編集します。</p>
+        <p class="text-sm text-stone-400">リピート条件とプレイリスト完了後の動作を編集します。</p>
       </div>
 
       <div class="space-y-3">
@@ -216,6 +268,100 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
               </div>
             )}
           </For>
+        </div>
+
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+          <div class="space-y-1">
+            <p class="text-xs font-medium text-stone-100">プレイリスト完了後（リピートなし時）</p>
+            <p class="text-xs text-stone-500">
+              プレイリスト全体のリピートが OFF で、最後の動画まで再生し終えた時に実行します。
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="flex items-center gap-2 text-xs text-stone-300">
+              <input
+                type="checkbox"
+                checked={completionSettings().playSoundEnabled}
+                onChange={(event) =>
+                  updateCompletionSettings({
+                    playSoundEnabled: event.currentTarget.checked,
+                  })
+                }
+              />
+              <span>音を再生する</span>
+            </label>
+          </div>
+
+          <Show when={completionSettings().playSoundEnabled}>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-stone-300">
+              <span>音量</span>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                inputMode="numeric"
+                value={completionSettings().soundVolume.toString()}
+                onInput={(event) =>
+                  updateCompletionSettings({
+                    soundVolume: clampInteger(event.currentTarget.value, 0, 100, 50),
+                  })
+                }
+                class="w-16 rounded-md border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100"
+              />
+              <span>%</span>
+              <span>連続再生数</span>
+              <input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={completionSettings().soundRepeatCount.toString()}
+                onInput={(event) =>
+                  updateCompletionSettings({
+                    soundRepeatCount: Math.max(
+                      clampInteger(event.currentTarget.value, 1, 99, 1),
+                      1,
+                    ),
+                  })
+                }
+                class="w-16 rounded-md border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100"
+              />
+              <span>回</span>
+              <button
+                type="button"
+                class="rounded-full border border-stone-600 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                onClick={() => void handlePreviewCompletionSound()}
+              >
+                設定通りに再生
+              </button>
+            </div>
+          </Show>
+
+          <label class="flex items-center gap-2 text-xs text-stone-300">
+            <input
+              type="checkbox"
+              checked={completionSettings().focusTabEnabled}
+              onChange={(event) =>
+                updateCompletionSettings({
+                  focusTabEnabled: event.currentTarget.checked,
+                })
+              }
+            />
+            <span>タブをフォーカスする</span>
+          </label>
+
+          <label class="flex items-center gap-2 text-xs text-stone-300">
+            <input
+              type="checkbox"
+              checked={completionSettings().alertEnabled}
+              onChange={(event) =>
+                updateCompletionSettings({
+                  alertEnabled: event.currentTarget.checked,
+                })
+              }
+            />
+            <span>ブラウザの確認ダイアログを表示する</span>
+          </label>
         </div>
 
         <button

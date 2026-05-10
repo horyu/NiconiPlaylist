@@ -1,4 +1,9 @@
-import type { PlaybackSettings, RepeatPreset, RepeatPresetMode } from "@/lib/types";
+import type {
+  PlaybackCompletionSettings,
+  PlaybackSettings,
+  RepeatPreset,
+  RepeatPresetMode,
+} from "@/lib/types";
 
 type RepeatPresetInput =
   | {
@@ -16,6 +21,7 @@ type PlaybackSettingsInput = {
   playlistRepeatEnabled?: boolean;
   activeRepeatPresetId?: string | null;
   presets?: RepeatPresetInput[];
+  completion?: Partial<PlaybackCompletionSettings>;
 };
 
 export const DEFAULT_REPEAT_PRESETS: RepeatPreset[] = [
@@ -30,6 +36,14 @@ export const DEFAULT_REPEAT_PRESETS: RepeatPreset[] = [
     durationSeconds: 10 * 60,
   },
 ];
+
+export const DEFAULT_PLAYBACK_COMPLETION_SETTINGS: PlaybackCompletionSettings = {
+  playSoundEnabled: false,
+  soundVolume: 50,
+  soundRepeatCount: 1,
+  focusTabEnabled: false,
+  alertEnabled: false,
+};
 
 function createRepeatPresetId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -71,6 +85,18 @@ function sanitizeRepeatPreset(preset: RepeatPresetInput): RepeatPreset | null {
   return null;
 }
 
+function sanitizePlaybackCompletionSettings(
+  settings: Partial<PlaybackCompletionSettings> | null | undefined,
+): PlaybackCompletionSettings {
+  return {
+    playSoundEnabled: settings?.playSoundEnabled === true,
+    soundVolume: Math.min(Math.max(Math.trunc(settings?.soundVolume ?? 50), 0), 100),
+    soundRepeatCount: Math.max(Math.trunc(settings?.soundRepeatCount ?? 1), 1),
+    focusTabEnabled: settings?.focusTabEnabled === true,
+    alertEnabled: settings?.alertEnabled === true,
+  };
+}
+
 export function sanitizePlaybackSettings(
   settings: PlaybackSettingsInput | null | undefined,
 ): PlaybackSettings {
@@ -79,6 +105,7 @@ export function sanitizePlaybackSettings(
       playlistRepeatEnabled: false,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS.map((preset) => ({ ...preset })),
+      completion: { ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS },
     };
   }
 
@@ -97,6 +124,7 @@ export function sanitizePlaybackSettings(
     playlistRepeatEnabled: settings.playlistRepeatEnabled === true,
     activeRepeatPresetId,
     presets: normalizedPresets.map((preset) => ({ ...preset })),
+    completion: sanitizePlaybackCompletionSettings(settings.completion),
   };
 }
 

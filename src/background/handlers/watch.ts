@@ -85,6 +85,26 @@ export async function handleWatchMessage(
     return undefined;
   }
 
+  if (message.type === "watch:focus-tab") {
+    const tab = await browser.tabs.get(tabId);
+    const tasks: Promise<unknown>[] = [
+      browser.tabs.update(tabId, {
+        active: true,
+      }),
+    ];
+
+    if (typeof tab.windowId === "number") {
+      tasks.push(
+        browser.windows.update(tab.windowId, {
+          focused: true,
+        }),
+      );
+    }
+
+    await Promise.all(tasks);
+    return undefined;
+  }
+
   if (message.type === "watch:init-location-observer") {
     await browser.scripting.executeScript({
       target: { tabId },

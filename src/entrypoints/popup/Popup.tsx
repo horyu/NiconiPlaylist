@@ -339,9 +339,9 @@ function Popup() {
 
     try {
       const nextPlaybackSettings = sanitizePlaybackSettings({
+        ...playbackSettings,
         playlistRepeatEnabled: playbackSettings.playlistRepeatEnabled,
         activeRepeatPresetId: nextValue === "none" ? null : nextValue,
-        presets: playbackSettings.presets,
       });
 
       setPlaybackSettingsDraft(nextPlaybackSettings);
@@ -364,10 +364,10 @@ function Popup() {
 
     try {
       const nextPlaybackSettings = sanitizePlaybackSettings({
+        ...playbackSettings,
         playlistRepeatEnabled: !playbackSettings.playlistRepeatEnabled,
         activeRepeatPresetId:
           selectedRepeatPresetIdValue === "none" ? null : selectedRepeatPresetIdValue,
-        presets: playbackSettings.presets,
       });
 
       setPlaybackSettingsDraft(nextPlaybackSettings);
