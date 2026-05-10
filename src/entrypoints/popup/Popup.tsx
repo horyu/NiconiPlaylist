@@ -61,7 +61,7 @@ function formatPlaylistOptionLabel(playlist: Playlist): string {
 }
 
 function buildWatchUrl(videoId: string): string {
-  return `https://www.nicovideo.jp/watch/${videoId}`;
+  return `https://www.nicovideo.jp/watch/${videoId}?from=0`;
 }
 
 const WATCH_URL_PREFIX = "https://www.nicovideo.jp/watch/";
