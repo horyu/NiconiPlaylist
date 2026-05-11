@@ -16,4 +16,5 @@ bun run vp config
 ## Documentation
 
 設計・仕様書の正本は `project-docs/` に置く。  
+未実装の将来拡張や改善案は `project-docs/TODO.md` に置く。  
 `docs/` は GitHub Pages 公開用ディレクトリとして扱う。
