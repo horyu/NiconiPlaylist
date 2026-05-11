@@ -1,8 +1,10 @@
 import { browser } from "wxt/browser";
 
+import { handlePopupMessage } from "@/background/handlers/popup";
 import { handleWatchMessage } from "@/background/handlers/watch";
 import { getStorageData } from "@/background/services/storage";
 import { initUserAgentOverride } from "@/background/services/userAgent";
+import type { PopupMessage } from "@/lib/popupMessages";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import { isPlaybackContext } from "@/lib/typeGuards";
 import type { WatchMessage } from "@/lib/watchMessages";
@@ -88,6 +90,22 @@ export function initBackground() {
     if (type === "badge:refresh") {
       void refreshPlaybackBadgeFromStorage();
       return undefined;
+    }
+
+    if (type.startsWith("popup:")) {
+      void handlePopupMessage(message as PopupMessage)
+        .then((response) => {
+          sendResponse(response);
+        })
+        .catch((error: unknown) => {
+          console.error("NiconiPlaylist failed to handle popup message.", {
+            error,
+            message,
+          });
+          sendResponse(undefined);
+        });
+
+      return true;
     }
 
     if (!type.startsWith("watch:")) {

@@ -15,13 +15,13 @@ import { setStoredPlaybackSettings } from "@/background/services/playbackSetting
 import {
   activateStoredPlaylist,
   getStoredPlaybackContexts,
-  setStoredPlaybackContextIndex,
   updateStoredPlaylist,
 } from "@/background/services/playlistStore";
 import { getPopupState } from "@/background/services/popupState";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
-import { buildWatchUrl, isWatchUrl } from "@/lib/nicovideoUrl";
+import { isWatchUrl } from "@/lib/nicovideoUrl";
 import { formatRepeatPresetLabel, sanitizePlaybackSettings } from "@/lib/playlistLoop";
+import type { PopupMessage } from "@/lib/popupMessages";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
 import { PopupPlaylistVideoList } from "@/popup/components/PopupPlaylistVideoList";
@@ -275,40 +275,15 @@ function Popup() {
     setFeedback(null);
 
     try {
-      const watchUrl = buildWatchUrl(nextVideoId);
+      const message: PopupMessage = {
+        activeTabId,
+        index,
+        playbackTabId: playbackTabIdValue,
+        playlistId: playlist.id,
+        type: "popup:start-playback",
+      };
 
-      if (playbackTabIdValue !== null) {
-        await setStoredPlaybackContextIndex(playbackTabIdValue, playlist.id, index);
-        await browser.tabs.update(playbackTabIdValue, {
-          url: watchUrl,
-        });
-        await refetch();
-        return;
-      }
-
-      if (activeTabId && currentPlaybackSettings()?.resumeTabMode === "replace-current-tab") {
-        await setStoredPlaybackContextIndex(activeTabId, playlist.id, index);
-        await browser.tabs.update(activeTabId, {
-          url: watchUrl,
-        });
-        await refetch();
-        return;
-      }
-
-      // 先にアクティブ化すると popup が閉じて、playback context 保存前に処理が中断されうる。
-      const createdTab = await browser.tabs.create({
-        url: watchUrl,
-        active: false,
-      });
-
-      if (typeof createdTab.id !== "number") {
-        throw new Error("新しいタブを作成できませんでした。");
-      }
-
-      await setStoredPlaybackContextIndex(createdTab.id, playlist.id, index);
-      await browser.tabs.update(createdTab.id, {
-        active: true,
-      });
+      await browser.runtime.sendMessage(message);
       await refetch();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "再生位置の更新に失敗しました。");
