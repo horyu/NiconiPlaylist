@@ -295,9 +295,10 @@ function Popup() {
         return;
       }
 
+      // 先にアクティブ化すると popup が閉じて、playback context 保存前に処理が中断されうる。
       const createdTab = await browser.tabs.create({
         url: watchUrl,
-        active: true,
+        active: false,
       });
 
       if (typeof createdTab.id !== "number") {
@@ -305,6 +306,9 @@ function Popup() {
       }
 
       await setStoredPlaybackContextIndex(createdTab.id, playlist.id, index);
+      await browser.tabs.update(createdTab.id, {
+        active: true,
+      });
       await refetch();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "再生位置の更新に失敗しました。");
