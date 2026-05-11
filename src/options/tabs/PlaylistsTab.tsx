@@ -735,8 +735,8 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       <Switch
         fallback={
           <p class="text-sm leading-6 text-stone-400">
-            保存済みプレイリストはまだありません。共有 URL またはプレイリスト JSON
-            をインポートしてください。
+            保存済みプレイリストはまだありません。インポートタブで取り込むか、作成タブから
+            新しく作成してください。
           </p>
         }
       >
