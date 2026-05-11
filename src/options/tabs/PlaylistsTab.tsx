@@ -12,6 +12,7 @@ import {
 import { createPlaylistJsonFilename, exportPlaylistJson } from "@/background/services/playlistJson";
 import {
   activateStoredPlaylist,
+  clearStoredPlaybackContextsByPlaylistId,
   createStoredPlaylistCopy,
   createShuffledStoredPlaylistCopy,
   deleteStoredPlaylist,
@@ -326,6 +327,24 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     } catch (error) {
       props.onFeedback({
         text: error instanceof Error ? error.message : "プレイリストの削除に失敗しました。",
+        tone: "error",
+      });
+    }
+  }
+
+  async function handleClearPlaybackState(playlistId: PlaylistId) {
+    props.onFeedback(null);
+
+    try {
+      await clearStoredPlaybackContextsByPlaylistId(playlistId);
+      await props.onUpdated();
+      props.onFeedback({
+        text: "再生状態を削除しました。",
+        tone: "success",
+      });
+    } catch (error) {
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "再生状態の削除に失敗しました。",
         tone: "error",
       });
     }
@@ -897,6 +916,15 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                               >
                                 選択
                               </button>
+                              <Show when={selectedPlaybackContext()}>
+                                <button
+                                  type="button"
+                                  class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                  onClick={() => void handleClearPlaybackState(detailPlaylist.id)}
+                                >
+                                  再生状態を削除
+                                </button>
+                              </Show>
                               <div class="relative">
                                 <button
                                   type="button"

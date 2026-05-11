@@ -300,6 +300,17 @@ export async function clearStoredPlaybackContextByTabId(tabId: number): Promise<
   await setStoredPlaybackContexts(nextPlaybackContexts);
 }
 
+export async function clearStoredPlaybackContextsByPlaylistId(
+  playlistId: PlaylistId,
+): Promise<void> {
+  const playbackContexts = await getStoredPlaybackContexts();
+  const nextPlaybackContexts = playbackContexts.filter(
+    (context) => context.playlistId !== playlistId,
+  );
+
+  await setStoredPlaybackContexts(nextPlaybackContexts);
+}
+
 export async function setStoredPlaybackContextIndex(
   tabId: number,
   playlistId: PlaylistId,
