@@ -49,9 +49,27 @@ export function isPlaybackSettings(value: unknown): value is PlaybackSettings {
     (candidate.activeRepeatPresetId === null ||
       candidate.activeRepeatPresetId === undefined ||
       typeof candidate.activeRepeatPresetId === "string") &&
+    (candidate.navigation === undefined || isPlaybackNavigationSettings(candidate.navigation)) &&
     (candidate.completion === undefined || isPlaybackCompletionSettings(candidate.completion)) &&
     Array.isArray(candidate.presets) &&
     candidate.presets.every(isRepeatPreset)
+  );
+}
+
+function isPlaybackNavigationSettings(value: unknown): value is PlaybackSettings["navigation"] {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PlaybackSettings["navigation"]>;
+
+  return (
+    (candidate.restorePreviousTabEnabled === undefined ||
+      typeof candidate.restorePreviousTabEnabled === "boolean") &&
+    (candidate.restorePreviousTabDelayMs === undefined ||
+      (typeof candidate.restorePreviousTabDelayMs === "number" &&
+        Number.isInteger(candidate.restorePreviousTabDelayMs) &&
+        candidate.restorePreviousTabDelayMs >= 0))
   );
 }
 

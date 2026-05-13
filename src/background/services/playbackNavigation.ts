@@ -7,6 +7,7 @@ import {
 } from "@/background/services/playlistStore";
 import { buildWatchUrl } from "@/lib/nicovideoUrl";
 import type { PopupMessage } from "@/lib/popupMessages";
+import type { PlaybackNavigationSettings } from "@/lib/types";
 
 export async function focusBrowserTab(tabId: number): Promise<void> {
   const tab = await browser.tabs.get(tabId);
@@ -25,6 +26,42 @@ export async function focusBrowserTab(tabId: number): Promise<void> {
   }
 
   await Promise.all(tasks);
+}
+
+async function getLastFocusedActiveTabId(): Promise<number | null> {
+  const [activeTab] = await browser.tabs.query({
+    active: true,
+    lastFocusedWindow: true,
+  });
+
+  return typeof activeTab?.id === "number" ? activeTab.id : null;
+}
+
+export async function focusPlaybackTabForNavigation(
+  tabId: number,
+  settings: PlaybackNavigationSettings,
+): Promise<void> {
+  const previousActiveTabId = await getLastFocusedActiveTabId();
+
+  await focusBrowserTab(tabId);
+
+  if (
+    !settings.restorePreviousTabEnabled ||
+    previousActiveTabId === null ||
+    previousActiveTabId === tabId
+  ) {
+    return;
+  }
+
+  globalThis.setTimeout(() => {
+    void focusBrowserTab(previousActiveTabId).catch((error: unknown) => {
+      console.error("NiconiPlaylist failed to restore previously focused tab.", {
+        error,
+        previousActiveTabId,
+        tabId,
+      });
+    });
+  }, settings.restorePreviousTabDelayMs);
 }
 
 export async function startPopupPlayback(

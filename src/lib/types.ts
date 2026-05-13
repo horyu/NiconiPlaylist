@@ -21,6 +21,7 @@ export type PlaybackSettings = {
   resumeTabMode: PlaybackResumeTabMode;
   activeRepeatPresetId: string | null;
   presets: RepeatPreset[];
+  navigation: PlaybackNavigationSettings;
   completion: PlaybackCompletionSettings;
 };
 
@@ -32,6 +33,11 @@ export type PlaybackCompletionSettings = {
   soundRepeatCount: number;
   focusTabEnabled: boolean;
   alertEnabled: boolean;
+};
+
+export type PlaybackNavigationSettings = {
+  restorePreviousTabEnabled: boolean;
+  restorePreviousTabDelayMs: number;
 };
 
 export type Playlist = {

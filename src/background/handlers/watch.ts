@@ -1,6 +1,9 @@
 import { browser } from "wxt/browser";
 
-import { focusBrowserTab } from "@/background/services/playbackNavigation";
+import {
+  focusBrowserTab,
+  focusPlaybackTabForNavigation,
+} from "@/background/services/playbackNavigation";
 import { getStoredPlaybackSettings } from "@/background/services/playbackSettings";
 import {
   clearStoredPlaybackContextByTabId,
@@ -60,7 +63,7 @@ export async function handleWatchMessage(
         playbackSettings: null,
       };
 
-    case "watch:navigate-next-video":
+    case "watch:navigate-next-video": {
       await browser.scripting.executeScript({
         target: { tabId },
         world: "MAIN",
@@ -82,7 +85,11 @@ export async function handleWatchMessage(
         },
         args: [message.url],
       });
+
+      const playbackSettings = await getStoredPlaybackSettings();
+      await focusPlaybackTabForNavigation(tabId, playbackSettings.navigation);
       return undefined;
+    }
 
     case "watch:focus-tab": {
       await focusBrowserTab(tabId);

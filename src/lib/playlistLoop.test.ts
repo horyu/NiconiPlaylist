@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
+  DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
   DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   DEFAULT_REPEAT_PRESETS,
   createRepeatPreset,
@@ -25,6 +26,7 @@ describe("playlistLoop", () => {
               count: 3,
             },
           ],
+          navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
           completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         1,
@@ -44,6 +46,7 @@ describe("playlistLoop", () => {
               count: 3,
             },
           ],
+          navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
           completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         3,
@@ -66,6 +69,7 @@ describe("playlistLoop", () => {
               durationSeconds: 300,
             },
           ],
+          navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
           completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         2,
@@ -85,6 +89,7 @@ describe("playlistLoop", () => {
               durationSeconds: 300,
             },
           ],
+          navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
           completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
         },
         3,
@@ -99,6 +104,7 @@ describe("playlistLoop", () => {
       resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS,
+      navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
       completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
     });
     expect(
@@ -112,6 +118,7 @@ describe("playlistLoop", () => {
       resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
       activeRepeatPresetId: null,
       presets: [],
+      navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
       completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
     });
   });
@@ -148,6 +155,21 @@ describe("playlistLoop", () => {
       soundRepeatCount: 1,
       focusTabEnabled: true,
       alertEnabled: true,
+    });
+  });
+
+  test("navigation 設定は範囲内に正規化する", () => {
+    expect(
+      sanitizePlaybackSettings({
+        presets: [],
+        navigation: {
+          restorePreviousTabEnabled: true,
+          restorePreviousTabDelayMs: -500,
+        },
+      }).navigation,
+    ).toEqual({
+      restorePreviousTabEnabled: true,
+      restorePreviousTabDelayMs: 0,
     });
   });
 });

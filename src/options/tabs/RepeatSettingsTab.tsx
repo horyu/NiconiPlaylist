@@ -8,11 +8,17 @@ import {
 import {
   createRepeatPreset,
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
+  DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
   DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   sanitizePlaybackSettings,
 } from "@/lib/playlistLoop";
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
-import type { PlaybackCompletionSettings, PlaybackResumeTabMode, RepeatPreset } from "@/lib/types";
+import type {
+  PlaybackCompletionSettings,
+  PlaybackNavigationSettings,
+  PlaybackResumeTabMode,
+  RepeatPreset,
+} from "@/lib/types";
 import type { OptionsToast } from "@/options/toast";
 
 type RepeatSettingsTabProps = {
@@ -52,9 +58,13 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   const [completionSettings, setCompletionSettings] = createSignal<PlaybackCompletionSettings>({
     ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   });
+  const [navigationSettings, setNavigationSettings] = createSignal<PlaybackNavigationSettings>({
+    ...DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
+  });
   const [resumeTabMode, setResumeTabMode] = createSignal<PlaybackResumeTabMode>(
     DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   );
+  const [savedNavigationSettingsJson, setSavedNavigationSettingsJson] = createSignal("{}");
   const [savedCompletionSettingsJson, setSavedCompletionSettingsJson] = createSignal("{}");
   const [savedResumeTabMode, setSavedResumeTabMode] = createSignal<PlaybackResumeTabMode>(
     DEFAULT_PLAYBACK_RESUME_TAB_MODE,
@@ -66,6 +76,8 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       setSavedPresetsJson(JSON.stringify(playbackSettings.presets));
       setCompletionSettings(playbackSettings.completion);
       setSavedCompletionSettingsJson(JSON.stringify(playbackSettings.completion));
+      setNavigationSettings(playbackSettings.navigation);
+      setSavedNavigationSettingsJson(JSON.stringify(playbackSettings.navigation));
       setResumeTabMode(playbackSettings.resumeTabMode);
       setSavedResumeTabMode(playbackSettings.resumeTabMode);
     });
@@ -74,6 +86,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   const hasUnsavedChanges = () =>
     JSON.stringify(presets()) !== savedPresetsJson() ||
     JSON.stringify(completionSettings()) !== savedCompletionSettingsJson() ||
+    JSON.stringify(navigationSettings()) !== savedNavigationSettingsJson() ||
     resumeTabMode() !== savedResumeTabMode();
 
   const completionNotificationMode = () => {
@@ -177,6 +190,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
         resumeTabMode: resumeTabMode(),
         activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
         presets: presets(),
+        navigation: navigationSettings(),
         completion: completionSettings(),
       });
 
@@ -185,6 +199,8 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       setSavedPresetsJson(JSON.stringify(nextPlaybackSettings.presets));
       setCompletionSettings(nextPlaybackSettings.completion);
       setSavedCompletionSettingsJson(JSON.stringify(nextPlaybackSettings.completion));
+      setNavigationSettings(nextPlaybackSettings.navigation);
+      setSavedNavigationSettingsJson(JSON.stringify(nextPlaybackSettings.navigation));
       setResumeTabMode(nextPlaybackSettings.resumeTabMode);
       setSavedResumeTabMode(nextPlaybackSettings.resumeTabMode);
       props.onFeedback({ text: "リピート設定を更新しました。", tone: "success" });
@@ -232,6 +248,75 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
               <span>現在のタブを上書きして開く</span>
             </label>
           </div>
+        </div>
+
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+          <div class="space-y-1">
+            <p class="text-xs font-medium text-stone-100">次動画へ進む時の前面化</p>
+            <p class="text-xs text-stone-500">
+              次動画へ自動遷移する時は再生タブを前面に表示します。必要に応じて一定時間後に元のタブへ戻します。
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-4">
+            <label class="flex items-center gap-2 text-xs text-stone-300">
+              <input
+                type="radio"
+                name="navigation-focus-mode"
+                checked={!navigationSettings().restorePreviousTabEnabled}
+                onChange={() =>
+                  setNavigationSettings((currentSettings) => ({
+                    ...currentSettings,
+                    restorePreviousTabEnabled: false,
+                  }))
+                }
+              />
+              <span>そのまま表示を維持する</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-stone-300">
+              <input
+                type="radio"
+                name="navigation-focus-mode"
+                checked={navigationSettings().restorePreviousTabEnabled}
+                onChange={() =>
+                  setNavigationSettings((currentSettings) => ({
+                    ...currentSettings,
+                    restorePreviousTabEnabled: true,
+                  }))
+                }
+              />
+              <span>一定時間後に元のタブへ戻す</span>
+            </label>
+          </div>
+
+          <Show when={navigationSettings().restorePreviousTabEnabled}>
+            <label class="flex items-center gap-2 text-xs text-stone-300">
+              <span>戻すまでの時間</span>
+              <input
+                type="number"
+                inputmode="numeric"
+                min="0"
+                step="100"
+                value={navigationSettings().restorePreviousTabDelayMs}
+                onInput={(event) =>
+                  setNavigationSettings((currentSettings) => ({
+                    ...currentSettings,
+                    restorePreviousTabDelayMs: Math.max(
+                      clampInteger(
+                        event.currentTarget.value,
+                        0,
+                        Number.MAX_SAFE_INTEGER,
+                        currentSettings.restorePreviousTabDelayMs,
+                      ),
+                      0,
+                    ),
+                  }))
+                }
+                class="w-28 rounded-lg border border-stone-700 bg-stone-900 px-2 py-1 text-right text-sm text-stone-100"
+              />
+              <span>ms</span>
+            </label>
+          </Show>
         </div>
 
         <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">

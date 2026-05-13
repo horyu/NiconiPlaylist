@@ -1,5 +1,6 @@
 import type {
   PlaybackCompletionSettings,
+  PlaybackNavigationSettings,
   PlaybackResumeTabMode,
   PlaybackSettings,
   RepeatPreset,
@@ -23,6 +24,7 @@ type PlaybackSettingsInput = {
   resumeTabMode?: PlaybackResumeTabMode;
   activeRepeatPresetId?: string | null;
   presets?: RepeatPresetInput[];
+  navigation?: Partial<PlaybackNavigationSettings>;
   completion?: Partial<PlaybackCompletionSettings>;
 };
 
@@ -48,6 +50,11 @@ export const DEFAULT_PLAYBACK_COMPLETION_SETTINGS: PlaybackCompletionSettings = 
 };
 
 export const DEFAULT_PLAYBACK_RESUME_TAB_MODE: PlaybackResumeTabMode = "new-tab";
+
+export const DEFAULT_PLAYBACK_NAVIGATION_SETTINGS: PlaybackNavigationSettings = {
+  restorePreviousTabEnabled: false,
+  restorePreviousTabDelayMs: 1500,
+};
 
 function createRepeatPresetId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -103,6 +110,21 @@ function sanitizePlaybackCompletionSettings(
   };
 }
 
+function sanitizePlaybackNavigationSettings(
+  settings: Partial<PlaybackNavigationSettings> | null | undefined,
+): PlaybackNavigationSettings {
+  return {
+    restorePreviousTabEnabled: settings?.restorePreviousTabEnabled === true,
+    restorePreviousTabDelayMs: Math.max(
+      Math.trunc(
+        settings?.restorePreviousTabDelayMs ??
+          DEFAULT_PLAYBACK_NAVIGATION_SETTINGS.restorePreviousTabDelayMs,
+      ),
+      0,
+    ),
+  };
+}
+
 export function sanitizePlaybackSettings(
   settings: PlaybackSettingsInput | null | undefined,
 ): PlaybackSettings {
@@ -112,6 +134,7 @@ export function sanitizePlaybackSettings(
       resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
       activeRepeatPresetId: null,
       presets: DEFAULT_REPEAT_PRESETS.map((preset) => ({ ...preset })),
+      navigation: { ...DEFAULT_PLAYBACK_NAVIGATION_SETTINGS },
       completion: { ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS },
     };
   }
@@ -133,6 +156,7 @@ export function sanitizePlaybackSettings(
       settings.resumeTabMode === "replace-current-tab" ? "replace-current-tab" : "new-tab",
     activeRepeatPresetId,
     presets: normalizedPresets.map((preset) => ({ ...preset })),
+    navigation: sanitizePlaybackNavigationSettings(settings.navigation),
     completion: sanitizePlaybackCompletionSettings(settings.completion),
   };
 }

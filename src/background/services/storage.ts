@@ -2,6 +2,7 @@ import { browser } from "wxt/browser";
 
 import {
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
+  DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
   DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   DEFAULT_REPEAT_PRESETS,
 } from "@/lib/playlistLoop";
@@ -27,6 +28,7 @@ const DEFAULT_BY_KEY: StorageDataByKey = {
     resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
     activeRepeatPresetId: null,
     presets: DEFAULT_REPEAT_PRESETS,
+    navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
     completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   },
   playbackContexts: [],
