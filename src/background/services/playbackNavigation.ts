@@ -9,7 +9,19 @@ import { buildWatchUrl } from "@/lib/nicovideoUrl";
 import type { PopupMessage } from "@/lib/popupMessages";
 import type { PlaybackNavigationSettings } from "@/lib/types";
 
+type PendingRestore = {
+  delayMs: number;
+  previousActiveTabId: number | null;
+  restorePreviousTabEnabled: boolean;
+};
+
+const pendingRestoreByPlaybackTabId = new Map<number, PendingRestore>();
+const restoreTimeoutIdByPlaybackTabId = new Map<number, ReturnType<typeof setTimeout>>();
+
 export async function focusBrowserTab(tabId: number): Promise<void> {
+  console.log("NiconiPlaylist focusing browser tab.", {
+    tabId,
+  });
   const tab = await browser.tabs.get(tabId);
   const tasks: Promise<unknown>[] = [
     browser.tabs.update(tabId, {
@@ -37,23 +49,85 @@ async function getLastFocusedActiveTabId(): Promise<number | null> {
   return typeof activeTab?.id === "number" ? activeTab.id : null;
 }
 
-export async function focusPlaybackTabForNavigation(
+export async function preparePlaybackTabForNavigation(
   tabId: number,
   settings: PlaybackNavigationSettings,
 ): Promise<void> {
+  cancelPendingPlaybackTabNavigation(tabId);
+
   const previousActiveTabId = await getLastFocusedActiveTabId();
+  console.log("NiconiPlaylist preparing playback tab navigation.", {
+    previousActiveTabId,
+    settings,
+    tabId,
+  });
+
+  pendingRestoreByPlaybackTabId.set(tabId, {
+    delayMs: settings.restorePreviousTabDelayMs,
+    restorePreviousTabEnabled: settings.restorePreviousTabEnabled,
+    previousActiveTabId,
+  });
+  console.log("NiconiPlaylist recorded pending playback tab navigation.", {
+    delayMs: settings.restorePreviousTabDelayMs,
+    previousActiveTabId,
+    restorePreviousTabEnabled: settings.restorePreviousTabEnabled,
+    tabId,
+  });
+}
+
+export function cancelPendingPlaybackTabNavigation(tabId: number): void {
+  console.log("NiconiPlaylist cancelling pending playback tab navigation.", {
+    hasPendingRestore: pendingRestoreByPlaybackTabId.has(tabId),
+    hasRestoreTimeout: restoreTimeoutIdByPlaybackTabId.has(tabId),
+    tabId,
+  });
+  const existingRestoreTimeoutId = restoreTimeoutIdByPlaybackTabId.get(tabId);
+
+  if (existingRestoreTimeoutId !== undefined) {
+    clearTimeout(existingRestoreTimeoutId);
+    restoreTimeoutIdByPlaybackTabId.delete(tabId);
+  }
+
+  pendingRestoreByPlaybackTabId.delete(tabId);
+}
+
+export async function completePlaybackTabNavigation(tabId: number): Promise<void> {
+  const pendingRestore = pendingRestoreByPlaybackTabId.get(tabId);
+
+  if (!pendingRestore) {
+    console.log("NiconiPlaylist route-ready received without pending tab restore.", {
+      tabId,
+    });
+    return;
+  }
+
+  pendingRestoreByPlaybackTabId.delete(tabId);
+  console.log("NiconiPlaylist completing playback tab navigation.", {
+    pendingRestore,
+    tabId,
+  });
 
   await focusBrowserTab(tabId);
 
   if (
-    !settings.restorePreviousTabEnabled ||
-    previousActiveTabId === null ||
-    previousActiveTabId === tabId
+    !pendingRestore.restorePreviousTabEnabled ||
+    pendingRestore.previousActiveTabId === null ||
+    pendingRestore.previousActiveTabId === tabId
   ) {
+    console.log("NiconiPlaylist keeping playback tab visible after route-ready.", {
+      pendingRestore,
+      tabId,
+    });
     return;
   }
 
-  globalThis.setTimeout(() => {
+  const previousActiveTabId = pendingRestore.previousActiveTabId;
+  const timeoutId = globalThis.setTimeout(() => {
+    restoreTimeoutIdByPlaybackTabId.delete(tabId);
+    console.log("NiconiPlaylist restoring previously focused tab after navigation.", {
+      previousActiveTabId,
+      tabId,
+    });
     void focusBrowserTab(previousActiveTabId).catch((error: unknown) => {
       console.error("NiconiPlaylist failed to restore previously focused tab.", {
         error,
@@ -61,7 +135,9 @@ export async function focusPlaybackTabForNavigation(
         tabId,
       });
     });
-  }, settings.restorePreviousTabDelayMs);
+  }, pendingRestore.delayMs);
+
+  restoreTimeoutIdByPlaybackTabId.set(tabId, timeoutId);
 }
 
 export async function startPopupPlayback(

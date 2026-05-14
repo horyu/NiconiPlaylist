@@ -1,8 +1,10 @@
 import { browser } from "wxt/browser";
 
 import {
+  cancelPendingPlaybackTabNavigation,
+  completePlaybackTabNavigation,
   focusBrowserTab,
-  focusPlaybackTabForNavigation,
+  preparePlaybackTabForNavigation,
 } from "@/background/services/playbackNavigation";
 import { getStoredPlaybackSettings } from "@/background/services/playbackSettings";
 import {
@@ -64,32 +66,58 @@ export async function handleWatchMessage(
       };
 
     case "watch:navigate-next-video": {
-      await browser.scripting.executeScript({
-        target: { tabId },
-        world: "MAIN",
-        func: (nextVideoUrl: string) => {
-          const nav = (
-            window as typeof window & {
-              __reactRouterDataRouter?: { navigate?: (to: string, options?: unknown) => void };
-            }
-          ).__reactRouterDataRouter?.navigate;
-          const url = new URL(nextVideoUrl, location.href);
-
-          if (typeof nav === "function") {
-            nav(url.pathname + url.search + url.hash, {
-              preventScrollReset: true,
-            });
-          } else {
-            location.href = url.href;
-          }
-        },
-        args: [message.url],
-      });
-
       const playbackSettings = await getStoredPlaybackSettings();
-      await focusPlaybackTabForNavigation(tabId, playbackSettings.navigation);
+      console.log("NiconiPlaylist handling watch:navigate-next-video.", {
+        tabId,
+        url: message.url,
+        navigation: playbackSettings.navigation,
+      });
+      await preparePlaybackTabForNavigation(tabId, playbackSettings.navigation);
+
+      try {
+        await browser.scripting.executeScript({
+          target: { tabId },
+          world: "MAIN",
+          func: (nextVideoUrl: string) => {
+            const nav = (
+              window as typeof window & {
+                __reactRouterDataRouter?: { navigate?: (to: string, options?: unknown) => void };
+              }
+            ).__reactRouterDataRouter?.navigate;
+            const url = new URL(nextVideoUrl, location.href);
+
+            if (typeof nav === "function") {
+              nav(url.pathname + url.search + url.hash, {
+                preventScrollReset: true,
+              });
+            } else {
+              location.href = url.href;
+            }
+          },
+          args: [message.url],
+        });
+        console.log("NiconiPlaylist watch:navigate-next-video executed script successfully.", {
+          tabId,
+          url: message.url,
+        });
+      } catch (error) {
+        console.error("NiconiPlaylist watch:navigate-next-video failed to execute script.", {
+          error,
+          tabId,
+          url: message.url,
+        });
+        cancelPendingPlaybackTabNavigation(tabId);
+        throw error;
+      }
       return undefined;
     }
+
+    case "watch:route-ready":
+      console.log("NiconiPlaylist handling watch:route-ready.", {
+        tabId,
+      });
+      await completePlaybackTabNavigation(tabId);
+      return undefined;
 
     case "watch:focus-tab": {
       await focusBrowserTab(tabId);

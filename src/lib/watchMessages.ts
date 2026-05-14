@@ -32,11 +32,16 @@ export type WatchInitLocationObserverMessage = {
   type: "watch:init-location-observer";
 };
 
+export type WatchRouteReadyMessage = {
+  type: "watch:route-ready";
+};
+
 export type WatchMessage =
   | WatchSyncPlaybackContextMessage
   | WatchResolveNextVideoMessage
   | WatchNavigateNextVideoMessage
   | WatchInitLocationObserverMessage
+  | WatchRouteReadyMessage
   | WatchClearPlaybackContextMessage
   | WatchFocusTabMessage
   | WatchShowCompletionAlertMessage;

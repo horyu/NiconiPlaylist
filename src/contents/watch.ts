@@ -81,6 +81,8 @@ async function resolveNextVideo(videoId: string): Promise<WatchPlaybackContextRe
 }
 
 let lastSyncedVideoId: string | null = null;
+let routeReadyArmed = false;
+let routeReadySawFromZero = false;
 let currentLoopVideoId: string | null = null;
 let completedPlaybackCount = 0;
 
@@ -99,6 +101,39 @@ function syncPlaybackContextIfNeeded(): void {
   lastSyncedVideoId = videoId;
   resetLoopProgress(videoId);
   void syncPlaybackContext(videoId);
+}
+
+function sendRouteReady(): void {
+  if (!routeReadyArmed) {
+    console.log("NiconiPlaylist route-ready skipped because it is not armed.");
+    return;
+  }
+
+  routeReadyArmed = false;
+  console.log("NiconiPlaylist route-ready sending message.");
+  void browser.runtime.sendMessage({
+    type: "watch:route-ready",
+  });
+}
+
+function hasFromZeroSearchParam(): boolean {
+  return new URL(location.href).searchParams.get("from") === "0";
+}
+
+function armRouteReady(): void {
+  if (!getCurrentWatchVideoId()) {
+    console.log(
+      "NiconiPlaylist route-ready arm skipped because current watch video id is missing.",
+    );
+    return;
+  }
+
+  routeReadyArmed = true;
+  routeReadySawFromZero = hasFromZeroSearchParam();
+  console.log("NiconiPlaylist route-ready armed.", {
+    hasFromZeroSearchParam: routeReadySawFromZero,
+    videoId: getCurrentWatchVideoId(),
+  });
 }
 
 function navigateToNextVideo(nextVideoId: string): void {
@@ -187,7 +222,28 @@ function initWatchLocationObserver(): void {
 
   state[WATCH_LOCATION_OBSERVER_KEY] = true;
   window.addEventListener("niconiplaylist:locationchange", () => {
+    const hasFromZero = hasFromZeroSearchParam();
+    let handledAsRouteReady = false;
+    console.log("NiconiPlaylist observed location change.", {
+      hasFromZeroSearchParam: hasFromZero,
+      pathname: location.pathname,
+      href: location.href,
+    });
+
+    if (routeReadyArmed && routeReadySawFromZero && !hasFromZero) {
+      console.log("NiconiPlaylist treating canonical URL change as route-ready.", {
+        pathname: location.pathname,
+        href: location.href,
+      });
+      sendRouteReady();
+      handledAsRouteReady = true;
+    }
+
     syncPlaybackContextIfNeeded();
+    if (handledAsRouteReady) {
+      return;
+    }
+    armRouteReady();
   });
   void browser.runtime.sendMessage({
     type: "watch:init-location-observer",
@@ -259,5 +315,6 @@ export function initWatchContent() {
   document.addEventListener("pause", handlePause, true);
   initWatchLocationObserver();
   syncPlaybackContextIfNeeded();
+  armRouteReady();
   void browser.runtime.sendMessage({ type: "badge:refresh" });
 }
