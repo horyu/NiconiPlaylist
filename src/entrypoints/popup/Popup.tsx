@@ -1,5 +1,6 @@
 import {
   createEffect,
+  createMemo,
   createResource,
   createSignal,
   For,
@@ -57,8 +58,10 @@ async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
   );
 }
 
-function formatPlaylistOptionLabel(playlist: Playlist): string {
-  return playlist.title ?? playlist.id;
+function formatPlaylistOptionLabel(playlist: Playlist, isPlaying: boolean): string {
+  const label = playlist.title ?? playlist.id;
+
+  return isPlaying ? `${label} ▶` : label;
 }
 
 function Popup() {
@@ -77,6 +80,7 @@ function Popup() {
     Partial<Record<PlaylistId, number>>
   >({});
   const activePlaylist = createActivePlaylist(() => popupState());
+  const selectablePlaylists = createMemo(() => (popupState()?.playlists ?? []).slice().reverse());
   const activePlaylistAliveTabId = createActivePlaylistAliveTabId(
     activePlaylist,
     aliveTabIdByPlaylistId,
@@ -118,6 +122,8 @@ function Popup() {
     playbackTabId,
   );
   const activePlaylistVideoCount = () => activePlaylist()?.videoIds.length ?? 0;
+  const isPlaylistPlaying = (playlistId: PlaylistId) =>
+    aliveTabIdByPlaylistId()[playlistId] !== undefined;
   const currentPlaybackSettings = () =>
     playbackSettingsDraft() ?? popupState()?.playbackSettings ?? null;
   const autoScrollKey = () => {
@@ -496,9 +502,11 @@ function Popup() {
                   value={popupState()?.lastActivePlaylistId ?? ""}
                   onChange={(event) => void handleActivate(event.currentTarget.value)}
                 >
-                  <For each={popupState()?.playlists}>
+                  <For each={selectablePlaylists()}>
                     {(playlist) => (
-                      <option value={playlist.id}>{formatPlaylistOptionLabel(playlist)}</option>
+                      <option value={playlist.id}>
+                        {formatPlaylistOptionLabel(playlist, isPlaylistPlaying(playlist.id))}
+                      </option>
                     )}
                   </For>
                 </select>
