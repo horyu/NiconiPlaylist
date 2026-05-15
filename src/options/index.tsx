@@ -75,12 +75,9 @@ export default function OptionsPage() {
       <div class="flex min-h-screen w-full flex-col gap-6 px-6 py-6 lg:px-10">
         <header class="flex flex-col gap-4 border-b border-stone-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
           <div class="space-y-1">
-            <p class="text-xs font-medium uppercase tracking-[0.24em] text-stone-500">
-              NiconiPlaylist
-            </p>
-            <h1 class="text-2xl font-semibold text-stone-50">Options</h1>
+            <h1 class="text-2xl font-semibold text-stone-50">NiconiPlaylist</h1>
             <p class="text-sm text-stone-400">
-              プレイリストの取り込み、作成、保存済みプレイリストの管理を行います。
+              保存済みプレイリストの管理や、プレイリストの取り込み・作成を行います。
             </p>
           </div>
 
