@@ -954,6 +954,15 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 >
                                   {selectedPlaybackContext() ? "再開" : "再生開始"}
                                 </button>
+                                <Show when={selectedPlaybackContext()}>
+                                  <button
+                                    type="button"
+                                    class="rounded-full border border-stone-600 px-2.5 py-0.5 text-[11px] font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                    onClick={() => void handleClearPlaybackState(detailPlaylist.id)}
+                                  >
+                                    再生状態を削除
+                                  </button>
+                                </Show>
                               </>
                             </Show>
                             <Show when={detailPlaylist.id !== props.state?.lastActivePlaylistId}>
@@ -973,6 +982,15 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 >
                                   {selectedPlaybackContext() ? "再開" : "再生開始"}
                                 </button>
+                                <Show when={selectedPlaybackContext()}>
+                                  <button
+                                    type="button"
+                                    class="rounded-full border border-stone-600 px-2.5 py-0.5 text-[11px] font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                    onClick={() => void handleClearPlaybackState(detailPlaylist.id)}
+                                  >
+                                    再生状態を削除
+                                  </button>
+                                </Show>
                               </>
                             </Show>
                           </div>
@@ -991,15 +1009,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                               >
                                 編集
                               </button>
-                              <Show when={selectedPlaybackContext()}>
-                                <button
-                                  type="button"
-                                  class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                                  onClick={() => void handleClearPlaybackState(detailPlaylist.id)}
-                                >
-                                  再生状態を削除
-                                </button>
-                              </Show>
                               <div class="relative">
                                 <button
                                   type="button"
@@ -1062,13 +1071,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                   </div>
                                 </Show>
                               </div>
-                              <button
-                                type="button"
-                                class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                                onClick={() => void handleCreateCopy(detailPlaylist.id)}
-                              >
-                                複製
-                              </button>
                               <div class="relative">
                                 <button
                                   type="button"
@@ -1127,6 +1129,13 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                   </div>
                                 </Show>
                               </div>
+                              <button
+                                type="button"
+                                class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                onClick={() => void handleCreateCopy(detailPlaylist.id)}
+                              >
+                                複製
+                              </button>
                               <button
                                 type="button"
                                 class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
