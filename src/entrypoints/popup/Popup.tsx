@@ -296,6 +296,11 @@ function Popup() {
     }
   }
 
+  async function handleOpenOptionsPage() {
+    await browser.runtime.openOptionsPage();
+    window.close();
+  }
+
   async function handleSelectRepeatPreset(nextValue: string) {
     const playbackSettings = currentPlaybackSettings();
 
@@ -413,9 +418,7 @@ function Popup() {
           </div>
           <button
             type="button"
-            onClick={() => {
-              void browser.runtime.openOptionsPage();
-            }}
+            onClick={() => void handleOpenOptionsPage()}
             class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800"
             title="オプションを開く"
             aria-label="オプションを開く"
