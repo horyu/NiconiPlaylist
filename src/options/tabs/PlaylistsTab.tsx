@@ -8,6 +8,7 @@ import {
   Show,
   Switch,
 } from "solid-js";
+import { browser } from "wxt/browser";
 
 import { createPlaylistJsonFilename, exportPlaylistJson } from "@/background/services/playlistJson";
 import {
@@ -21,6 +22,7 @@ import {
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { formatSlashTimestampWithSeconds } from "@/lib/dateTime";
 import { buildSharedPlaylistUrl } from "@/lib/playlistUrl";
+import type { PopupMessage } from "@/lib/popupMessages";
 import { normalizeOptionalText } from "@/lib/text";
 import type { Playlist, PlaylistId } from "@/lib/types";
 import { parseVideoIdInputLines } from "@/lib/videoIdInput";
@@ -388,6 +390,60 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     } catch (error) {
       props.onFeedback({
         text: error instanceof Error ? error.message : "プレイリストの複製に失敗しました。",
+        tone: "error",
+      });
+    }
+  }
+
+  async function handleStartPlayback(playlistId: PlaylistId) {
+    const playlist = selectedPlaylist();
+    const playbackContext = selectedPlaybackContext();
+    const startIndex = playbackContext?.currentIndex ?? 0;
+
+    if (!playlist || playlist.id !== playlistId || !playlist.videoIds[startIndex]) {
+      props.onFeedback({
+        text: "再生できる動画が見つかりません。",
+        tone: "error",
+      });
+      return;
+    }
+
+    props.onFeedback(null);
+
+    try {
+      const playbackTabId = (() => playbackContext?.tabId ?? null)();
+
+      if (props.state?.lastActivePlaylistId !== playlistId) {
+        await activateStoredPlaylist(playlistId);
+      }
+
+      const reusablePlaybackTabId =
+        playbackTabId !== null
+          ? await browser.tabs
+              .get(playbackTabId)
+              .then((tab) => (typeof tab.id === "number" ? tab.id : null))
+              .catch(() => null)
+          : null;
+
+      const message: PopupMessage = {
+        activeTabId: null,
+        index: startIndex,
+        playbackTabId: reusablePlaybackTabId,
+        playlistId,
+        type: "popup:start-playback",
+      };
+
+      await browser.runtime.sendMessage(message);
+      await props.onActivated();
+      props.onFeedback({
+        text: playbackContext
+          ? "プレイリストを再開しました。"
+          : "プレイリストの再生を開始しました。",
+        tone: "success",
+      });
+    } catch (error) {
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "プレイリストの再生開始に失敗しました。",
         tone: "error",
       });
     }
@@ -891,6 +947,32 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
                                   Active
                                 </span>
+                                <button
+                                  type="button"
+                                  class="rounded-full border border-stone-600 px-2.5 py-0.5 text-[11px] font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                  onClick={() => void handleStartPlayback(detailPlaylist.id)}
+                                >
+                                  {selectedPlaybackContext() ? "再開" : "再生開始"}
+                                </button>
+                              </>
+                            </Show>
+                            <Show when={detailPlaylist.id !== props.state?.lastActivePlaylistId}>
+                              <>
+                                <span class="text-stone-600">•</span>
+                                <button
+                                  type="button"
+                                  class="rounded-full border border-stone-600 px-2.5 py-0.5 text-[11px] font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                  onClick={() => void handleActivate(detailPlaylist.id)}
+                                >
+                                  選択
+                                </button>
+                                <button
+                                  type="button"
+                                  class="rounded-full border border-stone-600 px-2.5 py-0.5 text-[11px] font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                  onClick={() => void handleStartPlayback(detailPlaylist.id)}
+                                >
+                                  {selectedPlaybackContext() ? "再開" : "再生開始"}
+                                </button>
                               </>
                             </Show>
                           </div>
@@ -908,13 +990,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 onClick={handleStartEditingDetail}
                               >
                                 編集
-                              </button>
-                              <button
-                                type="button"
-                                class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                                onClick={() => void handleActivate(detailPlaylist.id)}
-                              >
-                                選択
                               </button>
                               <Show when={selectedPlaybackContext()}>
                                 <button
