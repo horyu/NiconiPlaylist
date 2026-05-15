@@ -45,6 +45,7 @@ export type Playlist = {
   videoIds: VideoId[];
   title?: string;
   memo?: string;
+  popupHidden?: boolean;
 };
 
 export type PlaybackContext = {

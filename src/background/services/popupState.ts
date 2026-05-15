@@ -1,6 +1,7 @@
 import { browser } from "wxt/browser";
 
 import { getStorageData } from "@/background/services/storage";
+import { isWatchUrl } from "@/lib/nicovideoUrl";
 import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import {
   isPlaybackSettings,
@@ -38,6 +39,26 @@ async function getActiveTabInfo(): Promise<{
   };
 }
 
+async function resolveAlivePlaybackContexts(
+  playbackContexts: PlaybackContext[],
+): Promise<PlaybackContext[]> {
+  const settledTabs = await Promise.allSettled(
+    playbackContexts.map(async (playbackContext) => {
+      const tab = await browser.tabs.get(playbackContext.tabId);
+
+      if (!isWatchUrl(tab.url)) {
+        return null;
+      }
+
+      return playbackContext;
+    }),
+  );
+
+  return settledTabs.flatMap((result) =>
+    result.status === "fulfilled" && result.value ? [result.value] : [],
+  );
+}
+
 export async function getPopupState(): Promise<PopupState> {
   const [activeTabInfo, storageData] = await Promise.all([
     getActiveTabInfo(),
@@ -51,6 +72,20 @@ export async function getPopupState(): Promise<PopupState> {
     ]),
   ]);
 
+  const playlists = storageData.playlists.filter(isPlaylist);
+  const playbackContexts = await resolveAlivePlaybackContexts(
+    storageData.playbackContexts.filter(isPlaybackContext),
+  );
+  const visiblePlaylistIds = new Set(
+    playbackContexts.map((playbackContext) => playbackContext.playlistId),
+  );
+  const filteredPlaylists = playlists.filter(
+    (playlist) =>
+      !playlist.popupHidden ||
+      playlist.id === storageData.lastActivePlaylistId ||
+      visiblePlaylistIds.has(playlist.id),
+  );
+
   return {
     activeTabId: activeTabInfo.activeTabId,
     activeTabUrl: activeTabInfo.activeTabUrl,
@@ -59,11 +94,11 @@ export async function getPopupState(): Promise<PopupState> {
         isOwnerMetadata(entry[1]),
       ),
     ),
-    playbackContexts: storageData.playbackContexts.filter(isPlaybackContext),
+    playbackContexts,
     playbackSettings: isPlaybackSettings(storageData.playbackSettings)
       ? sanitizePlaybackSettings(storageData.playbackSettings)
       : sanitizePlaybackSettings(undefined),
-    playlists: storageData.playlists.filter(isPlaylist),
+    playlists: filteredPlaylists,
     lastActivePlaylistId: storageData.lastActivePlaylistId,
     videoMetadataMap: Object.fromEntries(
       Object.entries(storageData.videoMetadata).filter((entry): entry is [string, VideoMetadata] =>

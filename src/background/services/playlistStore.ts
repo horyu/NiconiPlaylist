@@ -127,7 +127,7 @@ export async function activateStoredPlaylist(playlistId: PlaylistId): Promise<vo
 
 export async function updateStoredPlaylist(
   playlistId: PlaylistId,
-  updates: Partial<Pick<Playlist, "memo" | "title" | "videoIds">>,
+  updates: Partial<Pick<Playlist, "memo" | "title" | "videoIds" | "popupHidden">>,
   options?: {
     deletedVideoIndices?: number[];
   },
@@ -252,6 +252,7 @@ export async function createShuffledStoredPlaylistCopy(playlistId: PlaylistId): 
     id: createPlaylistId(),
     title: createShuffledPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
     memo: sourcePlaylist.memo,
+    popupHidden: false,
     videoIds: shuffleVideoIds(sourcePlaylist.videoIds),
   };
 
@@ -275,6 +276,7 @@ export async function createStoredPlaylistCopy(playlistId: PlaylistId): Promise<
     id: createPlaylistId(),
     title: createCopiedPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
     memo: sourcePlaylist.memo,
+    popupHidden: false,
     videoIds: [...sourcePlaylist.videoIds],
   };
 

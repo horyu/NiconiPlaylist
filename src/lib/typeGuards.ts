@@ -13,7 +13,8 @@ export function isPlaylist(value: unknown): value is Playlist {
     Array.isArray(candidate.videoIds) &&
     candidate.videoIds.every((videoId) => typeof videoId === "string") &&
     (candidate.title === undefined || typeof candidate.title === "string") &&
-    (candidate.memo === undefined || typeof candidate.memo === "string")
+    (candidate.memo === undefined || typeof candidate.memo === "string") &&
+    (candidate.popupHidden === undefined || typeof candidate.popupHidden === "boolean")
   );
 }
 

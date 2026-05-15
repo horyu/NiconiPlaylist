@@ -4,6 +4,7 @@ import { getStoredPlaybackSettings } from "@/background/services/playbackSetting
 import {
   getStoredPlaylists,
   setStoredPlaybackContextIndex,
+  updateStoredPlaylist,
 } from "@/background/services/playlistStore";
 import { buildWatchUrl } from "@/lib/nicovideoUrl";
 import type { PopupMessage } from "@/lib/popupMessages";
@@ -152,6 +153,12 @@ export async function startPopupPlayback(
 
   if (!playlist || !nextVideoId) {
     throw new Error("指定したプレイリストまたは動画が見つかりません。");
+  }
+
+  if (playlist.popupHidden) {
+    await updateStoredPlaylist(playlist.id, {
+      popupHidden: false,
+    });
   }
 
   const watchUrl = buildWatchUrl(nextVideoId);

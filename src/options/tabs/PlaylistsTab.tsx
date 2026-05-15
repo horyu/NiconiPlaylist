@@ -395,6 +395,22 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     }
   }
 
+  async function handleSetPopupHidden(playlistId: PlaylistId, popupHidden: boolean) {
+    props.onFeedback(null);
+
+    try {
+      await updateStoredPlaylist(playlistId, {
+        popupHidden,
+      });
+      await props.onUpdated();
+    } catch (error) {
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "popup表示設定の更新に失敗しました。",
+        tone: "error",
+      });
+    }
+  }
+
   async function handleStartPlayback(playlistId: PlaylistId) {
     const playlist = selectedPlaylist();
     const playbackContext = selectedPlaybackContext();
@@ -860,7 +876,14 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                         <div class="flex items-start justify-between gap-3">
                           <div class="min-w-0 space-y-1">
                             <p class="truncate text-sm font-medium">{getPlaylistLabel(playlist)}</p>
-                            <p class="text-xs text-stone-400">{playlist.videoIds.length} videos</p>
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-stone-400">
+                              <span>{playlist.videoIds.length} videos</span>
+                              <Show when={playlist.popupHidden}>
+                                <span class="rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[11px] font-medium text-stone-400">
+                                  popup非表示
+                                </span>
+                              </Show>
+                            </div>
                           </div>
                           <Show when={isActive()}>
                             <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
@@ -949,6 +972,22 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 </span>
                                 <button
                                   type="button"
+                                  class={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${
+                                    detailPlaylist.popupHidden
+                                      ? "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
+                                      : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                                  }`}
+                                  onClick={() =>
+                                    void handleSetPopupHidden(
+                                      detailPlaylist.id,
+                                      !detailPlaylist.popupHidden,
+                                    )
+                                  }
+                                >
+                                  {detailPlaylist.popupHidden ? "popupに表示" : "popup表示中"}
+                                </button>
+                                <button
+                                  type="button"
                                   class="rounded-full border border-stone-600 px-2.5 py-0.5 text-[11px] font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
                                   onClick={() => void handleStartPlayback(detailPlaylist.id)}
                                 >
@@ -968,6 +1007,22 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                             <Show when={detailPlaylist.id !== props.state?.lastActivePlaylistId}>
                               <>
                                 <span class="text-stone-600">•</span>
+                                <button
+                                  type="button"
+                                  class={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${
+                                    detailPlaylist.popupHidden
+                                      ? "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
+                                      : "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                                  }`}
+                                  onClick={() =>
+                                    void handleSetPopupHidden(
+                                      detailPlaylist.id,
+                                      !detailPlaylist.popupHidden,
+                                    )
+                                  }
+                                >
+                                  {detailPlaylist.popupHidden ? "popupに表示" : "popup表示中"}
+                                </button>
                                 <button
                                   type="button"
                                   class="rounded-full border border-stone-600 px-2.5 py-0.5 text-[11px] font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
