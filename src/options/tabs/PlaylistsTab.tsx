@@ -192,7 +192,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   });
 
   const filteredPlaylists = createMemo(() => {
-    const playlists = props.state?.playlists ?? [];
+    const playlists = (props.state?.playlists ?? []).slice().reverse();
     const query = playlistQuery().trim().toLowerCase();
 
     if (!query) {
