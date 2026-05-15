@@ -12,15 +12,15 @@ import type { OptionsToast } from "@/options/toast";
 type TabKey = "import" | "create" | "playlists" | "repeat" | "data";
 
 const TAB_LABELS: { key: TabKey; label: string }[] = [
+  { key: "playlists", label: "プレイリスト" },
   { key: "import", label: "インポート" },
   { key: "create", label: "作成" },
-  { key: "playlists", label: "プレイリスト" },
   { key: "repeat", label: "再生" },
   { key: "data", label: "データ" },
 ];
 
 export default function OptionsPage() {
-  const [activeTab, setActiveTab] = createSignal<TabKey>("import");
+  const [activeTab, setActiveTab] = createSignal<TabKey>("playlists");
   const [toast, setToast] = createSignal<OptionsToast | null>(null);
   const [state, { refetch }] = usePlaylistsState();
   const [videoMetadataState, { refetch: refetchVideoMetadataState }] = useVideoMetadataState();
