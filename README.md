@@ -27,5 +27,7 @@ bun run vp config
   - 動画メタデータ取得・保存方針
 - `project-docs/user-agent.md`
   - User-Agent 対応方針
+- `project-docs/watch-page-integration.md`
+  - watch ページ遷移、`from=0`、SPA 連携まわりの実装メモ
 - `project-docs/TODO.md`
   - 将来拡張、改善案、保留中の作業
