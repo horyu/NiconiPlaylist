@@ -8,6 +8,7 @@ import type { PlaybackCompletionSettings } from "@/lib/types";
 import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
 
 const PLAYBACK_END_THRESHOLD_SECONDS = 1;
+const ROUTE_READY_DELAY_MS = 50;
 const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
 const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitialized";
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
@@ -83,6 +84,7 @@ async function resolveNextVideo(videoId: string): Promise<WatchPlaybackContextRe
 let lastSyncedVideoId: string | null = null;
 let routeReadyArmed = false;
 let routeReadySawFromZero = false;
+let routeReadyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let currentLoopVideoId: string | null = null;
 let completedPlaybackCount = 0;
 
@@ -110,10 +112,20 @@ function sendRouteReady(): void {
   }
 
   routeReadyArmed = false;
-  console.log("NiconiPlaylist route-ready sending message.");
-  void browser.runtime.sendMessage({
-    type: "watch:route-ready",
+  if (routeReadyTimeoutId !== null) {
+    clearTimeout(routeReadyTimeoutId);
+  }
+
+  console.log("NiconiPlaylist route-ready scheduled after timeout.", {
+    delayMs: ROUTE_READY_DELAY_MS,
   });
+  routeReadyTimeoutId = setTimeout(() => {
+    routeReadyTimeoutId = null;
+    console.log("NiconiPlaylist route-ready sending message.");
+    void browser.runtime.sendMessage({
+      type: "watch:route-ready",
+    });
+  }, ROUTE_READY_DELAY_MS);
 }
 
 function hasFromZeroSearchParam(): boolean {
@@ -126,6 +138,11 @@ function armRouteReady(): void {
       "NiconiPlaylist route-ready arm skipped because current watch video id is missing.",
     );
     return;
+  }
+
+  if (routeReadyTimeoutId !== null) {
+    clearTimeout(routeReadyTimeoutId);
+    routeReadyTimeoutId = null;
   }
 
   routeReadyArmed = true;
