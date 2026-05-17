@@ -356,7 +356,9 @@ export async function setStoredPlaybackContextIndex(
     tabId,
     currentIndex,
   };
-  const nextPlaybackContexts = playbackContexts.filter((context) => context.tabId !== tabId);
+  const nextPlaybackContexts = playbackContexts.filter(
+    (context) => context.tabId !== tabId && context.playlistId !== playlistId,
+  );
   const playedAt = new Date().toISOString();
   const nextPlaylists = playlists.map((currentPlaylist) =>
     currentPlaylist.id === playlistId
@@ -419,10 +421,23 @@ export async function syncPlaybackContextForVideo(
     ? resolvePlaybackIndex(activePlaylist, videoId, previousPlaybackContext)
     : null;
 
-  const nextPlaybackContexts = playbackContexts.filter((context) => context.tabId !== tabId);
-
   if (!activePlaylist || currentIndex === null || currentIndex < 0) {
+    const latestPlaybackContexts = await getStoredPlaybackContexts();
+    const nextPlaybackContexts = latestPlaybackContexts.filter(
+      (context) => context.tabId !== tabId,
+    );
+
     await setStoredPlaybackContexts(nextPlaybackContexts);
+    return null;
+  }
+
+  const latestPlaybackContexts = await getStoredPlaybackContexts();
+  const latestPlaybackContext = latestPlaybackContexts.find((context) => context.tabId === tabId);
+
+  if (
+    !latestPlaybackContext ||
+    latestPlaybackContext.playlistId !== previousPlaybackContext?.playlistId
+  ) {
     return null;
   }
 
@@ -431,6 +446,9 @@ export async function syncPlaybackContextForVideo(
     tabId,
     currentIndex,
   };
+  const nextPlaybackContexts = latestPlaybackContexts.filter(
+    (context) => context.tabId !== tabId && context.playlistId !== activePlaylist.id,
+  );
 
   nextPlaybackContexts.push(playbackContext);
   await setStoredPlaybackContexts(nextPlaybackContexts);
