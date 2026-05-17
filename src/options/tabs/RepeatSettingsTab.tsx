@@ -296,25 +296,30 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 type="number"
                 inputmode="numeric"
                 min="0"
-                step="100"
-                value={navigationSettings().restorePreviousTabDelayMs}
+                max="99"
+                step="1"
+                value={Math.trunc(navigationSettings().restorePreviousTabDelayMs / 100)}
                 onInput={(event) =>
-                  setNavigationSettings((currentSettings) => ({
-                    ...currentSettings,
-                    restorePreviousTabDelayMs: Math.max(
+                  setNavigationSettings((currentSettings) => {
+                    const delayUnits = Math.max(
                       clampInteger(
                         event.currentTarget.value,
                         0,
-                        Number.MAX_SAFE_INTEGER,
-                        currentSettings.restorePreviousTabDelayMs,
+                        99,
+                        Math.trunc(currentSettings.restorePreviousTabDelayMs / 100),
                       ),
                       0,
-                    ),
-                  }))
+                    );
+
+                    return {
+                      ...currentSettings,
+                      restorePreviousTabDelayMs: delayUnits * 100,
+                    };
+                  })
                 }
-                class="w-28 rounded-lg border border-stone-700 bg-stone-900 px-2 py-1 text-right text-sm text-stone-100"
+                class="w-14 rounded-lg border border-stone-700 bg-stone-900 px-2 py-1 text-sm text-stone-100"
               />
-              <span>ms</span>
+              <span>x100ms</span>
             </label>
           </Show>
         </div>
