@@ -169,7 +169,7 @@ describe("playlistLoop", () => {
       }).navigation,
     ).toEqual({
       restorePreviousTabEnabled: true,
-      restorePreviousTabDelayMs: 0,
+      restorePreviousTabDelayMs: 100,
     });
   });
 });

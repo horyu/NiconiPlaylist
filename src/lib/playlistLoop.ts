@@ -113,15 +113,18 @@ function sanitizePlaybackCompletionSettings(
 function sanitizePlaybackNavigationSettings(
   settings: Partial<PlaybackNavigationSettings> | null | undefined,
 ): PlaybackNavigationSettings {
-  return {
-    restorePreviousTabEnabled: settings?.restorePreviousTabEnabled === true,
-    restorePreviousTabDelayMs: Math.max(
-      Math.trunc(
-        settings?.restorePreviousTabDelayMs ??
-          DEFAULT_PLAYBACK_NAVIGATION_SETTINGS.restorePreviousTabDelayMs,
-      ),
-      0,
+  const restorePreviousTabEnabled = settings?.restorePreviousTabEnabled === true;
+  const delayMs = Math.max(
+    Math.trunc(
+      settings?.restorePreviousTabDelayMs ??
+        DEFAULT_PLAYBACK_NAVIGATION_SETTINGS.restorePreviousTabDelayMs,
     ),
+    0,
+  );
+
+  return {
+    restorePreviousTabEnabled,
+    restorePreviousTabDelayMs: restorePreviousTabEnabled ? Math.max(delayMs, 100) : delayMs,
   };
 }
 

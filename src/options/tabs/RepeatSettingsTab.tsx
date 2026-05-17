@@ -295,7 +295,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
               <input
                 type="number"
                 inputmode="numeric"
-                min="0"
+                min="1"
                 max="99"
                 step="1"
                 value={Math.trunc(navigationSettings().restorePreviousTabDelayMs / 100)}
@@ -304,11 +304,11 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                     const delayUnits = Math.max(
                       clampInteger(
                         event.currentTarget.value,
-                        0,
+                        1,
                         99,
                         Math.trunc(currentSettings.restorePreviousTabDelayMs / 100),
                       ),
-                      0,
+                      1,
                     );
 
                     return {
