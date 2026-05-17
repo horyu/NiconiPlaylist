@@ -17,6 +17,7 @@ export type WatchNavigateNextVideoMessage = {
 
 export type WatchClearPlaybackContextMessage = {
   type: "watch:clear-playback-context";
+  markCompleted?: boolean;
 };
 
 export type WatchFocusTabMessage = {

@@ -12,6 +12,10 @@ export function isPlaylist(value: unknown): value is Playlist {
     typeof candidate.id === "string" &&
     Array.isArray(candidate.videoIds) &&
     candidate.videoIds.every((videoId) => typeof videoId === "string") &&
+    typeof candidate.createdAt === "string" &&
+    typeof candidate.updatedAt === "string" &&
+    (candidate.lastPlayedAt === null || typeof candidate.lastPlayedAt === "string") &&
+    (candidate.lastCompletedAt === null || typeof candidate.lastCompletedAt === "string") &&
     (candidate.title === undefined || typeof candidate.title === "string") &&
     (candidate.memo === undefined || typeof candidate.memo === "string") &&
     (candidate.popupHidden === undefined || typeof candidate.popupHidden === "boolean")

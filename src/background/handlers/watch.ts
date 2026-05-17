@@ -9,6 +9,7 @@ import {
 import { getStoredPlaybackSettings } from "@/background/services/playbackSettings";
 import {
   clearStoredPlaybackContextByTabId,
+  markStoredPlaylistCompletedByTabId,
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
 } from "@/background/services/playlistStore";
@@ -58,6 +59,9 @@ export async function handleWatchMessage(
     }
 
     case "watch:clear-playback-context":
+      if (message.markCompleted) {
+        await markStoredPlaylistCompletedByTabId(tabId);
+      }
       await clearStoredPlaybackContextByTabId(tabId);
       return {
         playbackContext: null,

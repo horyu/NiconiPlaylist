@@ -15,6 +15,19 @@ function createCopiedPlaylistTitle(sourceTitle: string): string {
   return `${sourceTitle} / copied ${formatDashedTimestampWithMinutes(new Date())}`;
 }
 
+function createPlaylistTimestampPatch(
+  now: Date,
+): Pick<Playlist, "createdAt" | "updatedAt" | "lastPlayedAt" | "lastCompletedAt"> {
+  const isoString = now.toISOString();
+
+  return {
+    createdAt: isoString,
+    updatedAt: isoString,
+    lastPlayedAt: null,
+    lastCompletedAt: null,
+  };
+}
+
 function shuffleVideoIds(videoIds: VideoId[]): VideoId[] {
   const nextVideoIds = [...videoIds];
 
@@ -143,9 +156,11 @@ export async function updateStoredPlaylist(
   }
 
   const currentPlaylist = playlists[playlistIndex]!;
+  const now = new Date().toISOString();
   const nextPlaylist: Playlist = {
     ...currentPlaylist,
     ...updates,
+    updatedAt: now,
   };
   const nextPlaylists = [...playlists];
 
@@ -248,8 +263,10 @@ export async function createShuffledStoredPlaylistCopy(playlistId: PlaylistId): 
     throw new Error("指定したプレイリストは保存されていません。");
   }
 
+  const now = new Date();
   const nextPlaylist: Playlist = {
     id: createPlaylistId(),
+    ...createPlaylistTimestampPatch(now),
     title: createShuffledPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
     memo: sourcePlaylist.memo,
     popupHidden: false,
@@ -272,8 +289,10 @@ export async function createStoredPlaylistCopy(playlistId: PlaylistId): Promise<
     throw new Error("指定したプレイリストは保存されていません。");
   }
 
+  const now = new Date();
   const nextPlaylist: Playlist = {
     id: createPlaylistId(),
+    ...createPlaylistTimestampPatch(now),
     title: createCopiedPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
     memo: sourcePlaylist.memo,
     popupHidden: false,
@@ -338,15 +357,50 @@ export async function setStoredPlaybackContextIndex(
     currentIndex,
   };
   const nextPlaybackContexts = playbackContexts.filter((context) => context.tabId !== tabId);
+  const playedAt = new Date().toISOString();
+  const nextPlaylists = playlists.map((currentPlaylist) =>
+    currentPlaylist.id === playlistId
+      ? {
+          ...currentPlaylist,
+          lastPlayedAt: playedAt,
+        }
+      : currentPlaylist,
+  );
 
   nextPlaybackContexts.push(playbackContext);
 
   await Promise.all([
     setStoredPlaybackContexts(nextPlaybackContexts),
+    setStoredPlaylists(nextPlaylists),
     setLastActivePlaylistId(playlistId),
   ]);
 
   return playbackContext;
+}
+
+export async function markStoredPlaylistCompleted(playlistId: PlaylistId): Promise<void> {
+  const playlists = await getStoredPlaylists();
+  const completedAt = new Date().toISOString();
+  const nextPlaylists = playlists.map((playlist) =>
+    playlist.id === playlistId
+      ? {
+          ...playlist,
+          lastCompletedAt: completedAt,
+        }
+      : playlist,
+  );
+
+  await setStoredPlaylists(nextPlaylists);
+}
+
+export async function markStoredPlaylistCompletedByTabId(tabId: number): Promise<void> {
+  const playbackContext = await getStoredPlaybackContextByTabId(tabId);
+
+  if (!playbackContext) {
+    return;
+  }
+
+  await markStoredPlaylistCompleted(playbackContext.playlistId);
 }
 
 export async function syncPlaybackContextForVideo(

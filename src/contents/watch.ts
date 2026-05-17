@@ -313,8 +313,12 @@ async function handlePause(event: Event) {
     if (playbackState?.playbackSettings && !playbackState.playbackSettings.playlistRepeatEnabled) {
       await handlePlaylistCompleted(playbackState);
     }
-    void browser.runtime.sendMessage({
+    await browser.runtime.sendMessage({
       type: "watch:clear-playback-context",
+      markCompleted:
+        playbackState?.playbackSettings !== null &&
+        playbackState?.playbackSettings !== undefined &&
+        !playbackState.playbackSettings.playlistRepeatEnabled,
     });
   }
 }

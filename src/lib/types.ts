@@ -43,6 +43,10 @@ export type PlaybackNavigationSettings = {
 export type Playlist = {
   id: PlaylistId;
   videoIds: VideoId[];
+  createdAt: string;
+  updatedAt: string;
+  lastPlayedAt: string | null;
+  lastCompletedAt: string | null;
   title?: string;
   memo?: string;
   popupHidden?: boolean;

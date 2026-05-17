@@ -14,7 +14,10 @@ import {
 
 const PLAYLIST_JSON_VERSION = 1;
 
-export type PlaylistJsonDraft = Pick<Playlist, "memo" | "title" | "videoIds">;
+export type PlaylistJsonDraft = Pick<
+  Playlist,
+  "createdAt" | "updatedAt" | "lastPlayedAt" | "lastCompletedAt" | "memo" | "title" | "videoIds"
+>;
 
 export type PlaylistJsonPayload = {
   exportedAt: string;
@@ -45,8 +48,12 @@ function normalizePlaylistJsonDraft(value: unknown): PlaylistJsonDraft {
   }
 
   return {
+    createdAt: playlistCandidate.createdAt as string,
+    lastCompletedAt: playlistCandidate.lastCompletedAt as string | null,
+    lastPlayedAt: playlistCandidate.lastPlayedAt as string | null,
     memo: playlistCandidate.memo,
     title: playlistCandidate.title,
+    updatedAt: playlistCandidate.updatedAt as string,
     videoIds: playlistCandidate.videoIds as string[],
   };
 }
@@ -135,8 +142,12 @@ export async function exportPlaylistJson(
     exportedAt: new Date().toISOString(),
     owners: playlistOwners,
     playlist: {
+      createdAt: playlist.createdAt,
+      lastCompletedAt: playlist.lastCompletedAt,
+      lastPlayedAt: playlist.lastPlayedAt,
       memo: options?.includeMemo ? playlist.memo : undefined,
       title: options?.includeTitle ? playlist.title : undefined,
+      updatedAt: playlist.updatedAt,
       videoIds: [...playlist.videoIds],
     },
     version: PLAYLIST_JSON_VERSION,

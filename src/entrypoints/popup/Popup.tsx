@@ -64,6 +64,10 @@ function formatPlaylistOptionLabel(playlist: Playlist, isPlaying: boolean): stri
   return isPlaying ? `${label} ▶` : label;
 }
 
+function comparePlaylistsByCreatedAtDesc(left: Playlist, right: Playlist): number {
+  return right.createdAt.localeCompare(left.createdAt);
+}
+
 function Popup() {
   const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
@@ -80,7 +84,9 @@ function Popup() {
     Partial<Record<PlaylistId, number>>
   >({});
   const activePlaylist = createActivePlaylist(() => popupState());
-  const selectablePlaylists = createMemo(() => (popupState()?.playlists ?? []).slice().reverse());
+  const selectablePlaylists = createMemo(() =>
+    (popupState()?.playlists ?? []).slice().sort(comparePlaylistsByCreatedAtDesc),
+  );
   const activePlaylistAliveTabId = createActivePlaylistAliveTabId(
     activePlaylist,
     aliveTabIdByPlaylistId,

@@ -19,10 +19,24 @@ function normalizeOptionalText(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-type PlaylistDraft = Pick<Playlist, "videoIds" | "title" | "memo">;
+type PlaylistDraft = Pick<Playlist, "videoIds" | "title" | "memo"> &
+  Partial<Pick<Playlist, "createdAt" | "updatedAt" | "lastPlayedAt" | "lastCompletedAt">>;
 type CreateStoredPlaylistOptions = {
   defaultTitleSource?: string;
 };
+
+function createPlaylistTimestamps(
+  now: Date,
+): Pick<Playlist, "createdAt" | "updatedAt" | "lastPlayedAt" | "lastCompletedAt"> {
+  const isoString = now.toISOString();
+
+  return {
+    createdAt: isoString,
+    updatedAt: isoString,
+    lastPlayedAt: null,
+    lastCompletedAt: null,
+  };
+}
 
 function createDefaultPlaylistTitleBySource(source: string): string {
   return `${formatSlashTimestampWithSeconds(new Date())} ${source}`;
@@ -32,8 +46,15 @@ export async function createStoredPlaylist(
   draft: PlaylistDraft,
   options?: CreateStoredPlaylistOptions,
 ): Promise<Playlist> {
+  const now = new Date();
+  const fallbackTimestamps = createPlaylistTimestamps(now);
   const playlist: Playlist = {
     id: createPlaylistId(),
+    createdAt: draft.createdAt ?? fallbackTimestamps.createdAt,
+    updatedAt: draft.updatedAt ?? fallbackTimestamps.updatedAt,
+    lastPlayedAt: draft.lastPlayedAt ?? fallbackTimestamps.lastPlayedAt,
+    lastCompletedAt: draft.lastCompletedAt ?? fallbackTimestamps.lastCompletedAt,
+    popupHidden: false,
     title:
       normalizeOptionalText(draft.title) ??
       createDefaultPlaylistTitleBySource(

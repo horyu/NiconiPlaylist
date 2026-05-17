@@ -70,6 +70,10 @@ function getPlaylistLabel(playlist: Playlist): string {
   return playlist.title ?? playlist.id;
 }
 
+function comparePlaylistsByCreatedAtDesc(left: Playlist, right: Playlist): number {
+  return right.createdAt.localeCompare(left.createdAt);
+}
+
 function createTimestampTitle(): string {
   return formatSlashTimestampWithSeconds(new Date());
 }
@@ -191,8 +195,12 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     setSelectedPlaylistId(props.state?.lastActivePlaylistId ?? playlists[0]!.id);
   });
 
+  const sortedPlaylists = createMemo(() =>
+    (props.state?.playlists ?? []).slice().sort(comparePlaylistsByCreatedAtDesc),
+  );
+
   const filteredPlaylists = createMemo(() => {
-    const playlists = (props.state?.playlists ?? []).slice().reverse();
+    const playlists = sortedPlaylists();
     const query = playlistQuery().trim().toLowerCase();
 
     if (!query) {
