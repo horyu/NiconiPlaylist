@@ -78,6 +78,18 @@ function createTimestampTitle(): string {
   return formatSlashTimestampWithSeconds(new Date());
 }
 
+function formatPlaylistTimestamp(timestamp: string): string {
+  return formatSlashTimestampWithSeconds(new Date(timestamp)).slice(0, -3);
+}
+
+function getPlaylistTimestampText(timestamp: string | null, emptyLabel: string): string {
+  return timestamp === null ? emptyLabel : formatPlaylistTimestamp(timestamp);
+}
+
+function getPlaylistTimestampTitle(timestamp: string | null): string | undefined {
+  return timestamp === null ? undefined : formatSlashTimestampWithSeconds(new Date(timestamp));
+}
+
 function getShareFormatLabel(kind: ShareUrlKind): string {
   switch (kind) {
     case "id-only":
@@ -125,6 +137,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   const [exportingPlaylistJson, setExportingPlaylistJson] = createSignal(false);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
   const [detailVideoInput, setDetailVideoInput] = createSignal("");
+  const [detailInfoOpen, setDetailInfoOpen] = createSignal(false);
   const [detailVideoInsertPosition, setDetailVideoInsertPosition] =
     createSignal<VideoInsertPosition>("append");
   const [detailVideoInsertIndexInput, setDetailVideoInsertIndexInput] = createSignal("1");
@@ -970,11 +983,24 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 <span>再生中: {(currentPlaybackIndex() ?? 0) + 1}</span>
                               </>
                             </Show>
-                            <span class="text-stone-600">•</span>
-                            <span>{detailPlaylist.id}</span>
-                            <Show when={detailPlaylist.id === props.state?.lastActivePlaylistId}>
+                            <Show
+                              when={
+                                detailPlaylist.lastCompletedAt !== null &&
+                                currentPlaybackIndex() === null
+                              }
+                            >
                               <>
                                 <span class="text-stone-600">•</span>
+                                <span
+                                  title={getPlaylistTimestampTitle(detailPlaylist.lastCompletedAt)}
+                                >
+                                  再生完了
+                                </span>
+                              </>
+                            </Show>
+                            <span class="text-stone-600">•</span>
+                            <Show when={detailPlaylist.id === props.state?.lastActivePlaylistId}>
+                              <>
                                 <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
                                   Active
                                 </span>
@@ -1054,6 +1080,42 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                     再生状態を削除
                                   </button>
                                 </Show>
+                              </>
+                            </Show>
+                            <button
+                              type="button"
+                              class="text-stone-500 transition hover:text-stone-300"
+                              onClick={() => setDetailInfoOpen((current) => !current)}
+                            >
+                              詳細情報
+                            </button>
+                            <Show when={detailInfoOpen()}>
+                              <>
+                                <span
+                                  title={getPlaylistTimestampTitle(detailPlaylist.lastPlayedAt)}
+                                >
+                                  最終再生:{" "}
+                                  <span class="text-stone-200">
+                                    {getPlaylistTimestampText(
+                                      detailPlaylist.lastPlayedAt,
+                                      "未再生",
+                                    )}
+                                  </span>
+                                </span>
+                                <span class="text-stone-600">•</span>
+                                <span title={getPlaylistTimestampTitle(detailPlaylist.updatedAt)}>
+                                  最終更新:{" "}
+                                  <span class="text-stone-200">
+                                    {formatPlaylistTimestamp(detailPlaylist.updatedAt)}
+                                  </span>
+                                </span>
+                                <span class="text-stone-600">•</span>
+                                <span title={getPlaylistTimestampTitle(detailPlaylist.createdAt)}>
+                                  作成:{" "}
+                                  <span class="text-stone-200">
+                                    {formatPlaylistTimestamp(detailPlaylist.createdAt)}
+                                  </span>
+                                </span>
                               </>
                             </Show>
                           </div>
