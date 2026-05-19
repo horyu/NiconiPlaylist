@@ -16,6 +16,7 @@
     "check": "vp check",
     "fix": "vp check --fix",
     "generate:dev-video-metadata": "bun run scripts/generate-dev-video-metadata.ts",
+    "docs": "bun run scripts/build-docs.ts",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },
