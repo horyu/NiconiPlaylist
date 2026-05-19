@@ -81,7 +81,7 @@ const decoded = decodeIds(encoded);
 実際のエンコード例として、`sm9`, `so5364283`, `nm2829323`, `ss46168863` を共有 URL にしたものは以下。
 
 ```txt
-https://horyu.github.io/NiconiPlaylist/import?videoIds=BOQS5OiOBd-4tQKovKop
+https://horyu.github.io/NiconiPlaylist/?videoIds=BOQS5OiOBd-4tQKovKop
 ```
 
 空配列も可逆変換の対象とする。

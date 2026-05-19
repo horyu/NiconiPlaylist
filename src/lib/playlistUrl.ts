@@ -1,7 +1,7 @@
 import { decodeIds, encodeIds } from "@/lib/idCodec";
 import type { Playlist } from "@/lib/types";
 
-export const SHARED_PLAYLIST_URL = "https://horyu.github.io/NiconiPlaylist/import";
+export const SHARED_PLAYLIST_URL = "https://horyu.github.io/NiconiPlaylist/";
 
 export type SharedPlaylistDraft = Pick<Playlist, "title" | "memo" | "videoIds">;
 

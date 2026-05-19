@@ -32,8 +32,7 @@ type ImportSectionProps = {
   videoMetadataState: VideoMetadataState | undefined;
 };
 
-const DEFAULT_SHARED_URL =
-  "https://horyu.github.io/NiconiPlaylist/import?videoIds=BOQS5OiOBd-4tQKovKop";
+const DEFAULT_SHARED_URL = "https://horyu.github.io/NiconiPlaylist/?videoIds=BOQS5OiOBd-4tQKovKop";
 
 function getSourceLabel(source: ImportSource): string {
   switch (source) {
@@ -297,7 +296,7 @@ export function ImportSection(props: ImportSectionProps) {
                   <input
                     type="url"
                     class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
-                    placeholder="https://horyu.github.io/NiconiPlaylist/import?videoIds=..."
+                    placeholder="https://horyu.github.io/NiconiPlaylist/?videoIds=..."
                     value={sharedUrl()}
                     onInput={(event) => {
                       setSharedUrl(event.currentTarget.value);
