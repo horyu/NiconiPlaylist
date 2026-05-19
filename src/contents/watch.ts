@@ -87,6 +87,16 @@ let routeReadySawFromZero = false;
 let routeReadyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let currentLoopVideoId: string | null = null;
 let completedPlaybackCount = 0;
+let expectedNextVideoId: string | null = null;
+
+function clearExpectedNextVideo(): void {
+  expectedNextVideoId = null;
+}
+
+function setExpectedNextVideo(nextVideoId: string): void {
+  clearExpectedNextVideo();
+  expectedNextVideoId = nextVideoId;
+}
 
 function resetLoopProgress(videoId: string | null): void {
   currentLoopVideoId = videoId;
@@ -118,6 +128,7 @@ function sendRouteReady(): void {
 
   console.log("NiconiPlaylist route-ready scheduled after timeout.", {
     delayMs: ROUTE_READY_DELAY_MS,
+    expectedNextVideoId,
   });
   routeReadyTimeoutId = setTimeout(() => {
     routeReadyTimeoutId = null;
@@ -133,7 +144,9 @@ function hasFromZeroSearchParam(): boolean {
 }
 
 function armRouteReady(): void {
-  if (!getCurrentWatchVideoId()) {
+  const videoId = getCurrentWatchVideoId();
+
+  if (!videoId) {
     console.log(
       "NiconiPlaylist route-ready arm skipped because current watch video id is missing.",
     );
@@ -148,17 +161,42 @@ function armRouteReady(): void {
   routeReadyArmed = true;
   routeReadySawFromZero = hasFromZeroSearchParam();
   console.log("NiconiPlaylist route-ready armed.", {
+    expectedNextVideoId,
     hasFromZeroSearchParam: routeReadySawFromZero,
-    videoId: getCurrentWatchVideoId(),
+    videoId,
   });
 }
 
 function navigateToNextVideo(nextVideoId: string): void {
   const nextVideoUrl = buildWatchUrl(nextVideoId);
+  setExpectedNextVideo(nextVideoId);
+  console.log("NiconiPlaylist navigating to expected next video.", {
+    nextVideoId,
+    nextVideoUrl,
+  });
   void browser.runtime.sendMessage({
     type: "watch:navigate-next-video",
     url: nextVideoUrl,
   });
+}
+
+function forceNavigateToExpectedNextVideo(): void {
+  if (!expectedNextVideoId) {
+    return;
+  }
+
+  const expectedNextVideoUrl = buildWatchUrl(expectedNextVideoId);
+  if (location.href === expectedNextVideoUrl) {
+    return;
+  }
+
+  console.warn("NiconiPlaylist detected unexpected next video and is forcing navigation.", {
+    currentVideoId: getCurrentWatchVideoId(),
+    currentUrl: location.href,
+    expectedNextVideoId,
+    expectedNextVideoUrl,
+  });
+  location.href = expectedNextVideoUrl;
 }
 
 function restartCurrentVideo(): void {
@@ -240,15 +278,35 @@ function initWatchLocationObserver(): void {
   state[WATCH_LOCATION_OBSERVER_KEY] = true;
   window.addEventListener("niconiplaylist:locationchange", () => {
     const hasFromZero = hasFromZeroSearchParam();
+    const currentVideoId = getCurrentWatchVideoId();
     let handledAsRouteReady = false;
     console.log("NiconiPlaylist observed location change.", {
+      currentVideoId,
+      expectedNextVideoId,
       hasFromZeroSearchParam: hasFromZero,
       pathname: location.pathname,
       href: location.href,
     });
 
-    if (routeReadyArmed && routeReadySawFromZero && !hasFromZero) {
+    if (
+      routeReadyArmed &&
+      expectedNextVideoId !== null &&
+      currentVideoId !== null &&
+      currentVideoId !== expectedNextVideoId
+    ) {
+      forceNavigateToExpectedNextVideo();
+      return;
+    }
+
+    if (
+      routeReadyArmed &&
+      routeReadySawFromZero &&
+      !hasFromZero &&
+      (expectedNextVideoId === null || currentVideoId === expectedNextVideoId)
+    ) {
       console.log("NiconiPlaylist treating canonical URL change as route-ready.", {
+        expectedNextVideoId,
+        currentVideoId,
         pathname: location.pathname,
         href: location.href,
       });
@@ -310,6 +368,7 @@ async function handlePause(event: Event) {
   if (playbackState?.nextVideoId) {
     navigateToNextVideo(playbackState.nextVideoId);
   } else {
+    clearExpectedNextVideo();
     if (playbackState?.playbackSettings && !playbackState.playbackSettings.playlistRepeatEnabled) {
       await handlePlaylistCompleted(playbackState);
     }

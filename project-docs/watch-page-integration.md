@@ -73,6 +73,22 @@ content script 側ではこのイベントを受けて以下を行う。
 - `title` や `meta[property="og:url"]` の変化より安定して観測できた
 - 現行の `?from=0` 付き遷移と自然に組み合わせられる
 
+### 5.3 期待している次動画との照合
+
+watch ページでは、拡張機能が次動画を決めた時点で `expectedNextVideoId` を content script 側に保持する。
+
+その後 `niconiplaylist:locationchange` が発生した時は、
+
+- 現在の `watch/{videoId}` と `expectedNextVideoId` を照合する
+- route-ready 待ち中に別の動画 ID へ遷移していた場合は、`location.href = buildWatchUrl(expectedNextVideoId)` で正しい URL へ戻す
+
+この処理を入れている理由は以下。
+
+- 拡張機能側が次動画遷移を実行した後に、ニコニコ動画公式の自動遷移が遅れて走り、別動画へ上書きされることがある
+- 単に URL 変化を観測するだけでは「正しい次動画へ進んだか」を保証できない
+
+`expectedNextVideoId` は固定時間で破棄せず、次の playlist 遷移が始まるか playback context が終了するまで保持する。
+
 ## 6. React Router と `location.href`
 
 次動画遷移は MAIN world で以下の順に試みる。
@@ -94,7 +110,7 @@ content script 側ではこのイベントを受けて以下を行う。
 そのため現状は以下の順で処理する。
 
 1. 次動画 URL への遷移だけを先に実行する
-2. `watch:route-ready` を受ける
+2. content script 側で、期待している次動画 ID と実際の `watch/{videoId}` を照合しながら待つ
 3. canonical URL への切り替わりを観測した後、短い `setTimeout` で少し待つ
 4. その後に `watch:route-ready` を通知し、再生タブを前面化する
 5. 再生設定に応じて、一定時間後に元のタブへ戻す
