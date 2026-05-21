@@ -288,12 +288,7 @@ function initWatchLocationObserver(): void {
       href: location.href,
     });
 
-    if (
-      routeReadyArmed &&
-      expectedNextVideoId !== null &&
-      currentVideoId !== null &&
-      currentVideoId !== expectedNextVideoId
-    ) {
+    if (expectedNextVideoId !== null && currentVideoId !== expectedNextVideoId) {
       forceNavigateToExpectedNextVideo();
       return;
     }
