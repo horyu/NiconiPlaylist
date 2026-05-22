@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show } from "solid-js";
+import { createSignal, For, onMount, Show } from "solid-js";
 
 import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import {
@@ -70,7 +70,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   );
 
-  createEffect(() => {
+  onMount(() => {
     void getStoredPlaybackSettings().then((playbackSettings) => {
       setPresets(playbackSettings.presets);
       setSavedPresetsJson(JSON.stringify(playbackSettings.presets));

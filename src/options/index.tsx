@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Match, Show, Switch } from "solid-js";
+import { createEffect, createSignal, For, Match, onCleanup, Show, Switch } from "solid-js";
 
 import { usePlaylistsState } from "@/options/hooks/usePlaylistsState";
 import { useVideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -40,9 +40,9 @@ export default function OptionsPage() {
       setToast(null);
     }, 4000);
 
-    return () => {
+    onCleanup(() => {
       window.clearTimeout(timer);
-    };
+    });
   });
 
   return (
