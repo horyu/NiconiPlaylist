@@ -87,7 +87,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
       ref={(element) => {
         videoListElement = element;
       }}
-      class="max-h-[32rem] space-y-2 overflow-y-auto pr-1"
+      class="h-full space-y-2 overflow-y-auto pr-1"
     >
       <For each={props.playlist.videoIds}>
         {(videoId, index) => {

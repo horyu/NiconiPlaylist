@@ -386,60 +386,62 @@ function Popup() {
   }
 
   return (
-    <main class="min-h-screen min-w-[30rem] bg-stone-950 px-3 py-3 text-stone-100">
-      <div class="mx-auto flex w-full max-w-2xl flex-col gap-3">
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <h1 class="text-lg font-semibold text-stone-50">NiconiPlaylist</h1>
-            <button
-              type="button"
-              onClick={() => setShowPlaybackSettings((value) => !value)}
-              class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
-                showPlaybackSettings()
-                  ? currentPlaybackSettings()?.playlistRepeatEnabled
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                    : "border-stone-300 bg-white text-stone-900"
-                  : currentPlaybackSettings()?.playlistRepeatEnabled
-                    ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/10"
+    <main class="flex h-[600px] min-w-[30rem] max-w-[42rem] flex-col overflow-hidden bg-stone-950 text-stone-100">
+      <div class="mx-auto flex h-full w-full min-h-0 flex-col gap-3 px-3 py-3">
+        <div class="shrink-0 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <h1 class="text-lg font-semibold text-stone-50">NiconiPlaylist</h1>
+              <button
+                type="button"
+                onClick={() => setShowPlaybackSettings((value) => !value)}
+                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
+                  showPlaybackSettings()
+                    ? currentPlaybackSettings()?.playlistRepeatEnabled
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
+                      : "border-stone-300 bg-white text-stone-900"
+                    : currentPlaybackSettings()?.playlistRepeatEnabled
+                      ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/10"
+                      : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
+                }`}
+                title="リピート設定を表示"
+                aria-label="リピート設定を表示"
+              >
+                ↻
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowMemoEditor((value) => !value)}
+                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
+                  showMemoEditor()
+                    ? "border-stone-300 bg-white text-stone-900"
                     : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
-              }`}
-              title="リピート設定を表示"
-              aria-label="リピート設定を表示"
-            >
-              ↻
-            </button>
+                }`}
+                title="プレイリストメモを表示"
+                aria-label="プレイリストメモを表示"
+              >
+                ✎
+              </button>
+            </div>
             <button
               type="button"
-              onClick={() => setShowMemoEditor((value) => !value)}
-              class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
-                showMemoEditor()
-                  ? "border-stone-300 bg-white text-stone-900"
-                  : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
-              }`}
-              title="プレイリストメモを表示"
-              aria-label="プレイリストメモを表示"
+              onClick={() => void handleOpenOptionsPage()}
+              class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800"
+              title="オプションを開く"
+              aria-label="オプションを開く"
             >
-              ✎
+              ⚙
             </button>
           </div>
-          <button
-            type="button"
-            onClick={() => void handleOpenOptionsPage()}
-            class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800"
-            title="オプションを開く"
-            aria-label="オプションを開く"
-          >
-            ⚙
-          </button>
-        </div>
 
-        <Show when={feedback()}>
-          {(message) => (
-            <div class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-              {message()}
-            </div>
-          )}
-        </Show>
+          <Show when={feedback()}>
+            {(message) => (
+              <div class="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {message()}
+              </div>
+            )}
+          </Show>
+        </div>
 
         <Switch
           fallback={
@@ -460,129 +462,134 @@ function Popup() {
           </Match>
 
           <Match when={popupState()?.playlists.length}>
-            <div class="space-y-3">
-              <Show when={showPlaybackSettings()}>
-                <div class="space-y-1.5">
-                  <div class="flex flex-wrap items-center gap-2 rounded-xl bg-stone-900/40 px-3">
-                    <span class="text-xs font-medium text-stone-200">
-                      プレイリスト全体のリピート
-                    </span>
-                    <button
-                      type="button"
-                      class={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                        currentPlaybackSettings()?.playlistRepeatEnabled
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
-                          : "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
-                      }`}
-                      onClick={() => void handleTogglePlaylistRepeatEnabled()}
-                    >
-                      {currentPlaybackSettings()?.playlistRepeatEnabled ? "ON" : "OFF"}
-                    </button>
-                  </div>
-
-                  <div class="flex flex-wrap items-center gap-2 rounded-xl bg-stone-900/40 px-3">
-                    <span class="text-xs font-medium text-stone-200">各動画のリピート</span>
-                    <select
-                      class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
-                      value={selectedRepeatPresetId()}
-                      onChange={(event) => void handleSelectRepeatPreset(event.currentTarget.value)}
-                    >
-                      <option value="none" selected={selectedRepeatPresetId() === "none"}>
-                        なし
-                      </option>
-                      <For each={currentPlaybackSettings()?.presets ?? []}>
-                        {(preset) => (
-                          <option
-                            value={preset.id}
-                            selected={selectedRepeatPresetId() === preset.id}
-                          >
-                            {formatRepeatPresetLabel(preset)}
-                          </option>
-                        )}
-                      </For>
-                    </select>
-                  </div>
-                </div>
-              </Show>
-
-              <div class="flex items-center gap-2">
-                <select
-                  class="w-full rounded-xl border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
-                  value={popupState()?.lastActivePlaylistId ?? ""}
-                  onChange={(event) => void handleActivate(event.currentTarget.value)}
-                >
-                  <For each={selectablePlaylists()}>
-                    {(playlist) => (
-                      <option value={playlist.id}>
-                        {formatPlaylistOptionLabel(playlist, isPlaylistPlaying(playlist.id))}
-                      </option>
-                    )}
-                  </For>
-                </select>
-                <button
-                  type="button"
-                  class={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
-                    currentPlaybackIndex() !== null
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
-                      : "border-stone-700 bg-stone-900 text-stone-300"
-                  }`}
-                  title="再生中の動画へ移動"
-                  aria-label="再生中の動画へ移動"
-                  onClick={() => {
-                    if (currentPlaybackIndex() === null) {
-                      return;
-                    }
-                    setManualScrollRequestKey((value) => value + 1);
-                  }}
-                >
-                  {currentPlaybackIndex() === null ? "-" : (currentPlaybackIndex() ?? 0) + 1}
-                  {" / "}
-                  {activePlaylistVideoCount()}件
-                </button>
-              </div>
-
-              <Show when={showMemoEditor() && activePlaylist()}>
-                {(playlist) => {
-                  const isMemoDirty = () => (playlist().memo ?? "") !== memoDraft();
-
-                  return (
-                    <div class="space-y-2 rounded-xl bg-stone-900/40 px-3 py-3">
-                      <div class="flex items-center justify-between gap-2">
-                        <span class="text-xs font-medium text-stone-200">プレイリストメモ</span>
-                        <button
-                          type="button"
-                          class={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                            isMemoDirty()
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
-                              : "border-stone-600 text-stone-400"
-                          }`}
-                          onClick={() => void handleSavePlaylistMemo()}
-                          disabled={!isMemoDirty()}
-                        >
-                          保存
-                        </button>
-                      </div>
-                      <textarea
-                        class="min-h-24 w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
-                        value={memoDraft()}
-                        onInput={(event) => setMemoDraft(event.currentTarget.value)}
-                        placeholder="このプレイリストのメモ"
-                      />
+            <div class="flex min-h-0 flex-1 flex-col gap-3">
+              <div class="shrink-0 space-y-3">
+                <Show when={showPlaybackSettings()}>
+                  <div class="space-y-1.5">
+                    <div class="flex flex-wrap items-center gap-2 rounded-xl bg-stone-900/40 px-3">
+                      <span class="text-xs font-medium text-stone-200">
+                        プレイリスト全体のリピート
+                      </span>
+                      <button
+                        type="button"
+                        class={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                          currentPlaybackSettings()?.playlistRepeatEnabled
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                            : "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
+                        }`}
+                        onClick={() => void handleTogglePlaylistRepeatEnabled()}
+                      >
+                        {currentPlaybackSettings()?.playlistRepeatEnabled ? "ON" : "OFF"}
+                      </button>
                     </div>
-                  );
-                }}
-              </Show>
+
+                    <div class="flex flex-wrap items-center gap-2 rounded-xl bg-stone-900/40 px-3">
+                      <span class="text-xs font-medium text-stone-200">各動画のリピート</span>
+                      <select
+                        class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                        value={selectedRepeatPresetId()}
+                        onChange={(event) =>
+                          void handleSelectRepeatPreset(event.currentTarget.value)
+                        }
+                      >
+                        <option value="none" selected={selectedRepeatPresetId() === "none"}>
+                          なし
+                        </option>
+                        <For each={currentPlaybackSettings()?.presets ?? []}>
+                          {(preset) => (
+                            <option
+                              value={preset.id}
+                              selected={selectedRepeatPresetId() === preset.id}
+                            >
+                              {formatRepeatPresetLabel(preset)}
+                            </option>
+                          )}
+                        </For>
+                      </select>
+                    </div>
+                  </div>
+                </Show>
+
+                <div class="flex items-center gap-2">
+                  <select
+                    class="w-full rounded-xl border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                    value={popupState()?.lastActivePlaylistId ?? ""}
+                    onChange={(event) => void handleActivate(event.currentTarget.value)}
+                  >
+                    <For each={selectablePlaylists()}>
+                      {(playlist) => (
+                        <option value={playlist.id}>
+                          {formatPlaylistOptionLabel(playlist, isPlaylistPlaying(playlist.id))}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                  <button
+                    type="button"
+                    class={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                      currentPlaybackIndex() !== null
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                        : "border-stone-700 bg-stone-900 text-stone-300"
+                    }`}
+                    title="再生中の動画へ移動"
+                    aria-label="再生中の動画へ移動"
+                    onClick={() => {
+                      if (currentPlaybackIndex() === null) {
+                        return;
+                      }
+                      setManualScrollRequestKey((value) => value + 1);
+                    }}
+                  >
+                    {currentPlaybackIndex() === null ? "-" : (currentPlaybackIndex() ?? 0) + 1}
+                    {" / "}
+                    {activePlaylistVideoCount()}件
+                  </button>
+                </div>
+
+                <Show when={showMemoEditor() && activePlaylist()}>
+                  {(playlist) => {
+                    const isMemoDirty = () => (playlist().memo ?? "") !== memoDraft();
+
+                    return (
+                      <div class="space-y-2 rounded-xl bg-stone-900/40 px-3 py-3">
+                        <div class="flex items-center justify-between gap-2">
+                          <span class="text-xs font-medium text-stone-200">プレイリストメモ</span>
+                          <button
+                            type="button"
+                            class={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                              isMemoDirty()
+                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                                : "border-stone-600 text-stone-400"
+                            }`}
+                            onClick={() => void handleSavePlaylistMemo()}
+                            disabled={!isMemoDirty()}
+                          >
+                            保存
+                          </button>
+                        </div>
+                        <textarea
+                          class="h-28 max-h-40 min-h-24 w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                          value={memoDraft()}
+                          onInput={(event) => setMemoDraft(event.currentTarget.value)}
+                          placeholder="このプレイリストのメモ"
+                        />
+                      </div>
+                    );
+                  }}
+                </Show>
+
+                <Show when={activePlaylist() && !showMemoEditor() && activePlaylist()?.memo}>
+                  {(memo) => (
+                    <p class="overflow-hidden text-xs leading-5 text-stone-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                      {memo()}
+                    </p>
+                  )}
+                </Show>
+              </div>
 
               <Show when={activePlaylist()}>
                 {(playlist) => (
-                  <div class="space-y-3">
-                    <Show when={!showMemoEditor() && playlist().memo}>
-                      {(memo) => (
-                        <p class="overflow-hidden text-xs leading-5 text-stone-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
-                          {memo()}
-                        </p>
-                      )}
-                    </Show>
+                  <div class="min-h-0 flex-1">
                     <PopupPlaylistVideoList
                       autoScrollKey={autoScrollKey()}
                       currentPlaybackIndex={currentPlaybackIndex()}
