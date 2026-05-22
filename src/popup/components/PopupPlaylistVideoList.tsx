@@ -39,7 +39,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
       return;
     }
 
-    const targetIndex = Math.max(playbackIndex - 2, 0);
+    const targetIndex = Math.max(playbackIndex - 1, 0);
 
     requestAnimationFrame(() => {
       const targetElement = videoItemElements[targetIndex];
