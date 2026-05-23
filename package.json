@@ -34,7 +34,6 @@
     "wxt": "0.20.20"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.x",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.x"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.x"
   }
 }
