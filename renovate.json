@@ -33,6 +33,11 @@
       "groupName": "solid tooling",
       "description": "Keep Solid runtime and ESLint plugin aligned",
       "matchPackageNames": ["solid-js", "eslint-plugin-solid"]
+    },
+    {
+      "description": "Link Solid runtime PRs to the upstream changelog",
+      "matchPackageNames": ["solid-js"],
+      "changelogUrl": "https://github.com/solidjs/solid/blob/main/packages/solid/CHANGELOG.md"
     }
   ]
 }
