@@ -1,6 +1,38 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
+  "extends": ["config:best-practices"],
+  "labels": ["dependencies", "renovate"],
+  "assignees": ["horyu"],
+  "reviewers": ["horyu"],
+  "prHourlyLimit": 0,
+  "separateMajorMinor": true,
+  "rangeStrategy": "pin",
+  "minimumReleaseAge": "2 days",
+  "packageRules": [
+    {
+      "description": "Do not pin versions in mise toolchain config",
+      "matchManagers": ["mise"],
+      "rangeStrategy": "auto"
+    },
+    {
+      "groupName": "tailwind",
+      "description": "Keep Tailwind packages aligned",
+      "matchPackageNames": ["tailwindcss", "/^@tailwindcss\\//"]
+    },
+    {
+      "groupName": "vite-plus tooling",
+      "description": "Keep vite-plus core and wrapper aligned",
+      "matchPackageNames": ["vite-plus", "@voidzero-dev/vite-plus-core"]
+    },
+    {
+      "groupName": "wxt tooling",
+      "description": "Keep WXT core and Solid module aligned",
+      "matchPackageNames": ["wxt", "@wxt-dev/module-solid"]
+    },
+    {
+      "groupName": "solid tooling",
+      "description": "Keep Solid runtime and ESLint plugin aligned",
+      "matchPackageNames": ["solid-js", "eslint-plugin-solid"]
+    }
   ]
 }
