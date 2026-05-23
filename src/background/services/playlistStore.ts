@@ -422,12 +422,6 @@ export async function syncPlaybackContextForVideo(
     : null;
 
   if (!activePlaylist || currentIndex === null || currentIndex < 0) {
-    const latestPlaybackContexts = await getStoredPlaybackContexts();
-    const nextPlaybackContexts = latestPlaybackContexts.filter(
-      (context) => context.tabId !== tabId,
-    );
-
-    await setStoredPlaybackContexts(nextPlaybackContexts);
     return null;
   }
 
