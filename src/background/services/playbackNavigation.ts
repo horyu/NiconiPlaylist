@@ -24,21 +24,12 @@ export async function focusBrowserTab(tabId: number): Promise<void> {
     tabId,
   });
   const tab = await browser.tabs.get(tabId);
-  const tasks: Promise<unknown>[] = [
-    browser.tabs.update(tabId, {
+
+  if (!tab.active) {
+    await browser.tabs.update(tabId, {
       active: true,
-    }),
-  ];
-
-  if (typeof tab.windowId === "number") {
-    tasks.push(
-      browser.windows.update(tab.windowId, {
-        focused: true,
-      }),
-    );
+    });
   }
-
-  await Promise.all(tasks);
 }
 
 async function getLastFocusedActiveTabId(): Promise<number | null> {
