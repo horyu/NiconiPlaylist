@@ -563,7 +563,7 @@ function Popup() {
                   >
                     {currentPlaybackIndex() === null ? "-" : (currentPlaybackIndex() ?? 0) + 1}
                     {" / "}
-                    {activePlaylistVideoCount()}件
+                    {activePlaylistVideoCount()}
                   </button>
                 </div>
 
