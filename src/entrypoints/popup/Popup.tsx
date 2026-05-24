@@ -132,6 +132,26 @@ function Popup() {
     aliveTabIdByPlaylistId()[playlistId] !== undefined;
   const currentPlaybackSettings = () =>
     playbackSettingsDraft() ?? popupState()?.playbackSettings ?? null;
+  const perVideoRepeatStatusLabel = createMemo(() => {
+    const playbackSettings = currentPlaybackSettings();
+
+    if (!playbackSettings || selectedRepeatPresetId() === "none") {
+      return "なし";
+    }
+
+    const activePreset = playbackSettings.presets.find(
+      (preset) => preset.id === selectedRepeatPresetId(),
+    );
+
+    return activePreset ? formatRepeatPresetLabel(activePreset).replace(/リピート$/, "") : "なし";
+  });
+  const repeatStatusLabel = createMemo(() => {
+    const playlistRepeatStatusLabel = currentPlaybackSettings()?.playlistRepeatEnabled
+      ? "ON"
+      : "OFF";
+
+    return `↻ ${playlistRepeatStatusLabel} / ${perVideoRepeatStatusLabel()}`;
+  });
   const autoScrollKey = () => {
     const playlist = activePlaylist();
     const playbackIndex = currentPlaybackIndex();
@@ -390,25 +410,8 @@ function Popup() {
       <div class="mx-auto flex h-full w-full min-h-0 flex-col gap-3 px-3 py-3">
         <div class="shrink-0 space-y-3">
           <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
+            <div class="flex min-w-0 items-center gap-2">
               <h1 class="text-lg font-semibold text-stone-50">NiconiPlaylist</h1>
-              <button
-                type="button"
-                onClick={() => setShowPlaybackSettings((value) => !value)}
-                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
-                  showPlaybackSettings()
-                    ? currentPlaybackSettings()?.playlistRepeatEnabled
-                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200"
-                      : "border-stone-300 bg-white text-stone-900"
-                    : currentPlaybackSettings()?.playlistRepeatEnabled
-                      ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-200 hover:bg-emerald-500/10"
-                      : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
-                }`}
-                title="リピート設定を表示"
-                aria-label="リピート設定を表示"
-              >
-                ↻
-              </button>
               <button
                 type="button"
                 onClick={() => setShowMemoEditor((value) => !value)}
@@ -422,6 +425,24 @@ function Popup() {
               >
                 ✎
               </button>
+              <button
+                type="button"
+                onClick={() => setShowPlaybackSettings((value) => !value)}
+                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
+                  showPlaybackSettings()
+                    ? "border-stone-300 bg-white text-stone-900"
+                    : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
+                }`}
+                title="リピート設定を表示"
+                aria-label="リピート設定を表示"
+              >
+                ↻
+              </button>
+              <Show when={!showPlaybackSettings()}>
+                <span class="max-w-32 truncate rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-stone-300">
+                  {repeatStatusLabel()}
+                </span>
+              </Show>
             </div>
             <button
               type="button"
@@ -474,7 +495,7 @@ function Popup() {
                         type="button"
                         class={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                           currentPlaybackSettings()?.playlistRepeatEnabled
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200 hover:bg-emerald-500/20"
+                            ? "border-stone-500 bg-stone-800 text-stone-100 hover:border-stone-400 hover:bg-stone-700"
                             : "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
                         }`}
                         onClick={() => void handleTogglePlaylistRepeatEnabled()}
