@@ -4,6 +4,7 @@ import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import {
   isOwnerMetadata,
   isPlaybackContext,
+  isPlaybackDebugEvent,
   isPlaybackSettings,
   isPlaylist,
   isVideoMetadata,
@@ -21,6 +22,7 @@ const STORAGE_EXPORT_KEYS = [
   "playlists",
   "playbackSettings",
   "playbackContexts",
+  "playbackDebugEvents",
   "lastActivePlaylistId",
   "videoMetadata",
   "owners",
@@ -36,7 +38,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
-function normalizeStorageData(value: unknown): StorageDataByKey {
+function normalizeStorageData(
+  value: unknown,
+  options?: {
+    includePlaybackDebugEvents?: boolean;
+  },
+): StorageDataByKey {
   const candidate = (() => {
     if (!isRecord(value)) {
       return {};
@@ -64,6 +71,10 @@ function normalizeStorageData(value: unknown): StorageDataByKey {
               .length ?? 0),
       )
     : defaultStorageData.playbackContexts;
+  const playbackDebugEvents =
+    options?.includePlaybackDebugEvents && Array.isArray(candidate.playbackDebugEvents)
+      ? candidate.playbackDebugEvents.filter(isPlaybackDebugEvent)
+      : defaultStorageData.playbackDebugEvents;
   const lastActivePlaylistId =
     typeof candidate.lastActivePlaylistId === "string" &&
     playlistIds.has(candidate.lastActivePlaylistId)
@@ -93,6 +104,7 @@ function normalizeStorageData(value: unknown): StorageDataByKey {
     playlists,
     playbackSettings,
     playbackContexts,
+    playbackDebugEvents,
     lastActivePlaylistId,
     videoMetadata,
     owners,
@@ -103,7 +115,7 @@ export async function exportStorageData(): Promise<StorageExportPayload> {
   const rawStorageData = await getRawStorageData(STORAGE_EXPORT_KEYS);
 
   return {
-    data: normalizeStorageData(rawStorageData),
+    data: normalizeStorageData(rawStorageData, { includePlaybackDebugEvents: true }),
     exportedAt: new Date().toISOString(),
     version: STORAGE_EXPORT_VERSION,
   };
@@ -112,7 +124,10 @@ export async function exportStorageData(): Promise<StorageExportPayload> {
 export async function importStorageData(payload: unknown): Promise<void> {
   const normalizedStorageData = normalizeStorageData(payload);
 
-  await setStorageData(normalizedStorageData);
+  await setStorageData({
+    ...normalizedStorageData,
+    playbackDebugEvents: [],
+  });
 }
 
 export async function clearAllStoredData(): Promise<void> {

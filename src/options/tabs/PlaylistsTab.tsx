@@ -359,7 +359,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     props.onFeedback(null);
 
     try {
-      await clearStoredPlaybackContextsByPlaylistId(playlistId);
+      await clearStoredPlaybackContextsByPlaylistId(playlistId, "manual-remove-from-options");
       await props.onUpdated();
       props.onFeedback({
         text: "再生状態を削除しました。",

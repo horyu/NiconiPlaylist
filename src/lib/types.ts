@@ -57,3 +57,20 @@ export type PlaybackContext = {
   tabId: number;
   currentIndex: number;
 };
+
+export type PlaybackDebugEventType =
+  | "clear-playback-context-by-tab"
+  | "clear-playback-contexts-by-playlist"
+  | "sync-playback-context-null";
+
+export type PlaybackDebugEvent = {
+  occurredAt: string;
+  type: PlaybackDebugEventType;
+  reason: string;
+  playlistId: PlaylistId | null;
+  tabId: number | null;
+  videoId: VideoId | null;
+  currentIndex: number | null;
+  playlistVideoCount: number | null;
+  previousPlaybackContext: PlaybackContext | null;
+};

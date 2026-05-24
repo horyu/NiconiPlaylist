@@ -1,7 +1,16 @@
 import { getStorageData, setStorageData } from "@/background/services/storage";
 import { formatDashedTimestampWithMinutes } from "@/lib/dateTime";
-import { isPlaybackContext, isPlaylist } from "@/lib/typeGuards";
-import type { PlaybackContext, Playlist, PlaylistId, VideoId } from "@/lib/types";
+import { isPlaybackContext, isPlaybackDebugEvent, isPlaylist } from "@/lib/typeGuards";
+import type {
+  PlaybackContext,
+  PlaybackDebugEvent,
+  PlaybackDebugEventType,
+  Playlist,
+  PlaylistId,
+  VideoId,
+} from "@/lib/types";
+
+const MAX_PLAYBACK_DEBUG_EVENTS = 50;
 
 function createPlaylistId(): PlaylistId {
   return crypto.randomUUID();
@@ -111,6 +120,51 @@ export async function getStoredPlaybackContexts(): Promise<PlaybackContext[]> {
   const { playbackContexts } = await getStorageData(["playbackContexts"]);
 
   return playbackContexts.filter(isPlaybackContext);
+}
+
+async function getStoredPlaybackDebugEvents(): Promise<PlaybackDebugEvent[]> {
+  const { playbackDebugEvents } = await getStorageData(["playbackDebugEvents"]);
+
+  return playbackDebugEvents.filter(isPlaybackDebugEvent);
+}
+
+async function appendStoredPlaybackDebugEvent(
+  event: Omit<PlaybackDebugEvent, "occurredAt">,
+): Promise<void> {
+  const playbackDebugEvents = await getStoredPlaybackDebugEvents();
+  const nextPlaybackDebugEvents = [
+    ...playbackDebugEvents,
+    {
+      ...event,
+      occurredAt: new Date().toISOString(),
+    },
+  ].slice(-MAX_PLAYBACK_DEBUG_EVENTS);
+
+  await setStorageData({ playbackDebugEvents: nextPlaybackDebugEvents });
+}
+
+async function recordPlaybackDebugEvent(
+  type: PlaybackDebugEventType,
+  reason: string,
+  details: {
+    playlistId?: PlaylistId | null;
+    tabId?: number | null;
+    videoId?: VideoId | null;
+    currentIndex?: number | null;
+    playlistVideoCount?: number | null;
+    previousPlaybackContext?: PlaybackContext | null;
+  },
+): Promise<void> {
+  await appendStoredPlaybackDebugEvent({
+    type,
+    reason,
+    playlistId: details.playlistId ?? null,
+    tabId: details.tabId ?? null,
+    videoId: details.videoId ?? null,
+    currentIndex: details.currentIndex ?? null,
+    playlistVideoCount: details.playlistVideoCount ?? null,
+    previousPlaybackContext: details.previousPlaybackContext ?? null,
+  });
 }
 
 export async function setStoredPlaybackContexts(
@@ -314,21 +368,38 @@ export async function getStoredPlaybackContextByTabId(
   return playbackContexts.find((context) => context.tabId === tabId) ?? null;
 }
 
-export async function clearStoredPlaybackContextByTabId(tabId: number): Promise<void> {
+export async function clearStoredPlaybackContextByTabId(
+  tabId: number,
+  reason = "unspecified",
+): Promise<void> {
   const playbackContexts = await getStoredPlaybackContexts();
+  const previousPlaybackContext =
+    playbackContexts.find((context) => context.tabId === tabId) ?? null;
   const nextPlaybackContexts = playbackContexts.filter((context) => context.tabId !== tabId);
 
+  await recordPlaybackDebugEvent("clear-playback-context-by-tab", reason, {
+    playlistId: previousPlaybackContext?.playlistId ?? null,
+    tabId,
+    currentIndex: previousPlaybackContext?.currentIndex ?? null,
+    previousPlaybackContext,
+  });
   await setStoredPlaybackContexts(nextPlaybackContexts);
 }
 
 export async function clearStoredPlaybackContextsByPlaylistId(
   playlistId: PlaylistId,
+  reason = "unspecified",
 ): Promise<void> {
   const playbackContexts = await getStoredPlaybackContexts();
   const nextPlaybackContexts = playbackContexts.filter(
     (context) => context.playlistId !== playlistId,
   );
 
+  await recordPlaybackDebugEvent("clear-playback-contexts-by-playlist", reason, {
+    playlistId,
+    previousPlaybackContext:
+      playbackContexts.find((context) => context.playlistId === playlistId) ?? null,
+  });
   await setStoredPlaybackContexts(nextPlaybackContexts);
 }
 
@@ -422,6 +493,22 @@ export async function syncPlaybackContextForVideo(
     : null;
 
   if (!activePlaylist || currentIndex === null || currentIndex < 0) {
+    if (!previousPlaybackContext) {
+      return null;
+    }
+
+    const reason = !activePlaylist
+      ? "playlist-not-found"
+      : currentIndex === null
+        ? "video-not-in-playlist"
+        : "invalid-current-index";
+    await recordPlaybackDebugEvent("sync-playback-context-null", reason, {
+      playlistId: previousPlaybackContext?.playlistId ?? null,
+      tabId,
+      videoId,
+      playlistVideoCount: activePlaylist?.videoIds.length ?? null,
+      previousPlaybackContext: previousPlaybackContext ?? null,
+    });
     return null;
   }
 
@@ -432,6 +519,14 @@ export async function syncPlaybackContextForVideo(
     !latestPlaybackContext ||
     latestPlaybackContext.playlistId !== previousPlaybackContext?.playlistId
   ) {
+    await recordPlaybackDebugEvent("sync-playback-context-null", "latest-context-mismatch", {
+      playlistId: previousPlaybackContext?.playlistId ?? null,
+      tabId,
+      videoId,
+      currentIndex,
+      playlistVideoCount: activePlaylist.videoIds.length,
+      previousPlaybackContext: previousPlaybackContext ?? null,
+    });
     return null;
   }
 

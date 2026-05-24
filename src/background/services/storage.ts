@@ -7,13 +7,20 @@ import {
   DEFAULT_REPEAT_PRESETS,
 } from "@/lib/playlistLoop";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
-import type { PlaybackContext, PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
+import type {
+  PlaybackContext,
+  PlaybackDebugEvent,
+  PlaybackSettings,
+  Playlist,
+  PlaylistId,
+} from "@/lib/types";
 import type { OwnerId, OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export interface StorageDataByKey {
   playlists: Playlist[];
   playbackSettings: PlaybackSettings;
   playbackContexts: PlaybackContext[];
+  playbackDebugEvents: PlaybackDebugEvent[];
   lastActivePlaylistId: PlaylistId | null;
   videoMetadata: Record<string, VideoMetadata>;
   owners: Record<OwnerId, OwnerMetadata>;
@@ -32,6 +39,7 @@ const DEFAULT_BY_KEY: StorageDataByKey = {
     completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   },
   playbackContexts: [],
+  playbackDebugEvents: [],
   lastActivePlaylistId: null,
   videoMetadata: {},
   owners: {},
@@ -46,6 +54,7 @@ export function getDefaultStorageData(): StorageDataByKey {
     playlists: cloneDefaultValue("playlists"),
     playbackSettings: cloneDefaultValue("playbackSettings"),
     playbackContexts: cloneDefaultValue("playbackContexts"),
+    playbackDebugEvents: cloneDefaultValue("playbackDebugEvents"),
     lastActivePlaylistId: cloneDefaultValue("lastActivePlaylistId"),
     videoMetadata: cloneDefaultValue("videoMetadata"),
     owners: cloneDefaultValue("owners"),

@@ -1,4 +1,10 @@
-import type { PlaybackContext, PlaybackSettings, Playlist, RepeatPreset } from "@/lib/types";
+import type {
+  PlaybackContext,
+  PlaybackDebugEvent,
+  PlaybackSettings,
+  Playlist,
+  RepeatPreset,
+} from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export function isPlaylist(value: unknown): value is Playlist {
@@ -35,6 +41,34 @@ export function isPlaybackContext(value: unknown): value is PlaybackContext {
     Number.isInteger(candidate.tabId) &&
     typeof candidate.currentIndex === "number" &&
     Number.isInteger(candidate.currentIndex)
+  );
+}
+
+export function isPlaybackDebugEvent(value: unknown): value is PlaybackDebugEvent {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<PlaybackDebugEvent>;
+
+  return (
+    typeof candidate.occurredAt === "string" &&
+    (candidate.type === "clear-playback-context-by-tab" ||
+      candidate.type === "clear-playback-contexts-by-playlist" ||
+      candidate.type === "sync-playback-context-null") &&
+    typeof candidate.reason === "string" &&
+    (candidate.playlistId === null || typeof candidate.playlistId === "string") &&
+    (candidate.tabId === null ||
+      (typeof candidate.tabId === "number" && Number.isInteger(candidate.tabId))) &&
+    (candidate.videoId === null || typeof candidate.videoId === "string") &&
+    (candidate.currentIndex === null ||
+      (typeof candidate.currentIndex === "number" && Number.isInteger(candidate.currentIndex))) &&
+    (candidate.playlistVideoCount === null ||
+      (typeof candidate.playlistVideoCount === "number" &&
+        Number.isInteger(candidate.playlistVideoCount) &&
+        candidate.playlistVideoCount >= 0)) &&
+    (candidate.previousPlaybackContext === null ||
+      isPlaybackContext(candidate.previousPlaybackContext))
   );
 }
 

@@ -62,7 +62,10 @@ export async function handleWatchMessage(
       if (message.markCompleted) {
         await markStoredPlaylistCompletedByTabId(tabId);
       }
-      await clearStoredPlaybackContextByTabId(tabId);
+      await clearStoredPlaybackContextByTabId(
+        tabId,
+        message.markCompleted ? "watch-clear-after-complete" : "watch-clear",
+      );
       return {
         playbackContext: null,
         nextVideoId: null,
