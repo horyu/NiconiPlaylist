@@ -1040,7 +1040,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                             </Show>
                             <Show when={detailPlaylist.id !== props.state?.lastActivePlaylistId}>
                               <>
-                                <span class="text-stone-600">•</span>
                                 <button
                                   type="button"
                                   class={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${
