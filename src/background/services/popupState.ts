@@ -16,6 +16,7 @@ import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 export type PopupState = {
   activeTabId: number | null;
   activeTabUrl: string | null;
+  alivePlaybackContexts: PlaybackContext[];
   ownersMap: Record<string, OwnerMetadata>;
   playbackContexts: PlaybackContext[];
   playbackSettings: PlaybackSettings;
@@ -73,11 +74,12 @@ export async function getPopupState(): Promise<PopupState> {
   ]);
 
   const playlists = storageData.playlists.filter(isPlaylist);
-  const playbackContexts = await resolveAlivePlaybackContexts(
+  const playbackContexts = storageData.playbackContexts.filter(isPlaybackContext);
+  const alivePlaybackContexts = await resolveAlivePlaybackContexts(
     storageData.playbackContexts.filter(isPlaybackContext),
   );
   const visiblePlaylistIds = new Set(
-    playbackContexts.map((playbackContext) => playbackContext.playlistId),
+    alivePlaybackContexts.map((playbackContext) => playbackContext.playlistId),
   );
   const filteredPlaylists = playlists.filter(
     (playlist) =>
@@ -89,6 +91,7 @@ export async function getPopupState(): Promise<PopupState> {
   return {
     activeTabId: activeTabInfo.activeTabId,
     activeTabUrl: activeTabInfo.activeTabUrl,
+    alivePlaybackContexts,
     ownersMap: Object.fromEntries(
       Object.entries(storageData.owners).filter((entry): entry is [string, OwnerMetadata] =>
         isOwnerMetadata(entry[1]),

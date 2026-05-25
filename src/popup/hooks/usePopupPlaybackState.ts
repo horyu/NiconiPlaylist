@@ -53,7 +53,7 @@ export function createCurrentPlaybackIndex(
       return Math.max(...playlistContexts.map((context) => context.currentIndex));
     }
 
-    const playbackContext = state.playbackContexts.find(
+    const playbackContext = state.alivePlaybackContexts.find(
       (context) => context.tabId === playbackTabId,
     );
 
