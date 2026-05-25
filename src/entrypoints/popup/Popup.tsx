@@ -412,6 +412,30 @@ function Popup() {
           <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-2">
               <h1 class="text-lg font-semibold text-stone-50">NiconiPlaylist</h1>
+              <Show
+                when={showPlaybackSettings()}
+                fallback={
+                  <button
+                    type="button"
+                    onClick={() => setShowPlaybackSettings(true)}
+                    class="max-w-32 truncate rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-stone-300 transition hover:border-stone-600 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500"
+                    title="リピート設定を表示"
+                    aria-label="リピート設定を表示"
+                  >
+                    {repeatStatusLabel()}
+                  </button>
+                }
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowPlaybackSettings(false)}
+                  class="max-w-32 truncate rounded-full border border-stone-300 bg-white px-2 py-0.5 text-[10px] font-medium text-stone-900 transition hover:border-stone-200 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
+                  title="リピート設定を閉じる"
+                  aria-label="リピート設定を閉じる"
+                >
+                  {repeatStatusLabel()}
+                </button>
+              </Show>
               <button
                 type="button"
                 onClick={() => setShowMemoEditor((value) => !value)}
@@ -425,24 +449,6 @@ function Popup() {
               >
                 ✎
               </button>
-              <button
-                type="button"
-                onClick={() => setShowPlaybackSettings((value) => !value)}
-                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
-                  showPlaybackSettings()
-                    ? "border-stone-300 bg-white text-stone-900"
-                    : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
-                }`}
-                title="リピート設定を表示"
-                aria-label="リピート設定を表示"
-              >
-                ↻
-              </button>
-              <Show when={!showPlaybackSettings()}>
-                <span class="max-w-32 truncate rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-stone-300">
-                  {repeatStatusLabel()}
-                </span>
-              </Show>
             </div>
             <button
               type="button"
