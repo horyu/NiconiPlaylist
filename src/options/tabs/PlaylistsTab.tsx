@@ -53,7 +53,7 @@ type DetailDraft = {
   videoRows: DetailDraftVideoRow[];
 };
 
-type VideoInsertPosition = "append" | "prepend" | "after-current" | "before-index" | "after-index";
+type VideoInsertPosition = "append" | "prepend" | "before-index" | "after-index";
 
 type PlaylistsTabProps = {
   state: PlaylistsState | undefined;
@@ -711,19 +711,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
             switch (detailVideoInsertPosition()) {
               case "prepend":
                 return 0;
-              case "after-current": {
-                const playbackIndex = currentPlaybackIndex();
-
-                if (playbackIndex === null) {
-                  return currentLength;
-                }
-
-                const currentRowIndex = currentVideoRows.findIndex(
-                  (videoRow) => videoRow.originalIndex === playbackIndex,
-                );
-
-                return currentRowIndex >= 0 ? currentRowIndex + 1 : currentLength;
-              }
               case "before-index":
               case "after-index": {
                 const parsedIndex = Number.parseInt(detailVideoInsertIndexInput().trim(), 10);
@@ -1365,7 +1352,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                               >
                                 <option value="append">末尾に追加</option>
                                 <option value="prepend">先頭に追加</option>
-                                <option value="after-current">再生中の次に追加</option>
                                 <option value="before-index">指定位置の前に追加</option>
                                 <option value="after-index">指定位置の後に追加</option>
                               </select>
