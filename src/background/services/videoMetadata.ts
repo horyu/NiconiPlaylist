@@ -1,4 +1,7 @@
-import { fetchNvapiVideoMetadata } from "@/background/services/videoMetadataClient";
+import {
+  fetchNvapiVideoMetadata,
+  VideoMetadataFetchError,
+} from "@/background/services/videoMetadataClient";
 import { loadDevVideoMetadataRecord } from "@/background/services/videoMetadataDevSource";
 import type { VideoId } from "@/lib/types";
 import type {
@@ -15,8 +18,11 @@ import {
 } from "./videoMetadataStore";
 
 const METADATA_FETCH_INTERVAL_MS = 500;
+const METADATA_FETCH_RETRY_COOLDOWN_MS = 60_000;
 const queuedVideoIds = new Set<VideoId>();
 let isProcessingQueue = false;
+let metadataFetchSuspendedUntil = 0;
+let retryTimerId: ReturnType<typeof setTimeout> | null = null;
 
 function sleep(milliseconds: number): Promise<void> {
   return new Promise((resolve) => {
@@ -60,12 +66,38 @@ async function loadVideoMetadataRecord(watchId: VideoId): Promise<DevVideoMetada
   return fetchNvapiVideoMetadata(watchId);
 }
 
+function shouldRetryVideoMetadataFetch(error: unknown): boolean {
+  if (error instanceof VideoMetadataFetchError) {
+    return error.options.retryable;
+  }
+
+  return error instanceof TypeError || error instanceof SyntaxError;
+}
+
+function scheduleQueuedVideoMetadataProcessing(delayMs: number): void {
+  if (retryTimerId !== null) {
+    clearTimeout(retryTimerId);
+  }
+
+  retryTimerId = setTimeout(() => {
+    retryTimerId = null;
+    void processQueuedVideoMetadata();
+  }, delayMs);
+}
+
 export async function ensureVideoMetadataForVideoIds(videoIds: VideoId[]): Promise<void> {
   enqueueVideoMetadataForVideoIds(videoIds);
 }
 
 async function processQueuedVideoMetadata(): Promise<void> {
   if (isProcessingQueue) {
+    return;
+  }
+
+  const suspendedForMs = metadataFetchSuspendedUntil - Date.now();
+
+  if (suspendedForMs > 0) {
+    scheduleQueuedVideoMetadataProcessing(suspendedForMs);
     return;
   }
 
@@ -82,7 +114,28 @@ async function processQueuedVideoMetadata(): Promise<void> {
         continue;
       }
 
-      const record = await loadVideoMetadataRecord(videoId);
+      let record: DevVideoMetadataRecord;
+
+      try {
+        record = await loadVideoMetadataRecord(videoId);
+      } catch (error) {
+        if (shouldRetryVideoMetadataFetch(error)) {
+          queuedVideoIds.add(videoId);
+          metadataFetchSuspendedUntil = Date.now() + METADATA_FETCH_RETRY_COOLDOWN_MS;
+          console.warn("NiconiPlaylist video metadata fetch temporarily failed.", {
+            error,
+            retryAfterMs: METADATA_FETCH_RETRY_COOLDOWN_MS,
+            videoId,
+          });
+          break;
+        }
+
+        console.error("NiconiPlaylist video metadata fetch permanently failed.", {
+          error,
+          videoId,
+        });
+        continue;
+      }
 
       if (record.kind === "found") {
         const [videoMetadataMap, ownersMap] = await Promise.all([
@@ -113,7 +166,13 @@ async function processQueuedVideoMetadata(): Promise<void> {
     isProcessingQueue = false;
 
     if (queuedVideoIds.size > 0) {
-      void processQueuedVideoMetadata();
+      const nextDelayMs = Math.max(0, metadataFetchSuspendedUntil - Date.now());
+
+      if (nextDelayMs > 0) {
+        scheduleQueuedVideoMetadataProcessing(nextDelayMs);
+      } else {
+        void processQueuedVideoMetadata();
+      }
     }
   }
 }

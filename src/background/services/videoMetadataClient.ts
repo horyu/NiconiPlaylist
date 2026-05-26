@@ -2,6 +2,20 @@ import { appendNvapiClientMarker, NVAPI_VIDEOS_ENDPOINT } from "@/background/ser
 import type { VideoId } from "@/lib/types";
 import type { DevVideoMetadataRecord } from "@/lib/videoMetadataTypes";
 
+export class VideoMetadataFetchError extends Error {
+  constructor(
+    message: string,
+    readonly options: {
+      status: number | null;
+      retryable: boolean;
+      watchId: VideoId;
+    },
+  ) {
+    super(message);
+    this.name = "VideoMetadataFetchError";
+  }
+}
+
 export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVideoMetadataRecord> {
   const url = new URL(NVAPI_VIDEOS_ENDPOINT);
   url.searchParams.set("watchIds", watchId);
@@ -16,10 +30,14 @@ export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVide
   });
 
   if (!response.ok) {
-    throw new Error(`動画情報の取得に失敗しました: ${response.status}`);
+    throw new VideoMetadataFetchError(`動画情報の取得に失敗しました: ${response.status}`, {
+      status: response.status,
+      retryable: response.status === 429 || response.status >= 500,
+      watchId,
+    });
   }
 
-  const payload = (await response.json()) as {
+  let payload: {
     data?: {
       items?: Array<{
         watchId: string;
@@ -43,6 +61,17 @@ export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVide
       }>;
     };
   };
+
+  try {
+    payload = (await response.json()) as typeof payload;
+  } catch {
+    throw new VideoMetadataFetchError("動画情報の応答を読み取れませんでした。", {
+      status: response.status,
+      retryable: true,
+      watchId,
+    });
+  }
+
   const item = payload.data?.items?.find((candidate) => candidate.watchId === watchId);
   const video = item?.video;
 
