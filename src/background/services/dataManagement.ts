@@ -1,5 +1,6 @@
 import { browser } from "wxt/browser";
 
+import { isWatchUrl } from "@/lib/nicovideoUrl";
 import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import {
   isOwnerMetadata,
@@ -10,8 +11,10 @@ import {
   isVideoMetadata,
 } from "@/lib/typeGuards";
 
+import { clearStoredPlaybackContextsByPlaylistId } from "./playlistStore";
 import {
   getDefaultStorageData,
+  getStorageData,
   getRawStorageData,
   type StorageDataByKey,
   setStorageData,
@@ -170,6 +173,102 @@ export async function cleanupOrphanedStoredData(): Promise<{
     removedOwnerCount: Object.keys(currentOwners).length - Object.keys(nextOwners).length,
     removedVideoMetadataCount:
       Object.keys(currentVideoMetadata).length - Object.keys(nextVideoMetadata).length,
+  };
+}
+
+type StalePlaybackCleanupCandidate = {
+  playlistId: string;
+  playlistTitle: string;
+  lastPlayedAt: string;
+};
+
+async function resolveAlivePlaybackTabIds(
+  playbackContexts: StorageDataByKey["playbackContexts"],
+): Promise<Set<number>> {
+  const settledTabs = await Promise.allSettled(
+    playbackContexts.map(async (playbackContext) => {
+      const tab = await browser.tabs.get(playbackContext.tabId);
+
+      if (!isWatchUrl(tab.url)) {
+        return null;
+      }
+
+      return playbackContext.tabId;
+    }),
+  );
+
+  return new Set(
+    settledTabs.flatMap((result) =>
+      result.status === "fulfilled" && typeof result.value === "number" ? [result.value] : [],
+    ),
+  );
+}
+
+async function findStalePlaybackCleanupCandidates(
+  olderThanDays: number,
+): Promise<StalePlaybackCleanupCandidate[]> {
+  const normalizedDays = Math.max(1, Math.trunc(olderThanDays));
+  const [playlists, playbackContexts] = await Promise.all([
+    getStorageData(["playlists"]).then((data) => data.playlists.filter(isPlaylist)),
+    getStorageData(["playbackContexts"]).then((data) =>
+      data.playbackContexts.filter(isPlaybackContext),
+    ),
+  ]);
+  const aliveTabIds = await resolveAlivePlaybackTabIds(playbackContexts);
+  const cutoffTime = Date.now() - normalizedDays * 24 * 60 * 60 * 1000;
+  const stalePlaylistIds = new Set(
+    playbackContexts
+      .filter((playbackContext) => !aliveTabIds.has(playbackContext.tabId))
+      .map((playbackContext) => playbackContext.playlistId),
+  );
+
+  return playlists
+    .filter((playlist) => {
+      if (!stalePlaylistIds.has(playlist.id) || !playlist.lastPlayedAt) {
+        return false;
+      }
+
+      const lastPlayedTime = Date.parse(playlist.lastPlayedAt);
+
+      return Number.isFinite(lastPlayedTime) && lastPlayedTime < cutoffTime;
+    })
+    .map((playlist) => ({
+      playlistId: playlist.id,
+      playlistTitle: playlist.title?.trim() || "(無題)",
+      lastPlayedAt: playlist.lastPlayedAt!,
+    }));
+}
+
+export async function previewStalePlaybackCleanup(olderThanDays: number): Promise<{
+  candidates: StalePlaybackCleanupCandidate[];
+}> {
+  return {
+    candidates: await findStalePlaybackCleanupCandidates(olderThanDays),
+  };
+}
+
+export async function cleanupStalePlaybackContexts(olderThanDays: number): Promise<{
+  removedPlaylistCount: number;
+}> {
+  const candidates = await findStalePlaybackCleanupCandidates(olderThanDays);
+
+  if (candidates.length === 0) {
+    return {
+      removedPlaylistCount: 0,
+    };
+  }
+
+  await Promise.all(
+    candidates.map((candidate) =>
+      clearStoredPlaybackContextsByPlaylistId(
+        candidate.playlistId,
+        `manual-stale-cleanup:${olderThanDays}d`,
+      ),
+    ),
+  );
+
+  return {
+    removedPlaylistCount: candidates.length,
   };
 }
 

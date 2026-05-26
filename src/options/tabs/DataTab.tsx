@@ -1,11 +1,13 @@
-import { createSignal, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, onCleanup, onMount } from "solid-js";
 
 import {
+  cleanupStalePlaybackContexts,
   cleanupOrphanedStoredData,
   clearAllStoredData,
   exportStorageData,
   getStorageUsageBytes,
   importStorageData,
+  previewStalePlaybackCleanup,
 } from "@/background/services/dataManagement";
 import { formatCompactTimestamp } from "@/lib/dateTime";
 import type { OptionsToast } from "@/options/toast";
@@ -29,7 +31,19 @@ export function DataTab(props: DataTabProps) {
   const [exporting, setExporting] = createSignal(false);
   const [importing, setImporting] = createSignal(false);
   const [cleaningUp, setCleaningUp] = createSignal(false);
+  const [cleaningUpPlayback, setCleaningUpPlayback] = createSignal(false);
+  const [stalePlaybackDays, setStalePlaybackDays] = createSignal("30");
   let importFileInput: HTMLInputElement | undefined;
+
+  function parseStalePlaybackDays(): number {
+    const parsed = Number.parseInt(stalePlaybackDays().trim(), 10);
+
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new Error("プレイリスト再生再開情報の削除日数は 1 以上の整数で指定してください。");
+    }
+
+    return parsed;
+  }
 
   async function refreshStorageUsage() {
     try {
@@ -165,6 +179,55 @@ export function DataTab(props: DataTabProps) {
     }
   }
 
+  async function handleCleanupStalePlayback() {
+    props.onFeedback(null);
+    setCleaningUpPlayback(true);
+
+    try {
+      const olderThanDays = parseStalePlaybackDays();
+      const { candidates } = await previewStalePlaybackCleanup(olderThanDays);
+
+      if (candidates.length === 0) {
+        props.onFeedback({
+          text: `${olderThanDays} 日より前の古いプレイリスト再生再開情報は見つかりませんでした。`,
+          tone: "success",
+        });
+        return;
+      }
+
+      const confirmed = window.confirm(
+        [
+          `${olderThanDays} 日より前に再生され、現在タブが残っていないプレイリスト再生再開情報を削除します。`,
+          "",
+          "対象プレイリスト:",
+          ...candidates.map((candidate) => `- ${candidate.playlistTitle}`),
+        ].join("\n"),
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const result = await cleanupStalePlaybackContexts(olderThanDays);
+      await props.onUpdated();
+      await refreshStorageUsage();
+      props.onFeedback({
+        text: `古いプレイリスト再生再開情報を ${result.removedPlaylistCount} 件削除しました。`,
+        tone: "success",
+      });
+    } catch (error) {
+      props.onFeedback({
+        text:
+          error instanceof Error
+            ? error.message
+            : "古いプレイリスト再生再開情報の削除に失敗しました。",
+        tone: "error",
+      });
+    } finally {
+      setCleaningUpPlayback(false);
+    }
+  }
+
   onCleanup(() => {
     if (importFileInput) {
       importFileInput.value = "";
@@ -221,13 +284,53 @@ export function DataTab(props: DataTabProps) {
 
         <div class="space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
           <div class="space-y-1">
-            <h3 class="text-sm font-semibold text-stone-200">クリーンアップ・削除</h3>
-            <p class="text-sm text-stone-400">
-              孤立した動画 / 投稿者データの削除と、全データ削除を行います。
-            </p>
+            <h3 class="text-sm font-semibold text-stone-200">クリーンアップ</h3>
           </div>
 
-          <div class="flex flex-wrap gap-2">
+          <div class="space-y-2 rounded-xl border border-stone-800 bg-stone-900/40 p-3">
+            <div class="space-y-1">
+              <h4 class="text-sm font-medium text-stone-200">再生再開情報削除</h4>
+              <p class="text-sm text-stone-400">
+                最終再生が指定日数より前のプレイリスト再生再開情報を削除します。
+                再生タブが残っているものは対象外です。
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="text-sm text-stone-300" for="stale-playback-days">
+                最終再生が
+              </label>
+              <input
+                id="stale-playback-days"
+                type="number"
+                min="1"
+                step="1"
+                inputmode="numeric"
+                value={stalePlaybackDays()}
+                onInput={(event) => setStalePlaybackDays(event.currentTarget.value)}
+                class="w-20 rounded-full border border-stone-700 bg-stone-950 px-3 py-1 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+              />
+              <span class="text-sm text-stone-400">日より前</span>
+              <span aria-hidden="true" class="text-sm text-stone-600">
+                ・
+              </span>
+              <button
+                type="button"
+                onClick={() => void handleCleanupStalePlayback()}
+                disabled={cleaningUpPlayback()}
+                class="rounded-full border border-stone-600 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+              >
+                再生再開情報削除
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-2 rounded-xl border border-stone-800 bg-stone-900/40 p-3">
+            <div class="space-y-1">
+              <h4 class="text-sm font-medium text-stone-200">孤立データ削除</h4>
+              <p class="text-sm text-stone-400">
+                どのプレイリストからも参照されていない動画メタデータと投稿者データを削除します。
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => void handleCleanup()}
@@ -236,6 +339,18 @@ export function DataTab(props: DataTabProps) {
             >
               孤立データ削除
             </button>
+          </div>
+        </div>
+
+        <div class="space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
+          <div class="space-y-1">
+            <h3 class="text-sm font-semibold text-red-200">全データ削除</h3>
+            <p class="text-sm text-stone-400">
+              保存済みプレイリスト、再生設定、プレイリストの再生再開情報、動画メタデータ、投稿者データをすべて削除します。
+            </p>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => void handleDeleteAll()}
@@ -245,10 +360,6 @@ export function DataTab(props: DataTabProps) {
               全データ削除
             </button>
           </div>
-
-          <Show when={deletingAll() || cleaningUp() || exporting() || importing()}>
-            <p class="text-sm text-stone-500">処理中...</p>
-          </Show>
         </div>
       </div>
     </section>
