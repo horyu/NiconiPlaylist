@@ -219,7 +219,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
             </label>
             <div class="grid gap-4">
               <label class="block space-y-2">
-                <span class="text-sm font-medium text-stone-200">title</span>
+                <span class="text-sm font-medium text-stone-200">タイトル</span>
                 <input
                   type="text"
                   class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
@@ -233,7 +233,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
               </label>
 
               <label class="block space-y-2">
-                <span class="text-sm font-medium text-stone-200">memo</span>
+                <span class="text-sm font-medium text-stone-200">メモ</span>
                 <input
                   type="text"
                   class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
