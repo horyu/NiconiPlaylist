@@ -39,7 +39,7 @@ export function DataTab(props: DataTabProps) {
     const parsed = Number.parseInt(stalePlaybackDays().trim(), 10);
 
     if (!Number.isInteger(parsed) || parsed < 1) {
-      throw new Error("プレイリスト再生再開情報の削除日数は 1 以上の整数で指定してください。");
+      throw new Error("プレイリスト再生状態データの削除日数は 1 以上の整数で指定してください。");
     }
 
     return parsed;
@@ -189,7 +189,7 @@ export function DataTab(props: DataTabProps) {
 
       if (candidates.length === 0) {
         props.onFeedback({
-          text: `${olderThanDays} 日より前の古いプレイリスト再生再開情報は見つかりませんでした。`,
+          text: `${olderThanDays} 日より前の古いプレイリスト再生状態データは見つかりませんでした。`,
           tone: "success",
         });
         return;
@@ -197,7 +197,7 @@ export function DataTab(props: DataTabProps) {
 
       const confirmed = window.confirm(
         [
-          `${olderThanDays} 日より前に再生され、現在タブが残っていないプレイリスト再生再開情報を削除します。`,
+          `${olderThanDays} 日より前に再生され、現在タブが残っていないプレイリスト再生状態データを削除します。`,
           "",
           "対象プレイリスト:",
           ...candidates.map((candidate) => `- ${candidate.playlistTitle}`),
@@ -212,7 +212,7 @@ export function DataTab(props: DataTabProps) {
       await props.onUpdated();
       await refreshStorageUsage();
       props.onFeedback({
-        text: `古いプレイリスト再生再開情報を ${result.removedPlaylistCount} 件削除しました。`,
+        text: `古いプレイリスト再生状態データを ${result.removedPlaylistCount} 件削除しました。`,
         tone: "success",
       });
     } catch (error) {
@@ -220,7 +220,7 @@ export function DataTab(props: DataTabProps) {
         text:
           error instanceof Error
             ? error.message
-            : "古いプレイリスト再生再開情報の削除に失敗しました。",
+            : "古いプレイリスト再生状態データの削除に失敗しました。",
         tone: "error",
       });
     } finally {
@@ -289,9 +289,9 @@ export function DataTab(props: DataTabProps) {
 
           <div class="space-y-2 rounded-xl border border-stone-800 bg-stone-900/40 p-3">
             <div class="space-y-1">
-              <h4 class="text-sm font-medium text-stone-200">再生再開情報削除</h4>
+              <h4 class="text-sm font-medium text-stone-200">再生状態データ削除</h4>
               <p class="text-sm text-stone-400">
-                最終再生が指定日数より前のプレイリスト再生再開情報を削除します。
+                最終再生が指定日数より前のプレイリスト再生状態データを削除します。
                 再生タブが残っているものは対象外です。
               </p>
             </div>
@@ -319,7 +319,7 @@ export function DataTab(props: DataTabProps) {
                 disabled={cleaningUpPlayback()}
                 class="rounded-full border border-stone-600 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
               >
-                再生再開情報削除
+                再生状態データ削除
               </button>
             </div>
           </div>
@@ -346,7 +346,7 @@ export function DataTab(props: DataTabProps) {
           <div class="space-y-1">
             <h3 class="text-sm font-semibold text-red-200">全データ削除</h3>
             <p class="text-sm text-stone-400">
-              保存済みプレイリスト、再生設定、プレイリストの再生再開情報、動画メタデータ、投稿者データをすべて削除します。
+              保存済みプレイリスト、再生設定、プレイリストの再生状態データ、動画メタデータ、投稿者データをすべて削除します。
             </p>
           </div>
 
