@@ -128,8 +128,8 @@ function Popup() {
     playbackTabId,
   );
   const activePlaylistVideoCount = () => activePlaylist()?.videoIds.length ?? 0;
-  const isPlaylistPlaying = (playlistId: PlaylistId) =>
-    aliveTabIdByPlaylistId()[playlistId] !== undefined;
+  const hasPlaylistPlaybackContext = (playlistId: PlaylistId) =>
+    (popupState()?.playbackContexts ?? []).some((context) => context.playlistId === playlistId);
   const currentPlaybackSettings = () =>
     playbackSettingsDraft() ?? popupState()?.playbackSettings ?? null;
   const perVideoRepeatStatusLabel = createMemo(() => {
@@ -546,7 +546,10 @@ function Popup() {
                     <For each={selectablePlaylists()}>
                       {(playlist) => (
                         <option value={playlist.id}>
-                          {formatPlaylistOptionLabel(playlist, isPlaylistPlaying(playlist.id))}
+                          {formatPlaylistOptionLabel(
+                            playlist,
+                            hasPlaylistPlaybackContext(playlist.id),
+                          )}
                         </option>
                       )}
                     </For>
