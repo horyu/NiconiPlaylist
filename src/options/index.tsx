@@ -7,15 +7,17 @@ import { DirectInputCreateSection } from "@/options/tabs/DirectInputCreateSectio
 import { ImportSection } from "@/options/tabs/ImportSection";
 import { PlaylistsTab } from "@/options/tabs/PlaylistsTab";
 import { RepeatSettingsTab } from "@/options/tabs/RepeatSettingsTab";
+import { VideosTab } from "@/options/tabs/VideosTab";
 import type { OptionsToast } from "@/options/toast";
 
-type TabKey = "import" | "create" | "playlists" | "repeat" | "data";
+type TabKey = "import" | "create" | "playlists" | "repeat" | "videos" | "data";
 
 const TAB_LABELS: { key: TabKey; label: string }[] = [
   { key: "playlists", label: "プレイリスト" },
   { key: "import", label: "インポート" },
   { key: "create", label: "作成" },
   { key: "repeat", label: "再生" },
+  { key: "videos", label: "動画" },
   { key: "data", label: "データ" },
 ];
 
@@ -135,6 +137,15 @@ export default function OptionsPage() {
 
           <Match when={activeTab() === "data"}>
             <DataTab onFeedback={setToast} onUpdated={refreshState} />
+          </Match>
+
+          <Match when={activeTab() === "videos"}>
+            <VideosTab
+              state={state()}
+              videoMetadataState={videoMetadataState()}
+              loading={state.loading || videoMetadataState.loading}
+              error={state.error ?? videoMetadataState.error}
+            />
           </Match>
         </Switch>
       </div>
