@@ -391,7 +391,7 @@ export function VideosTab(props: VideosTabProps) {
                             </a>
                           </td>
                           <td class="border-t border-stone-800 px-4 py-4">
-                            <p class="line-clamp-2 font-medium text-stone-100">
+                            <p class="line-clamp-3 font-medium text-stone-100">
                               {row.videoMetadata?.title ?? "未取得"}
                             </p>
                           </td>
