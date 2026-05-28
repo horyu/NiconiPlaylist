@@ -35,6 +35,37 @@ function formatDuration(duration: number | null | undefined): string {
   return `${minutes}:${seconds}`;
 }
 
+function ClearableFilterInput(props: {
+  list?: string;
+  onClear: () => void;
+  onInput: (value: string) => void;
+  placeholder: string;
+  value: string;
+}) {
+  return (
+    <div class="relative min-w-0">
+      <input
+        type="text"
+        list={props.list}
+        value={props.value}
+        onInput={(event) => props.onInput(event.currentTarget.value)}
+        placeholder={props.placeholder}
+        class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-stone-600"
+      />
+      <Show when={props.value.trim() !== ""}>
+        <button
+          type="button"
+          onClick={() => props.onClear()}
+          class="absolute right-3.5 top-1/2 z-10 -translate-y-1/2 bg-stone-950 px-1 text-base leading-none text-stone-500 transition hover:text-stone-200"
+          aria-label="入力をクリア"
+        >
+          ×
+        </button>
+      </Show>
+    </div>
+  );
+}
+
 function compareVideoRows(left: VideoRow, right: VideoRow): number {
   const leftTitle = left.videoMetadata?.title ?? left.videoId;
   const rightTitle = right.videoMetadata?.title ?? right.videoId;
@@ -95,8 +126,79 @@ function buildVideoRows(
 
 export function VideosTab(props: VideosTabProps) {
   const [allExpanded, setAllExpanded] = createSignal(true);
+  const [titleQuery, setTitleQuery] = createSignal("");
+  const [watchIdQuery, setWatchIdQuery] = createSignal("");
+  const [ownerQuery, setOwnerQuery] = createSignal("");
+  const [playlistQuery, setPlaylistQuery] = createSignal("");
+  const [selectedMetadataFilter, setSelectedMetadataFilter] = createSignal<
+    "all" | "with" | "without"
+  >("all");
   const [toggledVideoIds, setToggledVideoIds] = createSignal<Set<VideoId>>(new Set());
   const videoRows = createMemo(() => buildVideoRows(props.state, props.videoMetadataState));
+  const ownerOptions = createMemo(() =>
+    [
+      ...new Set(
+        videoRows()
+          .map((row) => row.ownerMetadata?.name?.trim())
+          .filter((name): name is string => Boolean(name && name.length > 0)),
+      ),
+    ].sort((left, right) => left.localeCompare(right, "ja")),
+  );
+  const playlistOptions = createMemo(() =>
+    [
+      ...new Set(
+        (props.state?.playlists ?? [])
+          .map((playlist) => playlist.title?.trim() || "(無題)")
+          .filter((title): title is string => title.length > 0),
+      ),
+    ].sort((left, right) => left.localeCompare(right, "ja")),
+  );
+  const filteredVideoRows = createMemo(() => {
+    const normalizedTitleQuery = titleQuery().trim().toLocaleLowerCase();
+    const normalizedWatchIdQuery = watchIdQuery().trim().toLocaleLowerCase();
+    const normalizedOwnerQuery = ownerQuery().trim().toLocaleLowerCase();
+    const normalizedPlaylistQuery = playlistQuery().trim().toLocaleLowerCase();
+    const metadataFilter = selectedMetadataFilter();
+
+    return videoRows().filter((row) => {
+      if (metadataFilter === "with" && row.videoMetadata === undefined) {
+        return false;
+      }
+
+      if (metadataFilter === "without" && row.videoMetadata !== undefined) {
+        return false;
+      }
+
+      const title = row.videoMetadata?.title?.toLocaleLowerCase() ?? "";
+      const ownerName = row.ownerMetadata?.name?.toLocaleLowerCase() ?? "";
+
+      if (normalizedTitleQuery !== "" && !title.includes(normalizedTitleQuery)) {
+        return false;
+      }
+
+      if (
+        normalizedWatchIdQuery !== "" &&
+        !row.videoId.toLocaleLowerCase().includes(normalizedWatchIdQuery)
+      ) {
+        return false;
+      }
+
+      if (normalizedOwnerQuery !== "" && !ownerName.includes(normalizedOwnerQuery)) {
+        return false;
+      }
+
+      if (
+        normalizedPlaylistQuery !== "" &&
+        !row.memberships.some((membership) =>
+          membership.playlistTitle.toLocaleLowerCase().includes(normalizedPlaylistQuery),
+        )
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  });
 
   function isRowExpanded(videoId: VideoId): boolean {
     return allExpanded() ? !toggledVideoIds().has(videoId) : toggledVideoIds().has(videoId);
@@ -142,18 +244,94 @@ export function VideosTab(props: VideosTabProps) {
       </Show>
 
       <div class="rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-stone-800 pb-4">
-          <button
-            type="button"
-            onClick={toggleAllExpansions}
-            disabled={videoRows().length === 0}
-            class="rounded-full border border-stone-700 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
-          >
-            {allExpanded() ? "プレイリストを全て折りたたむ" : "プレイリストを全て展開"}
-          </button>
-          <p class="text-sm text-stone-400">
-            <span class="font-medium text-stone-200">{videoRows().length}</span> 件
-          </p>
+        <div class="space-y-4 border-b border-stone-800 pb-4">
+          <div class="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)_minmax(12rem,1fr)_minmax(10rem,0.7fr)]">
+            <label class="min-w-0 space-y-2">
+              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                タイトル
+              </span>
+              <ClearableFilterInput
+                value={titleQuery()}
+                onInput={setTitleQuery}
+                onClear={() => setTitleQuery("")}
+                placeholder="タイトルで検索"
+              />
+            </label>
+            <label class="min-w-0 space-y-2">
+              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                watchId
+              </span>
+              <ClearableFilterInput
+                value={watchIdQuery()}
+                onInput={setWatchIdQuery}
+                onClear={() => setWatchIdQuery("")}
+                placeholder="watchIdで検索"
+              />
+            </label>
+            <label class="min-w-0 space-y-2">
+              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                投稿者
+              </span>
+              <ClearableFilterInput
+                list="np-video-owner-list"
+                value={ownerQuery()}
+                onInput={setOwnerQuery}
+                onClear={() => setOwnerQuery("")}
+                placeholder="投稿者で検索"
+              />
+              <datalist id="np-video-owner-list">
+                <For each={ownerOptions()}>{(ownerName) => <option value={ownerName} />}</For>
+              </datalist>
+            </label>
+            <label class="min-w-0 space-y-2">
+              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                Playlist
+              </span>
+              <ClearableFilterInput
+                list="np-video-playlist-list"
+                value={playlistQuery()}
+                onInput={setPlaylistQuery}
+                onClear={() => setPlaylistQuery("")}
+                placeholder="プレイリストで検索"
+              />
+              <datalist id="np-video-playlist-list">
+                <For each={playlistOptions()}>
+                  {(playlistTitle) => <option value={playlistTitle} />}
+                </For>
+              </datalist>
+            </label>
+            <label class="min-w-0 space-y-2">
+              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                メタデータ
+              </span>
+              <select
+                value={selectedMetadataFilter()}
+                onChange={(event) =>
+                  setSelectedMetadataFilter(event.currentTarget.value as "all" | "with" | "without")
+                }
+                class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
+              >
+                <option value="all">すべて</option>
+                <option value="with">取得済みのみ</option>
+                <option value="without">未取得のみ</option>
+              </select>
+            </label>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={toggleAllExpansions}
+              disabled={videoRows().length === 0}
+              class="rounded-full border border-stone-700 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+            >
+              {allExpanded() ? "プレイリストを全て折りたたむ" : "プレイリストを全て展開"}
+            </button>
+            <p class="text-sm text-stone-400">
+              <span class="font-medium text-stone-200">{filteredVideoRows().length}</span>
+              <span class="text-stone-500"> / </span>
+              <span class="font-medium text-stone-200">{videoRows().length}</span> 件
+            </p>
+          </div>
         </div>
 
         <Show
@@ -161,8 +339,14 @@ export function VideosTab(props: VideosTabProps) {
           fallback={<p class="py-6 text-sm text-stone-500">読み込み中...</p>}
         >
           <Show
-            when={videoRows().length > 0}
-            fallback={<p class="py-6 text-sm text-stone-500">表示できる動画がありません。</p>}
+            when={filteredVideoRows().length > 0}
+            fallback={
+              <p class="py-6 text-sm text-stone-500">
+                {videoRows().length > 0
+                  ? "条件に一致する動画がありません。"
+                  : "表示できる動画がありません。"}
+              </p>
+            }
           >
             <div class="overflow-x-auto pt-4">
               <table class="min-w-full table-fixed border-separate border-spacing-0 overflow-hidden rounded-2xl border border-stone-800">
@@ -178,7 +362,7 @@ export function VideosTab(props: VideosTabProps) {
                   </tr>
                 </thead>
                 <tbody class="bg-stone-950/40">
-                  <For each={videoRows()}>
+                  <For each={filteredVideoRows()}>
                     {(row, index) => {
                       const thumbnailUrl =
                         row.videoMetadata?.thumbnail.listingUrl ?? row.videoMetadata?.thumbnail.url;
