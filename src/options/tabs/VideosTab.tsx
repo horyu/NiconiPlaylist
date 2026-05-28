@@ -224,7 +224,7 @@ export function VideosTab(props: VideosTabProps) {
   }
 
   return (
-    <section class="space-y-6">
+    <section class="space-y-6 rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <header class="space-y-1">
         <h2 class="text-lg font-semibold text-stone-50">動画</h2>
         <p class="text-sm text-stone-400">
@@ -412,8 +412,8 @@ export function VideosTab(props: VideosTabProps) {
                                 class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
                               >
                                 {isRowExpanded(row.videoId)
-                                  ? `playlist ${row.memberships.length}件を折りたたむ`
-                                  : `playlist ${row.memberships.length}件を表示`}
+                                  ? `プレイリスト ${row.memberships.length}件を折りたたむ`
+                                  : `プレイリスト ${row.memberships.length}件を表示`}
                               </button>
                               <Show when={isRowExpanded(row.videoId)}>
                                 <ul class="space-y-2">
