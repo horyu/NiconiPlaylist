@@ -25,6 +25,9 @@ type VideosTabProps = {
   videoMetadataState: VideoMetadataState | undefined;
 };
 
+type VideoSortKey = "duration" | "owner" | "playlist-count" | "title" | "watch-id";
+type SortOrder = "asc" | "desc";
+
 function formatDuration(duration: number | null | undefined): string {
   if (duration === null || duration === undefined) {
     return "--:--";
@@ -79,6 +82,46 @@ function compareVideoRows(left: VideoRow, right: VideoRow): number {
   return left.videoId.localeCompare(right.videoId, "ja");
 }
 
+function compareNullableNumbers(
+  left: number | null | undefined,
+  right: number | null | undefined,
+): number {
+  if (left === right) {
+    return 0;
+  }
+
+  if (left === null || left === undefined) {
+    return 1;
+  }
+
+  if (right === null || right === undefined) {
+    return -1;
+  }
+
+  return left - right;
+}
+
+function compareBySortKey(left: VideoRow, right: VideoRow, sortKey: VideoSortKey): number {
+  switch (sortKey) {
+    case "title":
+      return compareVideoRows(left, right);
+    case "watch-id":
+      return left.videoId.localeCompare(right.videoId, "ja") || compareVideoRows(left, right);
+    case "owner":
+      return (
+        (left.ownerMetadata?.name ?? "").localeCompare(right.ownerMetadata?.name ?? "", "ja") ||
+        compareVideoRows(left, right)
+      );
+    case "playlist-count":
+      return left.memberships.length - right.memberships.length || compareVideoRows(left, right);
+    case "duration":
+      return (
+        compareNullableNumbers(left.videoMetadata?.duration, right.videoMetadata?.duration) ||
+        compareVideoRows(left, right)
+      );
+  }
+}
+
 function buildVideoRows(
   playlistsState: PlaylistsState | undefined,
   videoMetadataState: VideoMetadataState | undefined,
@@ -127,6 +170,8 @@ function buildVideoRows(
 
 export function VideosTab(props: VideosTabProps) {
   const [allExpanded, setAllExpanded] = createSignal(true);
+  const [sortKey, setSortKey] = createSignal<VideoSortKey>("title");
+  const [sortOrder, setSortOrder] = createSignal<SortOrder>("asc");
   const [titleQuery, setTitleQuery] = createSignal("");
   const [watchIdQuery, setWatchIdQuery] = createSignal("");
   const [ownerQuery, setOwnerQuery] = createSignal("");
@@ -200,6 +245,14 @@ export function VideosTab(props: VideosTabProps) {
       return true;
     });
   });
+  const sortedFilteredVideoRows = createMemo(() => {
+    const key = sortKey();
+    const direction = sortOrder() === "asc" ? 1 : -1;
+
+    return filteredVideoRows()
+      .slice()
+      .sort((left, right) => compareBySortKey(left, right, key) * direction);
+  });
 
   function isRowExpanded(videoId: VideoId): boolean {
     return allExpanded() ? !toggledVideoIds().has(videoId) : toggledVideoIds().has(videoId);
@@ -246,7 +299,7 @@ export function VideosTab(props: VideosTabProps) {
 
       <div class="rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
         <div class="space-y-4 border-b border-stone-800 pb-4">
-          <div class="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)_minmax(12rem,1fr)_minmax(10rem,0.7fr)]">
+          <div class="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)_minmax(12rem,1fr)_minmax(10rem,0.7fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)]">
             <label class="min-w-0 space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 タイトル
@@ -317,6 +370,34 @@ export function VideosTab(props: VideosTabProps) {
                 <option value="without">未取得のみ</option>
               </select>
             </label>
+            <label class="min-w-0 space-y-2">
+              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                ソート
+              </span>
+              <select
+                value={sortKey()}
+                onChange={(event) => setSortKey(event.currentTarget.value as VideoSortKey)}
+                class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
+              >
+                <option value="title">タイトル</option>
+                <option value="duration">再生時間</option>
+                <option value="watch-id">watchId</option>
+                <option value="owner">投稿者</option>
+                <option value="playlist-count">playlist件数</option>
+              </select>
+            </label>
+            <div class="min-w-0 space-y-2">
+              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                順序
+              </span>
+              <button
+                type="button"
+                onClick={() => setSortOrder((current) => (current === "asc" ? "desc" : "asc"))}
+                class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-left text-sm text-stone-100 outline-none transition hover:border-stone-700 hover:bg-stone-900 focus:border-stone-600"
+              >
+                {sortOrder() === "asc" ? "昇順" : "降順"}
+              </button>
+            </div>
           </div>
           <div class="flex flex-wrap items-center justify-between gap-3">
             <button
@@ -328,7 +409,7 @@ export function VideosTab(props: VideosTabProps) {
               {allExpanded() ? "プレイリストを全て折りたたむ" : "プレイリストを全て展開"}
             </button>
             <p class="text-sm text-stone-400">
-              <span class="font-medium text-stone-200">{filteredVideoRows().length}</span>
+              <span class="font-medium text-stone-200">{sortedFilteredVideoRows().length}</span>
               <span class="text-stone-500"> / </span>
               <span class="font-medium text-stone-200">{videoRows().length}</span> 件
             </p>
@@ -340,7 +421,7 @@ export function VideosTab(props: VideosTabProps) {
           fallback={<p class="py-6 text-sm text-stone-500">読み込み中...</p>}
         >
           <Show
-            when={filteredVideoRows().length > 0}
+            when={sortedFilteredVideoRows().length > 0}
             fallback={
               <p class="py-6 text-sm text-stone-500">
                 {videoRows().length > 0
@@ -363,7 +444,7 @@ export function VideosTab(props: VideosTabProps) {
                   </tr>
                 </thead>
                 <tbody class="bg-stone-950/40">
-                  <For each={filteredVideoRows()}>
+                  <For each={sortedFilteredVideoRows()}>
                     {(row, index) => {
                       const thumbnailUrl =
                         row.videoMetadata?.thumbnail.listingUrl ?? row.videoMetadata?.thumbnail.url;
