@@ -299,8 +299,8 @@ export function VideosTab(props: VideosTabProps) {
 
       <div class="rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
         <div class="space-y-4 border-b border-stone-800 pb-4">
-          <div class="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(10rem,0.85fr)_minmax(10rem,0.85fr)_minmax(12rem,1fr)_minmax(10rem,0.7fr)_minmax(10rem,0.8fr)_minmax(8rem,0.6fr)]">
-            <label class="min-w-0 space-y-2">
+          <div class="flex flex-wrap gap-3">
+            <label class="min-w-[12rem] flex-1 space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 タイトル
               </span>
@@ -311,7 +311,7 @@ export function VideosTab(props: VideosTabProps) {
                 placeholder="タイトルで検索"
               />
             </label>
-            <label class="min-w-0 space-y-2">
+            <label class="min-w-[10rem] flex-1 space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 watchId
               </span>
@@ -322,7 +322,7 @@ export function VideosTab(props: VideosTabProps) {
                 placeholder="watchIdで検索"
               />
             </label>
-            <label class="min-w-0 space-y-2">
+            <label class="min-w-[10rem] flex-1 space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 投稿者
               </span>
@@ -337,7 +337,7 @@ export function VideosTab(props: VideosTabProps) {
                 <For each={ownerOptions()}>{(ownerName) => <option value={ownerName} />}</For>
               </datalist>
             </label>
-            <label class="min-w-0 space-y-2">
+            <label class="min-w-[12rem] flex-1 space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 Playlist
               </span>
@@ -354,7 +354,7 @@ export function VideosTab(props: VideosTabProps) {
                 </For>
               </datalist>
             </label>
-            <label class="min-w-0 space-y-2">
+            <label class="min-w-[9rem] flex-none space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 メタデータ
               </span>
@@ -370,7 +370,7 @@ export function VideosTab(props: VideosTabProps) {
                 <option value="without">未取得のみ</option>
               </select>
             </label>
-            <label class="min-w-0 space-y-2">
+            <label class="min-w-[9rem] flex-none space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 ソート
               </span>
@@ -386,7 +386,7 @@ export function VideosTab(props: VideosTabProps) {
                 <option value="playlist-count">playlist件数</option>
               </select>
             </label>
-            <div class="min-w-0 space-y-2">
+            <div class="min-w-[7rem] flex-none space-y-2">
               <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                 順序
               </span>
