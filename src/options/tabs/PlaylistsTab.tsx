@@ -60,6 +60,7 @@ type PlaylistsTabProps = {
   videoMetadataState: VideoMetadataState | undefined;
   loading: boolean;
   error: unknown;
+  playlistSelectionRequest: { playlistId: string; requestKey: number } | null;
   onActivated: () => Promise<void> | void;
   onDeleted: () => Promise<void> | void;
   onUpdated: () => Promise<void> | void;
@@ -134,6 +135,8 @@ function clamp(value: number, min: number, max: number): number {
 export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
+  const [lastHandledPlaylistSelectionRequestKey, setLastHandledPlaylistSelectionRequestKey] =
+    createSignal<number | null>(null);
   const [exportingPlaylistJson, setExportingPlaylistJson] = createSignal(false);
   const [isEditingDetail, setIsEditingDetail] = createSignal(false);
   const [detailVideoInput, setDetailVideoInput] = createSignal("");
@@ -206,6 +209,26 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     }
 
     setSelectedPlaylistId(props.state?.lastActivePlaylistId ?? playlists[0]!.id);
+  });
+
+  createEffect(() => {
+    const request = props.playlistSelectionRequest;
+
+    if (!request) {
+      return;
+    }
+
+    if (lastHandledPlaylistSelectionRequestKey() === request.requestKey) {
+      return;
+    }
+
+    if (!props.state?.playlists.some((playlist) => playlist.id === request.playlistId)) {
+      return;
+    }
+
+    setLastHandledPlaylistSelectionRequestKey(request.requestKey);
+    setPlaylistQuery("");
+    setSelectedPlaylistId(request.playlistId as PlaylistId);
   });
 
   const sortedPlaylists = createMemo(() =>

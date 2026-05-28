@@ -11,6 +11,10 @@ import { VideosTab } from "@/options/tabs/VideosTab";
 import type { OptionsToast } from "@/options/toast";
 
 type TabKey = "import" | "create" | "playlists" | "repeat" | "videos" | "data";
+type PlaylistSelectionRequest = {
+  playlistId: string;
+  requestKey: number;
+};
 
 const TAB_LABELS: { key: TabKey; label: string }[] = [
   { key: "playlists", label: "プレイリスト" },
@@ -23,12 +27,23 @@ const TAB_LABELS: { key: TabKey; label: string }[] = [
 
 export default function OptionsPage() {
   const [activeTab, setActiveTab] = createSignal<TabKey>("playlists");
+  const [playlistSelectionRequest, setPlaylistSelectionRequest] =
+    createSignal<PlaylistSelectionRequest | null>(null);
   const [toast, setToast] = createSignal<OptionsToast | null>(null);
   const [state, { refetch }] = usePlaylistsState();
   const [videoMetadataState, { refetch: refetchVideoMetadataState }] = useVideoMetadataState();
 
   async function refreshState() {
     await Promise.all([refetch(), refetchVideoMetadataState()]);
+  }
+
+  function openPlaylistDetail(playlistId: string) {
+    setPlaylistSelectionRequest((current) => ({
+      playlistId,
+      requestKey: (current?.requestKey ?? 0) + 1,
+    }));
+    setActiveTab("playlists");
+    setToast(null);
   }
 
   createEffect(() => {
@@ -124,6 +139,7 @@ export default function OptionsPage() {
               videoMetadataState={videoMetadataState()}
               loading={state.loading}
               error={state.error}
+              playlistSelectionRequest={playlistSelectionRequest()}
               onActivated={refreshState}
               onDeleted={refreshState}
               onUpdated={refreshState}
@@ -145,6 +161,7 @@ export default function OptionsPage() {
               videoMetadataState={videoMetadataState()}
               loading={state.loading || videoMetadataState.loading}
               error={state.error ?? videoMetadataState.error}
+              onOpenPlaylist={openPlaylistDetail}
             />
           </Match>
         </Switch>

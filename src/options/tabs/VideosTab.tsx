@@ -1,6 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 
-import type { VideoId } from "@/lib/types";
+import type { PlaylistId, VideoId } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -20,6 +20,7 @@ type VideoRow = {
 type VideosTabProps = {
   error: unknown;
   loading: boolean;
+  onOpenPlaylist: (playlistId: PlaylistId) => void;
   state: PlaylistsState | undefined;
   videoMetadataState: VideoMetadataState | undefined;
 };
@@ -419,8 +420,18 @@ export function VideosTab(props: VideosTabProps) {
                                 <ul class="space-y-2">
                                   <For each={row.memberships}>
                                     {(membership) => (
-                                      <li class="rounded-lg border border-stone-800 bg-stone-900/50 px-3 py-2 text-xs text-stone-300">
-                                        {membership.playlistTitle}
+                                      <li>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            props.onOpenPlaylist(
+                                              membership.playlistId as PlaylistId,
+                                            )
+                                          }
+                                          class="w-full rounded-lg border border-stone-800 bg-stone-900/50 px-3 py-2 text-left text-xs text-stone-300 transition hover:border-stone-700 hover:bg-stone-900 hover:text-stone-100"
+                                        >
+                                          {membership.playlistTitle}
+                                        </button>
                                       </li>
                                     )}
                                   </For>
