@@ -298,237 +298,242 @@ export function VideosTab(props: VideosTabProps) {
       </Show>
 
       <div class="rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
-        <div class="space-y-4 border-b border-stone-800 pb-4">
-          <div class="flex flex-wrap gap-3">
-            <label class="min-w-[12rem] flex-1 space-y-2">
-              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                タイトル
-              </span>
-              <ClearableFilterInput
-                value={titleQuery()}
-                onInput={setTitleQuery}
-                onClear={() => setTitleQuery("")}
-                placeholder="タイトルで検索"
-              />
-            </label>
-            <label class="min-w-[10rem] flex-1 space-y-2">
-              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                watchId
-              </span>
-              <ClearableFilterInput
-                value={watchIdQuery()}
-                onInput={setWatchIdQuery}
-                onClear={() => setWatchIdQuery("")}
-                placeholder="watchIdで検索"
-              />
-            </label>
-            <label class="min-w-[10rem] flex-1 space-y-2">
-              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                投稿者
-              </span>
-              <ClearableFilterInput
-                list="np-video-owner-list"
-                value={ownerQuery()}
-                onInput={setOwnerQuery}
-                onClear={() => setOwnerQuery("")}
-                placeholder="投稿者で検索"
-              />
-              <datalist id="np-video-owner-list">
-                <For each={ownerOptions()}>{(ownerName) => <option value={ownerName} />}</For>
-              </datalist>
-            </label>
-            <label class="min-w-[12rem] flex-1 space-y-2">
-              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                Playlist
-              </span>
-              <ClearableFilterInput
-                list="np-video-playlist-list"
-                value={playlistQuery()}
-                onInput={setPlaylistQuery}
-                onClear={() => setPlaylistQuery("")}
-                placeholder="プレイリストで検索"
-              />
-              <datalist id="np-video-playlist-list">
-                <For each={playlistOptions()}>
-                  {(playlistTitle) => <option value={playlistTitle} />}
-                </For>
-              </datalist>
-            </label>
-            <label class="min-w-[9rem] flex-none space-y-2">
-              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                メタデータ
-              </span>
-              <select
-                value={selectedMetadataFilter()}
-                onChange={(event) =>
-                  setSelectedMetadataFilter(event.currentTarget.value as "all" | "with" | "without")
-                }
-                class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
-              >
-                <option value="all">すべて</option>
-                <option value="with">取得済みのみ</option>
-                <option value="without">未取得のみ</option>
-              </select>
-            </label>
-            <label class="min-w-[9rem] flex-none space-y-2">
-              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                ソート
-              </span>
-              <select
-                value={sortKey()}
-                onChange={(event) => setSortKey(event.currentTarget.value as VideoSortKey)}
-                class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
-              >
-                <option value="title">タイトル</option>
-                <option value="duration">再生時間</option>
-                <option value="watch-id">watchId</option>
-                <option value="owner">投稿者</option>
-                <option value="playlist-count">playlist件数</option>
-              </select>
-            </label>
-            <div class="min-w-[7rem] flex-none space-y-2">
-              <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                順序
-              </span>
+        <div class="mx-auto max-w-[1500px]">
+          <div class="space-y-4 border-b border-stone-800 pb-4">
+            <div class="flex flex-wrap gap-3">
+              <label class="min-w-[12rem] flex-1 space-y-2">
+                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                  タイトル
+                </span>
+                <ClearableFilterInput
+                  value={titleQuery()}
+                  onInput={setTitleQuery}
+                  onClear={() => setTitleQuery("")}
+                  placeholder="タイトルで検索"
+                />
+              </label>
+              <label class="min-w-[10rem] flex-1 space-y-2">
+                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                  watchId
+                </span>
+                <ClearableFilterInput
+                  value={watchIdQuery()}
+                  onInput={setWatchIdQuery}
+                  onClear={() => setWatchIdQuery("")}
+                  placeholder="watchIdで検索"
+                />
+              </label>
+              <label class="min-w-[10rem] flex-1 space-y-2">
+                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                  投稿者
+                </span>
+                <ClearableFilterInput
+                  list="np-video-owner-list"
+                  value={ownerQuery()}
+                  onInput={setOwnerQuery}
+                  onClear={() => setOwnerQuery("")}
+                  placeholder="投稿者で検索"
+                />
+                <datalist id="np-video-owner-list">
+                  <For each={ownerOptions()}>{(ownerName) => <option value={ownerName} />}</For>
+                </datalist>
+              </label>
+              <label class="min-w-[12rem] flex-1 space-y-2">
+                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                  Playlist
+                </span>
+                <ClearableFilterInput
+                  list="np-video-playlist-list"
+                  value={playlistQuery()}
+                  onInput={setPlaylistQuery}
+                  onClear={() => setPlaylistQuery("")}
+                  placeholder="プレイリストで検索"
+                />
+                <datalist id="np-video-playlist-list">
+                  <For each={playlistOptions()}>
+                    {(playlistTitle) => <option value={playlistTitle} />}
+                  </For>
+                </datalist>
+              </label>
+              <label class="min-w-[9rem] flex-none space-y-2">
+                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                  メタデータ
+                </span>
+                <select
+                  value={selectedMetadataFilter()}
+                  onChange={(event) =>
+                    setSelectedMetadataFilter(
+                      event.currentTarget.value as "all" | "with" | "without",
+                    )
+                  }
+                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
+                >
+                  <option value="all">すべて</option>
+                  <option value="with">取得済みのみ</option>
+                  <option value="without">未取得のみ</option>
+                </select>
+              </label>
+              <label class="min-w-[9rem] flex-none space-y-2">
+                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                  ソート
+                </span>
+                <select
+                  value={sortKey()}
+                  onChange={(event) => setSortKey(event.currentTarget.value as VideoSortKey)}
+                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
+                >
+                  <option value="title">タイトル</option>
+                  <option value="duration">再生時間</option>
+                  <option value="watch-id">watchId</option>
+                  <option value="owner">投稿者</option>
+                  <option value="playlist-count">playlist件数</option>
+                </select>
+              </label>
+              <div class="min-w-[7rem] flex-none space-y-2">
+                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                  順序
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSortOrder((current) => (current === "asc" ? "desc" : "asc"))}
+                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-left text-sm text-stone-100 outline-none transition hover:border-stone-700 hover:bg-stone-900 focus:border-stone-600"
+                >
+                  {sortOrder() === "asc" ? "昇順" : "降順"}
+                </button>
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"
-                onClick={() => setSortOrder((current) => (current === "asc" ? "desc" : "asc"))}
-                class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-left text-sm text-stone-100 outline-none transition hover:border-stone-700 hover:bg-stone-900 focus:border-stone-600"
+                onClick={toggleAllExpansions}
+                disabled={videoRows().length === 0}
+                class="rounded-full border border-stone-700 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
               >
-                {sortOrder() === "asc" ? "昇順" : "降順"}
+                {allExpanded() ? "プレイリストを全て折りたたむ" : "プレイリストを全て展開"}
               </button>
-            </div>
-          </div>
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={toggleAllExpansions}
-              disabled={videoRows().length === 0}
-              class="rounded-full border border-stone-700 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
-            >
-              {allExpanded() ? "プレイリストを全て折りたたむ" : "プレイリストを全て展開"}
-            </button>
-            <p class="text-sm text-stone-400">
-              <span class="font-medium text-stone-200">{sortedFilteredVideoRows().length}</span>
-              <span class="text-stone-500"> / </span>
-              <span class="font-medium text-stone-200">{videoRows().length}</span> 件
-            </p>
-          </div>
-        </div>
-
-        <Show
-          when={!props.loading}
-          fallback={<p class="py-6 text-sm text-stone-500">読み込み中...</p>}
-        >
-          <Show
-            when={sortedFilteredVideoRows().length > 0}
-            fallback={
-              <p class="py-6 text-sm text-stone-500">
-                {videoRows().length > 0
-                  ? "条件に一致する動画がありません。"
-                  : "表示できる動画がありません。"}
+              <p class="text-sm text-stone-400">
+                <span class="font-medium text-stone-200">{sortedFilteredVideoRows().length}</span>
+                <span class="text-stone-500"> / </span>
+                <span class="font-medium text-stone-200">{videoRows().length}</span> 件
               </p>
-            }
-          >
-            <div class="overflow-x-auto pt-4">
-              <table class="min-w-full table-fixed border-separate border-spacing-0 overflow-hidden rounded-2xl border border-stone-800">
-                <thead class="bg-stone-900/80">
-                  <tr class="text-left text-xs uppercase tracking-[0.18em] text-stone-500">
-                    <th class="w-16 px-4 py-3 font-medium">#</th>
-                    <th class="w-28 px-4 py-3 font-medium">サムネ</th>
-                    <th class="px-4 py-3 font-medium">タイトル</th>
-                    <th class="w-24 px-4 py-3 font-medium">時間</th>
-                    <th class="w-32 px-4 py-3 font-medium">watchId</th>
-                    <th class="w-36 px-4 py-3 font-medium">投稿者</th>
-                    <th class="w-80 px-4 py-3 font-medium">playlist</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-stone-950/40">
-                  <For each={sortedFilteredVideoRows()}>
-                    {(row, index) => {
-                      const thumbnailUrl =
-                        row.videoMetadata?.thumbnail.listingUrl ?? row.videoMetadata?.thumbnail.url;
-
-                      return (
-                        <tr class="align-top text-sm text-stone-200">
-                          <td class="border-t border-stone-800 px-4 py-4 text-xs font-medium text-stone-500">
-                            #{index() + 1}
-                          </td>
-                          <td class="border-t border-stone-800 px-4 py-4">
-                            <a
-                              href={`https://www.nicovideo.jp/watch/${row.videoId}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              class="flex h-16 w-24 items-center justify-center overflow-hidden rounded-xl bg-stone-900 text-[11px] text-stone-500 transition hover:bg-stone-800"
-                            >
-                              <Show when={thumbnailUrl} fallback={<span>{row.videoId}</span>}>
-                                {(resolvedThumbnailUrl) => (
-                                  <img
-                                    src={resolvedThumbnailUrl()}
-                                    alt=""
-                                    class="h-full w-full object-cover"
-                                  />
-                                )}
-                              </Show>
-                            </a>
-                          </td>
-                          <td class="border-t border-stone-800 px-4 py-4">
-                            <p class="line-clamp-3 font-medium text-stone-100">
-                              {row.videoMetadata?.title ?? "未取得"}
-                            </p>
-                          </td>
-                          <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-500">
-                            {formatDuration(row.videoMetadata?.duration)}
-                          </td>
-                          <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
-                            {row.videoId}
-                          </td>
-                          <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
-                            {row.ownerMetadata?.name ?? "-"}
-                          </td>
-                          <td class="border-t border-stone-800 px-4 py-4">
-                            <div class="space-y-2">
-                              <button
-                                type="button"
-                                onClick={() => toggleVideoExpansion(row.videoId)}
-                                class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                              >
-                                {isRowExpanded(row.videoId)
-                                  ? `プレイリスト ${row.memberships.length}件を折りたたむ`
-                                  : `プレイリスト ${row.memberships.length}件を表示`}
-                              </button>
-                              <Show when={isRowExpanded(row.videoId)}>
-                                <ul class="space-y-2">
-                                  <For each={row.memberships}>
-                                    {(membership) => (
-                                      <li>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            props.onOpenPlaylist(
-                                              membership.playlistId as PlaylistId,
-                                            )
-                                          }
-                                          class="w-full rounded-lg border border-stone-800 bg-stone-900/50 px-3 py-2 text-left text-xs text-stone-300 transition hover:border-stone-700 hover:bg-stone-900 hover:text-stone-100"
-                                        >
-                                          {membership.playlistTitle}
-                                        </button>
-                                      </li>
-                                    )}
-                                  </For>
-                                </ul>
-                              </Show>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    }}
-                  </For>
-                </tbody>
-              </table>
             </div>
+          </div>
+
+          <Show
+            when={!props.loading}
+            fallback={<p class="py-6 text-sm text-stone-500">読み込み中...</p>}
+          >
+            <Show
+              when={sortedFilteredVideoRows().length > 0}
+              fallback={
+                <p class="py-6 text-sm text-stone-500">
+                  {videoRows().length > 0
+                    ? "条件に一致する動画がありません。"
+                    : "表示できる動画がありません。"}
+                </p>
+              }
+            >
+              <div class="overflow-x-auto pt-4">
+                <table class="min-w-full table-fixed border-separate border-spacing-0 overflow-hidden rounded-2xl border border-stone-800">
+                  <thead class="bg-stone-900/80">
+                    <tr class="text-left text-xs uppercase tracking-[0.18em] text-stone-500">
+                      <th class="w-16 px-4 py-3 font-medium">#</th>
+                      <th class="w-28 px-4 py-3 font-medium">サムネ</th>
+                      <th class="px-4 py-3 font-medium">タイトル</th>
+                      <th class="w-24 px-4 py-3 font-medium">時間</th>
+                      <th class="w-32 px-4 py-3 font-medium">watchId</th>
+                      <th class="w-36 px-4 py-3 font-medium">投稿者</th>
+                      <th class="w-80 px-4 py-3 font-medium">playlist</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-stone-950/40">
+                    <For each={sortedFilteredVideoRows()}>
+                      {(row, index) => {
+                        const thumbnailUrl =
+                          row.videoMetadata?.thumbnail.listingUrl ??
+                          row.videoMetadata?.thumbnail.url;
+
+                        return (
+                          <tr class="align-top text-sm text-stone-200">
+                            <td class="border-t border-stone-800 px-4 py-4 text-xs font-medium text-stone-500">
+                              #{index() + 1}
+                            </td>
+                            <td class="border-t border-stone-800 px-4 py-4">
+                              <a
+                                href={`https://www.nicovideo.jp/watch/${row.videoId}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                class="flex h-16 w-24 items-center justify-center overflow-hidden rounded-xl bg-stone-900 text-[11px] text-stone-500 transition hover:bg-stone-800"
+                              >
+                                <Show when={thumbnailUrl} fallback={<span>{row.videoId}</span>}>
+                                  {(resolvedThumbnailUrl) => (
+                                    <img
+                                      src={resolvedThumbnailUrl()}
+                                      alt=""
+                                      class="h-full w-full object-cover"
+                                    />
+                                  )}
+                                </Show>
+                              </a>
+                            </td>
+                            <td class="border-t border-stone-800 px-4 py-4">
+                              <p class="line-clamp-3 font-medium text-stone-100">
+                                {row.videoMetadata?.title ?? "未取得"}
+                              </p>
+                            </td>
+                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-500">
+                              {formatDuration(row.videoMetadata?.duration)}
+                            </td>
+                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
+                              {row.videoId}
+                            </td>
+                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
+                              {row.ownerMetadata?.name ?? "-"}
+                            </td>
+                            <td class="border-t border-stone-800 px-4 py-4">
+                              <div class="space-y-2">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleVideoExpansion(row.videoId)}
+                                  class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                                >
+                                  {isRowExpanded(row.videoId)
+                                    ? `プレイリスト ${row.memberships.length}件を折りたたむ`
+                                    : `プレイリスト ${row.memberships.length}件を表示`}
+                                </button>
+                                <Show when={isRowExpanded(row.videoId)}>
+                                  <ul class="space-y-2">
+                                    <For each={row.memberships}>
+                                      {(membership) => (
+                                        <li>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              props.onOpenPlaylist(
+                                                membership.playlistId as PlaylistId,
+                                              )
+                                            }
+                                            class="w-full rounded-lg border border-stone-800 bg-stone-900/50 px-3 py-2 text-left text-xs text-stone-300 transition hover:border-stone-700 hover:bg-stone-900 hover:text-stone-100"
+                                          >
+                                            {membership.playlistTitle}
+                                          </button>
+                                        </li>
+                                      )}
+                                    </For>
+                                  </ul>
+                                </Show>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      }}
+                    </For>
+                  </tbody>
+                </table>
+              </div>
+            </Show>
           </Show>
-        </Show>
+        </div>
       </div>
     </section>
   );
