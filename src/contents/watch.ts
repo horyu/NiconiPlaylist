@@ -8,6 +8,7 @@ import type { PlaybackCompletionSettings } from "@/lib/types";
 import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
 
 const PLAYBACK_END_THRESHOLD_SECONDS = 1;
+const PLAYBACK_END_DEDUPLICATION_WINDOW_MS = 5_000;
 const ROUTE_READY_DELAY_MS = 50;
 const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
 const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitialized";
@@ -126,6 +127,11 @@ let routeReadyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let currentLoopVideoId: string | null = null;
 let completedPlaybackCount = 0;
 let expectedNextVideoId: string | null = null;
+let lastHandledPlaybackEnd: {
+  at: number;
+  eventType: "pause" | "ended";
+  signature: string;
+} | null = null;
 
 function clearExpectedNextVideo(): void {
   expectedNextVideoId = null;
@@ -139,6 +145,35 @@ function setExpectedNextVideo(nextVideoId: string): void {
 function resetLoopProgress(videoId: string | null): void {
   currentLoopVideoId = videoId;
   completedPlaybackCount = 0;
+}
+
+function buildPlaybackEndSignature(videoId: string, video: HTMLVideoElement): string {
+  return [
+    videoId,
+    video.currentSrc || video.src,
+    Math.round(video.currentTime * 1000),
+    Math.round(video.duration * 1000),
+  ].join("|");
+}
+
+function shouldSkipDuplicatePlaybackEnd(eventType: "pause" | "ended", signature: string): boolean {
+  const now = Date.now();
+
+  if (
+    lastHandledPlaybackEnd !== null &&
+    lastHandledPlaybackEnd.signature === signature &&
+    lastHandledPlaybackEnd.eventType !== eventType &&
+    now - lastHandledPlaybackEnd.at <= PLAYBACK_END_DEDUPLICATION_WINDOW_MS
+  ) {
+    return true;
+  }
+
+  lastHandledPlaybackEnd = {
+    at: now,
+    eventType,
+    signature,
+  };
+  return false;
 }
 
 function syncPlaybackContextIfNeeded(): void {
@@ -358,8 +393,8 @@ function initWatchLocationObserver(): void {
   });
 }
 
-async function handlePause(event: Event) {
-  logPlaybackEvent("pause", event);
+async function handlePlaybackTerminalEvent(eventType: "pause" | "ended", event: Event) {
+  logPlaybackEvent(eventType, event);
   const target = event.target;
 
   if (!isVideoElement(target)) {
@@ -377,6 +412,17 @@ async function handlePause(event: Event) {
   const videoId = getCurrentWatchVideoId();
 
   if (!videoId) {
+    return;
+  }
+
+  const playbackEndSignature = buildPlaybackEndSignature(videoId, target);
+
+  if (shouldSkipDuplicatePlaybackEnd(eventType, playbackEndSignature)) {
+    console.log("NiconiPlaylist skipped duplicate playback end handling.", {
+      eventType,
+      playbackEndSignature,
+      videoId,
+    });
     return;
   }
 
@@ -417,7 +463,11 @@ async function handlePause(event: Event) {
 }
 
 function handleEnded(event: Event): void {
-  logPlaybackEvent("ended", event);
+  void handlePlaybackTerminalEvent("ended", event);
+}
+
+function handlePause(event: Event): void {
+  void handlePlaybackTerminalEvent("pause", event);
 }
 
 export function initWatchContent() {
