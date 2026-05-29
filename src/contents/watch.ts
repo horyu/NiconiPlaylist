@@ -67,6 +67,44 @@ function getCurrentWatchVideoId(): string | null {
   return match?.[1] ?? null;
 }
 
+function logPlaybackEvent(eventType: "pause" | "ended", event: Event): void {
+  const target = event.target;
+  const isVideo = isVideoElement(target);
+  const advertisementVideo = isVideo ? isAdvertisementVideo(target) : false;
+  const payload = {
+    eventType,
+    href: location.href,
+    isAdvertisementVideo: advertisementVideo,
+    isVideoElement: isVideo,
+    targetTagName: target instanceof Element ? target.tagName : null,
+    videoCurrentSrc: isVideo ? target.currentSrc || target.src : null,
+    videoCurrentTime: isVideo ? target.currentTime : null,
+    videoDuration: isVideo ? target.duration : null,
+    videoEnded: isVideo ? target.ended : null,
+    videoPaused: isVideo ? target.paused : null,
+    videoTitle: isVideo ? target.title : null,
+    videoId: getCurrentWatchVideoId(),
+  };
+
+  console.log(`NiconiPlaylist observed ${eventType} event.`, {
+    currentWatchVideoId: payload.videoId,
+    href: payload.href,
+    isAdvertisementVideo: payload.isAdvertisementVideo,
+    isVideoElement: payload.isVideoElement,
+    targetTagName: payload.targetTagName,
+    videoCurrentSrc: payload.videoCurrentSrc,
+    videoCurrentTime: payload.videoCurrentTime,
+    videoDuration: payload.videoDuration,
+    videoEnded: payload.videoEnded,
+    videoPaused: payload.videoPaused,
+    videoTitle: payload.videoTitle,
+  });
+  void browser.runtime.sendMessage({
+    type: "watch:record-playback-debug-event",
+    ...payload,
+  });
+}
+
 async function syncPlaybackContext(videoId: string): Promise<WatchPlaybackContextResponse | null> {
   return browser.runtime.sendMessage({
     type: "watch:sync-playback-context",
@@ -321,6 +359,7 @@ function initWatchLocationObserver(): void {
 }
 
 async function handlePause(event: Event) {
+  logPlaybackEvent("pause", event);
   const target = event.target;
 
   if (!isVideoElement(target)) {
@@ -377,6 +416,10 @@ async function handlePause(event: Event) {
   }
 }
 
+function handleEnded(event: Event): void {
+  logPlaybackEvent("ended", event);
+}
+
 export function initWatchContent() {
   const state = globalThis as typeof globalThis & {
     [WATCH_CONTENT_INIT_KEY]?: boolean;
@@ -387,6 +430,7 @@ export function initWatchContent() {
   }
 
   state[WATCH_CONTENT_INIT_KEY] = true;
+  document.addEventListener("ended", handleEnded, true);
   document.addEventListener("pause", handlePause, true);
   initWatchLocationObserver();
   syncPlaybackContextIfNeeded();

@@ -29,6 +29,22 @@ export type WatchShowCompletionAlertMessage = {
   message: string;
 };
 
+export type WatchRecordPlaybackDebugEventMessage = {
+  type: "watch:record-playback-debug-event";
+  eventType: "pause" | "ended";
+  href: string;
+  isAdvertisementVideo: boolean;
+  isVideoElement: boolean;
+  targetTagName: string | null;
+  videoCurrentSrc: string | null;
+  videoCurrentTime: number | null;
+  videoDuration: number | null;
+  videoEnded: boolean | null;
+  videoPaused: boolean | null;
+  videoTitle: string | null;
+  videoId: VideoId | null;
+};
+
 export type WatchInitLocationObserverMessage = {
   type: "watch:init-location-observer";
 };
@@ -45,7 +61,8 @@ export type WatchMessage =
   | WatchRouteReadyMessage
   | WatchClearPlaybackContextMessage
   | WatchFocusTabMessage
-  | WatchShowCompletionAlertMessage;
+  | WatchShowCompletionAlertMessage
+  | WatchRecordPlaybackDebugEventMessage;
 
 export type WatchPlaybackContextResponse = {
   playbackContext: PlaybackContext | null;

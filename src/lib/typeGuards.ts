@@ -55,7 +55,8 @@ export function isPlaybackDebugEvent(value: unknown): value is PlaybackDebugEven
     typeof candidate.occurredAt === "string" &&
     (candidate.type === "clear-playback-context-by-tab" ||
       candidate.type === "clear-playback-contexts-by-playlist" ||
-      candidate.type === "sync-playback-context-null") &&
+      candidate.type === "sync-playback-context-null" ||
+      candidate.type === "content-playback-event") &&
     typeof candidate.reason === "string" &&
     (candidate.playlistId === null || typeof candidate.playlistId === "string") &&
     (candidate.tabId === null ||
@@ -68,7 +69,37 @@ export function isPlaybackDebugEvent(value: unknown): value is PlaybackDebugEven
         Number.isInteger(candidate.playlistVideoCount) &&
         candidate.playlistVideoCount >= 0)) &&
     (candidate.previousPlaybackContext === null ||
-      isPlaybackContext(candidate.previousPlaybackContext))
+      isPlaybackContext(candidate.previousPlaybackContext)) &&
+    (candidate.href === undefined ||
+      candidate.href === null ||
+      typeof candidate.href === "string") &&
+    (candidate.isAdvertisementVideo === undefined ||
+      candidate.isAdvertisementVideo === null ||
+      typeof candidate.isAdvertisementVideo === "boolean") &&
+    (candidate.isVideoElement === undefined ||
+      candidate.isVideoElement === null ||
+      typeof candidate.isVideoElement === "boolean") &&
+    (candidate.targetTagName === undefined ||
+      candidate.targetTagName === null ||
+      typeof candidate.targetTagName === "string") &&
+    (candidate.videoCurrentSrc === undefined ||
+      candidate.videoCurrentSrc === null ||
+      typeof candidate.videoCurrentSrc === "string") &&
+    (candidate.videoCurrentTime === undefined ||
+      candidate.videoCurrentTime === null ||
+      typeof candidate.videoCurrentTime === "number") &&
+    (candidate.videoDuration === undefined ||
+      candidate.videoDuration === null ||
+      typeof candidate.videoDuration === "number") &&
+    (candidate.videoEnded === undefined ||
+      candidate.videoEnded === null ||
+      typeof candidate.videoEnded === "boolean") &&
+    (candidate.videoPaused === undefined ||
+      candidate.videoPaused === null ||
+      typeof candidate.videoPaused === "boolean") &&
+    (candidate.videoTitle === undefined ||
+      candidate.videoTitle === null ||
+      typeof candidate.videoTitle === "string")
   );
 }
 

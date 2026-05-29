@@ -10,6 +10,7 @@ import { getStoredPlaybackSettings } from "@/background/services/playbackSetting
 import {
   clearStoredPlaybackContextByTabId,
   markStoredPlaylistCompletedByTabId,
+  recordContentPlaybackDebugEvent,
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
 } from "@/background/services/playlistStore";
@@ -141,6 +142,12 @@ export async function handleWatchMessage(
         args: [message.message],
       });
       return undefined;
+
+    case "watch:record-playback-debug-event": {
+      const { type: _type, ...event } = message;
+      await recordContentPlaybackDebugEvent(tabId, event);
+      return undefined;
+    }
 
     case "watch:init-location-observer":
       await browser.scripting.executeScript({

@@ -153,6 +153,16 @@ async function recordPlaybackDebugEvent(
     currentIndex?: number | null;
     playlistVideoCount?: number | null;
     previousPlaybackContext?: PlaybackContext | null;
+    href?: string | null;
+    isAdvertisementVideo?: boolean | null;
+    isVideoElement?: boolean | null;
+    targetTagName?: string | null;
+    videoCurrentSrc?: string | null;
+    videoCurrentTime?: number | null;
+    videoDuration?: number | null;
+    videoEnded?: boolean | null;
+    videoPaused?: boolean | null;
+    videoTitle?: string | null;
   },
 ): Promise<void> {
   await appendStoredPlaybackDebugEvent({
@@ -164,6 +174,61 @@ async function recordPlaybackDebugEvent(
     currentIndex: details.currentIndex ?? null,
     playlistVideoCount: details.playlistVideoCount ?? null,
     previousPlaybackContext: details.previousPlaybackContext ?? null,
+    href: details.href ?? null,
+    isAdvertisementVideo: details.isAdvertisementVideo ?? null,
+    isVideoElement: details.isVideoElement ?? null,
+    targetTagName: details.targetTagName ?? null,
+    videoCurrentSrc: details.videoCurrentSrc ?? null,
+    videoCurrentTime: details.videoCurrentTime ?? null,
+    videoDuration: details.videoDuration ?? null,
+    videoEnded: details.videoEnded ?? null,
+    videoPaused: details.videoPaused ?? null,
+    videoTitle: details.videoTitle ?? null,
+  });
+}
+
+export async function recordContentPlaybackDebugEvent(
+  tabId: number,
+  event: {
+    eventType: "pause" | "ended";
+    href: string;
+    isAdvertisementVideo: boolean;
+    isVideoElement: boolean;
+    targetTagName: string | null;
+    videoCurrentSrc: string | null;
+    videoCurrentTime: number | null;
+    videoDuration: number | null;
+    videoEnded: boolean | null;
+    videoPaused: boolean | null;
+    videoTitle: string | null;
+    videoId: VideoId | null;
+  },
+): Promise<void> {
+  const playbackContexts = await getStoredPlaybackContexts();
+  const previousPlaybackContext =
+    playbackContexts.find((context) => context.tabId === tabId) ?? null;
+  const playlists = previousPlaybackContext !== null ? await getStoredPlaylists() : [];
+  const playlist = previousPlaybackContext
+    ? (playlists.find((candidate) => candidate.id === previousPlaybackContext.playlistId) ?? null)
+    : null;
+
+  await recordPlaybackDebugEvent("content-playback-event", event.eventType, {
+    playlistId: previousPlaybackContext?.playlistId ?? null,
+    tabId,
+    videoId: event.videoId,
+    currentIndex: previousPlaybackContext?.currentIndex ?? null,
+    playlistVideoCount: playlist?.videoIds.length ?? null,
+    previousPlaybackContext,
+    href: event.href,
+    isAdvertisementVideo: event.isAdvertisementVideo,
+    isVideoElement: event.isVideoElement,
+    targetTagName: event.targetTagName,
+    videoCurrentSrc: event.videoCurrentSrc,
+    videoCurrentTime: event.videoCurrentTime,
+    videoDuration: event.videoDuration,
+    videoEnded: event.videoEnded,
+    videoPaused: event.videoPaused,
+    videoTitle: event.videoTitle,
   });
 }
 
