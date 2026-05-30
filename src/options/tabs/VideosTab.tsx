@@ -316,7 +316,7 @@ export function VideosTab(props: VideosTabProps) {
 
   return (
     <section class="space-y-6 rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
-      <header class="space-y-1">
+      <header class="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">動画</h2>
         <p class="text-sm text-stone-400">
           保存済みプレイリストに含まれる動画を、playlist 横断で一覧表示します。
