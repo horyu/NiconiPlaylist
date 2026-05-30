@@ -1,5 +1,6 @@
 import { createMemo, createSignal, For, Show } from "solid-js";
 
+import { formatSlashTimestampWithSeconds } from "@/lib/dateTime";
 import type { PlaylistId, VideoId } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
@@ -25,7 +26,13 @@ type VideosTabProps = {
   videoMetadataState: VideoMetadataState | undefined;
 };
 
-type VideoSortKey = "duration" | "owner" | "playlist-count" | "title" | "watch-id";
+type VideoSortKey =
+  | "duration"
+  | "owner"
+  | "playlist-count"
+  | "registered-at"
+  | "title"
+  | "watch-id";
 type SortOrder = "asc" | "desc";
 
 function formatDuration(duration: number | null | undefined): string {
@@ -37,6 +44,20 @@ function formatDuration(duration: number | null | undefined): string {
   const seconds = (duration % 60).toString().padStart(2, "0");
 
   return `${minutes}:${seconds}`;
+}
+
+function formatRegisteredAt(registeredAt: string | null | undefined): string {
+  if (!registeredAt) {
+    return "-";
+  }
+
+  const date = new Date(registeredAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return registeredAt;
+  }
+
+  return formatSlashTimestampWithSeconds(date);
 }
 
 function ClearableFilterInput(props: {
@@ -101,6 +122,25 @@ function compareNullableNumbers(
   return left - right;
 }
 
+function compareNullableStrings(
+  left: string | null | undefined,
+  right: string | null | undefined,
+): number {
+  if (left === right) {
+    return 0;
+  }
+
+  if (left === null || left === undefined) {
+    return 1;
+  }
+
+  if (right === null || right === undefined) {
+    return -1;
+  }
+
+  return left.localeCompare(right, "ja");
+}
+
 function compareBySortKey(left: VideoRow, right: VideoRow, sortKey: VideoSortKey): number {
   switch (sortKey) {
     case "title":
@@ -118,6 +158,13 @@ function compareBySortKey(left: VideoRow, right: VideoRow, sortKey: VideoSortKey
       return (
         compareNullableNumbers(left.videoMetadata?.duration, right.videoMetadata?.duration) ||
         compareVideoRows(left, right)
+      );
+    case "registered-at":
+      return (
+        compareNullableStrings(
+          left.videoMetadata?.registeredAt,
+          right.videoMetadata?.registeredAt,
+        ) || compareVideoRows(left, right)
       );
   }
 }
@@ -383,6 +430,7 @@ export function VideosTab(props: VideosTabProps) {
                   class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
                 >
                   <option value="title">タイトル</option>
+                  <option value="registered-at">投稿日時</option>
                   <option value="duration">再生時間</option>
                   <option value="watch-id">watchId</option>
                   <option value="owner">投稿者</option>
@@ -440,6 +488,7 @@ export function VideosTab(props: VideosTabProps) {
                       <th class="w-16 px-4 py-3 font-medium">#</th>
                       <th class="w-28 px-4 py-3 font-medium">サムネ</th>
                       <th class="px-4 py-3 font-medium">タイトル</th>
+                      <th class="w-48 px-4 py-3 font-medium">投稿日時</th>
                       <th class="w-24 px-4 py-3 font-medium">時間</th>
                       <th class="w-32 px-4 py-3 font-medium">watchId</th>
                       <th class="w-36 px-4 py-3 font-medium">投稿者</th>
@@ -480,6 +529,9 @@ export function VideosTab(props: VideosTabProps) {
                               <p class="line-clamp-3 font-medium text-stone-100">
                                 {row.videoMetadata?.title ?? "未取得"}
                               </p>
+                            </td>
+                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
+                              {formatRegisteredAt(row.videoMetadata?.registeredAt)}
                             </td>
                             <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-500">
                               {formatDuration(row.videoMetadata?.duration)}
