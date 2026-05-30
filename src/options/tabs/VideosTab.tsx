@@ -185,10 +185,12 @@ function buildVideoRows(
       const existingRow = rowsByVideoId.get(videoId);
 
       if (existingRow) {
-        existingRow.memberships.push({
-          playlistId: playlist.id,
-          playlistTitle,
-        });
+        if (!existingRow.memberships.some((membership) => membership.playlistId === playlist.id)) {
+          existingRow.memberships.push({
+            playlistId: playlist.id,
+            playlistTitle,
+          });
+        }
         continue;
       }
 
