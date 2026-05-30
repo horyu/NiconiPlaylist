@@ -32,7 +32,8 @@ type ImportSectionProps = {
   videoMetadataState: VideoMetadataState | undefined;
 };
 
-const DEFAULT_SHARED_URL = "https://horyu.github.io/NiconiPlaylist/?videoIds=BOQS5OiOBd-4tQKovKop";
+const DEFAULT_SHARED_URL =
+  "https://horyu.github.io/NiconiPlaylist/?videoIds=AwYBjBLk6I4F37i1AoOw2QLk6I4F37i1Ag";
 
 function getSourceLabel(source: ImportSource): string {
   switch (source) {

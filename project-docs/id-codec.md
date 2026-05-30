@@ -83,10 +83,10 @@ const decoded = decodeIds(encoded);
 // decoded は ids と完全一致する
 ```
 
-実際の共有 URL 例として、`sm9`, `so5364283`, `nm2829323` を共有 URL にしたものは以下。
+実際の共有 URL 例として、`sm9`, `so5364283`, `nm2829323`, `sm9`, `so5364283`, `nm2829323` を共有 URL にしたものは以下。
 
 ```txt
-https://horyu.github.io/NiconiPlaylist/?videoIds=AwMBBRLk6I4F37i1Ag
+https://horyu.github.io/NiconiPlaylist/?videoIds=AwYBjBLk6I4F37i1AoOw2QLk6I4F37i1Ag
 ```
 
 空配列も可逆変換の対象とする。
