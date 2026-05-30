@@ -2,14 +2,16 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const VIDEO_IDS = ["sm9", "so5364283", "nm2829323", "ss46168863", "sm1"] as const;
+const VIDEO_IDS = ["sm9", "so5364283", "nm2829323", "sm1"] as const;
 
 type ApiPayload = {
   data?: {
     items?: Array<{
       watchId: string;
       video?: {
+        contentType?: string | null;
         title?: string;
+        registeredAt?: string | null;
         thumbnail?: {
           url?: string | null;
           middleUrl?: string | null;
@@ -18,6 +20,9 @@ type ApiPayload = {
           nHdUrl?: string | null;
         };
         duration?: number | null;
+        isChannelVideo?: boolean | null;
+        isPaymentRequired?: boolean | null;
+        requireSensitiveMasking?: boolean | null;
         owner?: {
           id?: string | null;
           name?: string | null;
@@ -64,6 +69,8 @@ async function fetchVideoMetadata(videoId: string) {
     kind: "found",
     watchId: videoId,
     title: video.title,
+    registeredAt: video.registeredAt ?? null,
+    contentType: video.contentType ?? null,
     thumbnail: {
       url: video.thumbnail?.url ?? null,
       middleUrl: video.thumbnail?.middleUrl ?? null,
@@ -72,6 +79,9 @@ async function fetchVideoMetadata(videoId: string) {
       nHdUrl: video.thumbnail?.nHdUrl ?? null,
     },
     duration: video.duration ?? null,
+    isChannelVideo: video.isChannelVideo ?? null,
+    isPaymentRequired: video.isPaymentRequired ?? null,
+    requireSensitiveMasking: video.requireSensitiveMasking ?? null,
     owner: {
       id: video.owner?.id ?? null,
       name: video.owner?.name ?? null,

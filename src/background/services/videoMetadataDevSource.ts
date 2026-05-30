@@ -45,8 +45,23 @@ function parseDevVideoMetadataRecord(value: unknown): DevVideoMetadataRecord {
     candidate.kind === "found" &&
     typeof candidate.watchId === "string" &&
     typeof candidate.title === "string" &&
+    (candidate.registeredAt === null ||
+      candidate.registeredAt === undefined ||
+      typeof candidate.registeredAt === "string") &&
+    (candidate.contentType === null ||
+      candidate.contentType === undefined ||
+      typeof candidate.contentType === "string") &&
     isThumbnail(candidate.thumbnail) &&
     (candidate.duration === null || typeof candidate.duration === "number") &&
+    (candidate.isChannelVideo === null ||
+      candidate.isChannelVideo === undefined ||
+      typeof candidate.isChannelVideo === "boolean") &&
+    (candidate.isPaymentRequired === null ||
+      candidate.isPaymentRequired === undefined ||
+      typeof candidate.isPaymentRequired === "boolean") &&
+    (candidate.requireSensitiveMasking === null ||
+      candidate.requireSensitiveMasking === undefined ||
+      typeof candidate.requireSensitiveMasking === "boolean") &&
     isOwner(candidate.owner)
   ) {
     const thumbnail = candidate.thumbnail;
@@ -56,8 +71,13 @@ function parseDevVideoMetadataRecord(value: unknown): DevVideoMetadataRecord {
       kind: "found",
       watchId: candidate.watchId,
       title: candidate.title,
+      registeredAt: candidate.registeredAt ?? null,
+      contentType: candidate.contentType ?? null,
       thumbnail,
       duration: candidate.duration,
+      isChannelVideo: candidate.isChannelVideo ?? null,
+      isPaymentRequired: candidate.isPaymentRequired ?? null,
+      requireSensitiveMasking: candidate.requireSensitiveMasking ?? null,
       owner,
     };
   }
@@ -95,6 +115,8 @@ function createSyntheticDevVideoMetadataRecord(watchId: VideoId): DevVideoMetada
     kind: "found",
     watchId,
     title: `${watchId} (DEV)`,
+    registeredAt: null,
+    contentType: null,
     thumbnail: {
       url: "https://resource.video.nimg.jp/web/img/common/video_deleted.jpg?_t=20181018",
       middleUrl: "https://resource.video.nimg.jp/web/img/common/video_deleted_M.jpg?_t=20190301",
@@ -103,6 +125,9 @@ function createSyntheticDevVideoMetadataRecord(watchId: VideoId): DevVideoMetada
       nHdUrl: "https://resource.video.nimg.jp/web/img/common/video_deleted_360p.jpg?_t=20200610",
     },
     duration: null,
+    isChannelVideo: null,
+    isPaymentRequired: null,
+    requireSensitiveMasking: null,
     owner: {
       id: null,
       name: "DEV",

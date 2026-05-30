@@ -13,8 +13,13 @@ export type VideoThumbnail = {
 export type VideoMetadata = {
   watchId: VideoId;
   title: string;
+  registeredAt: string | null;
+  contentType: string | null;
   thumbnail: VideoThumbnail;
   duration: number | null;
+  isChannelVideo: boolean | null;
+  isPaymentRequired: boolean | null;
+  requireSensitiveMasking: boolean | null;
   ownerId: OwnerId | null;
   fetchedAt: string;
 };
@@ -31,8 +36,13 @@ export type DevVideoMetadataFoundRecord = {
   kind: "found";
   watchId: VideoId;
   title: string;
+  registeredAt: string | null;
+  contentType: string | null;
   thumbnail: VideoThumbnail;
   duration: number | null;
+  isChannelVideo: boolean | null;
+  isPaymentRequired: boolean | null;
+  requireSensitiveMasking: boolean | null;
   owner: {
     id: OwnerId | null;
     name: string | null;

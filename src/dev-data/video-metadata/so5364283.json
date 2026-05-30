@@ -2,6 +2,8 @@
   "kind": "found",
   "watchId": "so5364283",
   "title": "モバイルカ第1話",
+  "registeredAt": "2008-04-08T16:13:28+09:00",
+  "contentType": "long",
   "thumbnail": {
     "url": "https://nicovideo.cdn.nimg.jp/thumbnails/5364283/5364283",
     "middleUrl": null,
@@ -10,6 +12,9 @@
     "nHdUrl": "https://img.cdn.nimg.jp/s/nicovideo/thumbnails/5364283/5364283.original/r640x360l?key=3d93498bd15a1fac12c3dc058f13ff6c20bcfbaafc0b5ac7570f969f4f87565a"
   },
   "duration": 77,
+  "isChannelVideo": true,
+  "isPaymentRequired": false,
+  "requireSensitiveMasking": false,
   "owner": {
     "id": "ch75",
     "name": "キャラウッド動画 ",

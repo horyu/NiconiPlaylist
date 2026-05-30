@@ -206,9 +206,24 @@ export function isVideoMetadata(value: unknown): value is VideoMetadata {
   return (
     typeof candidate.watchId === "string" &&
     typeof candidate.title === "string" &&
+    (candidate.registeredAt === null ||
+      candidate.registeredAt === undefined ||
+      typeof candidate.registeredAt === "string") &&
+    (candidate.contentType === null ||
+      candidate.contentType === undefined ||
+      typeof candidate.contentType === "string") &&
     !!candidate.thumbnail &&
     typeof candidate.thumbnail === "object" &&
     (candidate.duration === null || typeof candidate.duration === "number") &&
+    (candidate.isChannelVideo === null ||
+      candidate.isChannelVideo === undefined ||
+      typeof candidate.isChannelVideo === "boolean") &&
+    (candidate.isPaymentRequired === null ||
+      candidate.isPaymentRequired === undefined ||
+      typeof candidate.isPaymentRequired === "boolean") &&
+    (candidate.requireSensitiveMasking === null ||
+      candidate.requireSensitiveMasking === undefined ||
+      typeof candidate.requireSensitiveMasking === "boolean") &&
     (candidate.ownerId === null ||
       candidate.ownerId === undefined ||
       typeof candidate.ownerId === "string") &&

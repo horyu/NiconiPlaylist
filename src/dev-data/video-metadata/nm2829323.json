@@ -2,6 +2,8 @@
   "kind": "found",
   "watchId": "nm2829323",
   "title": "NMMでぽぽたんダンス×ｳｯｰｳｯｰｳﾏｳﾏ(ﾟ∀ﾟ)",
+  "registeredAt": "2008-03-29T23:06:23+09:00",
+  "contentType": "long",
   "thumbnail": {
     "url": "https://nicovideo.cdn.nimg.jp/thumbnails/2829323/2829323",
     "middleUrl": null,
@@ -10,6 +12,9 @@
     "nHdUrl": "https://img.cdn.nimg.jp/s/nicovideo/thumbnails/2829323/2829323.original/r640x360l?key=20dcf9457eb5cfd6e32c7e3c3db343e0ee013e7e3304dac755e96bd942088720"
   },
   "duration": 173,
+  "isChannelVideo": false,
+  "isPaymentRequired": false,
+  "requireSensitiveMasking": false,
   "owner": {
     "id": "4080496",
     "name": "新ドナP",

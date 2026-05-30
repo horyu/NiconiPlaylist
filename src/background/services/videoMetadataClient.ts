@@ -42,7 +42,9 @@ export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVide
       items?: Array<{
         watchId: string;
         video?: {
+          contentType?: string | null;
           title?: string;
+          registeredAt?: string | null;
           thumbnail?: {
             url?: string | null;
             middleUrl?: string | null;
@@ -51,6 +53,9 @@ export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVide
             nHdUrl?: string | null;
           };
           duration?: number | null;
+          isChannelVideo?: boolean | null;
+          isPaymentRequired?: boolean | null;
+          requireSensitiveMasking?: boolean | null;
           owner?: {
             id?: string | null;
             name?: string | null;
@@ -87,6 +92,8 @@ export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVide
     kind: "found",
     watchId,
     title: video.title,
+    registeredAt: video.registeredAt ?? null,
+    contentType: video.contentType ?? null,
     thumbnail: {
       url: video.thumbnail?.url ?? null,
       middleUrl: video.thumbnail?.middleUrl ?? null,
@@ -95,6 +102,9 @@ export async function fetchNvapiVideoMetadata(watchId: VideoId): Promise<DevVide
       nHdUrl: video.thumbnail?.nHdUrl ?? null,
     },
     duration: video.duration ?? null,
+    isChannelVideo: video.isChannelVideo ?? null,
+    isPaymentRequired: video.isPaymentRequired ?? null,
+    requireSensitiveMasking: video.requireSensitiveMasking ?? null,
     owner: {
       id: video.owner?.id ?? null,
       name: video.owner?.name ?? null,

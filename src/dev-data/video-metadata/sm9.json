@@ -2,6 +2,8 @@
   "kind": "found",
   "watchId": "sm9",
   "title": "新・豪血寺一族 -煩悩解放 - レッツゴー！陰陽師",
+  "registeredAt": "2007-03-06T00:33:00+09:00",
+  "contentType": "long",
   "thumbnail": {
     "url": "https://nicovideo.cdn.nimg.jp/thumbnails/9/9",
     "middleUrl": null,
@@ -10,6 +12,9 @@
     "nHdUrl": "https://img.cdn.nimg.jp/s/nicovideo/thumbnails/9/9.original/r640x360l?key=f83ef455571077c596fbb73a6c652bdb4436f0fd40f485f09a6a8cd09d0dd892"
   },
   "duration": 320,
+  "isChannelVideo": false,
+  "isPaymentRequired": false,
+  "requireSensitiveMasking": false,
   "owner": {
     "id": "4",
     "name": "中の",

@@ -40,8 +40,13 @@ function toStoredRecords(
     videoMetadata: {
       watchId: record.watchId,
       title: record.title,
+      registeredAt: record.registeredAt,
+      contentType: record.contentType,
       thumbnail: record.thumbnail,
       duration: record.duration,
+      isChannelVideo: record.isChannelVideo,
+      isPaymentRequired: record.isPaymentRequired,
+      requireSensitiveMasking: record.requireSensitiveMasking,
       ownerId,
       fetchedAt,
     },
