@@ -243,7 +243,7 @@ export function DataTab(props: DataTabProps) {
         </p>
       </div>
 
-      <div class="grid gap-6 xl:grid-cols-2">
+      <div class="space-y-6">
         <div class="space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
           <div class="space-y-1">
             <h3 class="text-sm font-semibold text-stone-200">バックアップ・復元</h3>
