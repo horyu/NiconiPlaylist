@@ -5,7 +5,7 @@ import { parseVideoIdInputLine, parseVideoIdInputLines } from "./videoIdInput";
 describe("videoIdInput", () => {
   test("動画IDをそのまま解析できる", () => {
     expect(parseVideoIdInputLine("sm9")).toBe("sm9");
-    expect(parseVideoIdInputLine("ss46168863")).toBe("ss46168863");
+    expect(parseVideoIdInputLine("nm2829323")).toBe("nm2829323");
   });
 
   test("watch URL から動画IDを抽出できる", () => {
@@ -17,7 +17,7 @@ describe("videoIdInput", () => {
 
   test("行中の最初の動画IDを抽出できる", () => {
     expect(parseVideoIdInputLine("https://example.com/watch/sm9")).toBe("sm9");
-    expect(parseVideoIdInputLine("prefix so5364283 suffix ss46168863")).toBe("so5364283");
+    expect(parseVideoIdInputLine("prefix so5364283 suffix nm2829323")).toBe("so5364283");
   });
 
   test("複数行の動画IDと watch URL をまとめて解析できる", () => {
@@ -26,20 +26,20 @@ describe("videoIdInput", () => {
       "https://www.nicovideo.jp/watch/so5364283",
       "",
       "nm2829323",
-      "https://www.nicovideo.jp/watch/ss46168863?from=0",
+      "https://www.nicovideo.jp/watch/sm46168863?from=0",
     ].join("\n");
 
-    expect(parseVideoIdInputLines(value)).toEqual(["sm9", "so5364283", "nm2829323", "ss46168863"]);
+    expect(parseVideoIdInputLines(value)).toEqual(["sm9", "so5364283", "nm2829323", "sm46168863"]);
   });
 
   test("空白区切りとタブ区切りとカンマ区切りをまとめて解析できる", () => {
-    const value = ["sm9,so5364283", "nm2829323\tss46168863", "sm45764446 so46209323"].join("\n");
+    const value = ["sm9,so5364283", "nm2829323\tsm46168863", "sm45764446 so46209323"].join("\n");
 
     expect(parseVideoIdInputLines(value)).toEqual([
       "sm9",
       "so5364283",
       "nm2829323",
-      "ss46168863",
+      "sm46168863",
       "sm45764446",
       "so46209323",
     ]);

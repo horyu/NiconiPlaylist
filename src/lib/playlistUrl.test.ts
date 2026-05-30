@@ -7,7 +7,7 @@ describe("playlistUrl", () => {
     const url = buildSharedPlaylistUrl({
       title: "My Playlist",
       memo: "memo text",
-      videoIds: ["sm1", "so2", "ss3"],
+      videoIds: ["sm1", "so2", "nm3"],
     });
 
     expect(url.startsWith(`${SHARED_PLAYLIST_URL}?`)).toBe(true);
@@ -20,7 +20,7 @@ describe("playlistUrl", () => {
     const draft = {
       title: "Shared title",
       memo: "Shared memo",
-      videoIds: ["sm1", "so20", "nm300", "ss4000"],
+      videoIds: ["sm1", "so20", "nm300", "sm4000"],
     };
 
     expect(parseSharedPlaylistUrl(buildSharedPlaylistUrl(draft))).toEqual(draft);
@@ -28,13 +28,13 @@ describe("playlistUrl", () => {
 
   test("title と memo を省略しても扱える", () => {
     const draft = {
-      videoIds: ["sm1", "ss2"],
+      videoIds: ["sm1", "nm2"],
     };
 
     expect(parseSharedPlaylistUrl(buildSharedPlaylistUrl(draft))).toEqual({
       title: undefined,
       memo: undefined,
-      videoIds: ["sm1", "ss2"],
+      videoIds: ["sm1", "nm2"],
     });
   });
 

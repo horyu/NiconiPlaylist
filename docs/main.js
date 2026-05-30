@@ -1,30 +1,36 @@
-var v = ["sm", "so", "nm", "ss"];
-function E(e, r) {
-  if (!Number.isInteger(e) || e < -2147483647 || e > 2147483647) throw Error(`Invalid ${r}.`);
+var M = ["sm", "so", "nm"],
+  T = [
+    ["so", "nm"],
+    ["sm", "nm"],
+    ["sm", "so"],
+  ];
+var D = ["sm", "so", "nm"];
+function R(e, n) {
+  if (!Number.isInteger(e) || e < -2147483647 || e > 2147483647) throw Error(`Invalid ${n}.`);
 }
-function _(e) {
+function N(e) {
   if (!Number.isInteger(e) || e < 0 || e > 2147483647) throw Error("Invalid ZigZag value.");
   return e % 2 === 0 ? e / 2 : -((e + 1) / 2);
 }
-function h(e, r) {
-  let n = 0,
+function p(e, n) {
+  let r = 0,
     t = 0,
-    o = r;
+    o = n;
   while (o < e.length) {
     let i = e[o];
-    if (((n += (i & 127) * 2 ** t), (o += 1), (i & 128) === 0)) return { value: n, nextIndex: o };
+    if (((r += (i & 127) * 2 ** t), (o += 1), (i & 128) === 0)) return { value: r, nextIndex: o };
     if (((t += 7), t > 28)) throw Error("Invalid varint value.");
   }
   throw Error("Incomplete varint.");
 }
-function A(e) {
+function k(e) {
   if (!/^[A-Za-z0-9\-_]*$/u.test(e)) throw Error("Invalid base64url.");
   if (e.length % 4 === 1) throw Error("Invalid base64url.");
-  let r = (4 - (e.length % 4)) % 4,
-    n = e.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat(r),
+  let n = (4 - (e.length % 4)) % 4,
+    r = e.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat(n),
     t = "";
   try {
-    t = atob(n);
+    t = atob(r);
   } catch {
     throw Error("Invalid base64url.");
   }
@@ -32,40 +38,91 @@ function A(e) {
   for (let i = 0; i < t.length; i += 1) o[i] = t.charCodeAt(i);
   return o;
 }
-function x(e) {
-  let r = A(e),
-    n = h(r, 0),
-    t = n.value,
-    o = Math.ceil(t / 4),
-    i = n.nextIndex,
-    l = i + o;
-  if (l > r.length) throw Error("Packed prefix bytes are missing.");
-  let I = r.slice(i, l),
-    p = [],
-    m = 0,
-    c = l;
-  for (let a = 0; a < t; a += 1) {
-    let w = (I[Math.floor(a / 4)] >> ((a % 4) * 2)) & 3,
-      u = v[w];
-    if (!u) throw Error("Invalid prefix code.");
-    let g = h(r, c);
-    c = g.nextIndex;
-    let f = _(g.value);
-    E(f, "delta");
-    let s = m + f;
-    if (!Number.isSafeInteger(s) || s < 1 || s > 999999999)
-      throw Error("Decoded numeric part is out of range.");
-    ((m = s), p.push(`${u}${s}`));
+function L(e, n, r) {
+  let t = p(e, n),
+    o = t.value,
+    i = p(e, t.nextIndex),
+    d = i.value,
+    c = Array(d),
+    s = i.nextIndex;
+  for (let a = 0; a < d; a += 1) {
+    let g = p(e, s);
+    ((c[a] = g.value), (s = g.nextIndex));
   }
-  if (c !== r.length) throw Error("Unexpected trailing bytes.");
-  return p;
+  let f = Math.ceil(d / 8),
+    l = s + f;
+  if (l > e.length) throw Error("Packed exception type bits are missing.");
+  let u = e.slice(s, l);
+  s = l;
+  let m = p(e, s),
+    E = m.value;
+  s = m.nextIndex;
+  let b = M[r],
+    [v, _] = T[r],
+    x = [];
+  for (let a = 0; a < d; a += 1) {
+    let g = c[a];
+    for (let y = 0; y < g; y += 1) x.push(b);
+    let A = (u[Math.floor(a / 8)] >> (a % 8)) & 1;
+    x.push(A === 0 ? v : _);
+  }
+  for (let a = 0; a < E; a += 1) x.push(b);
+  if (x.length !== o) throw Error("Decoded prefix count does not match count.");
+  return { count: o, prefixes: x, nextIndex: s };
 }
-function N(e) {
-  let r = new URLSearchParams(e),
-    n = r.get("videoIds");
-  if (!n) return { kind: "empty" };
+function S(e) {
+  let n = 0n;
+  for (let r of e) n = (n << 8n) | BigInt(r);
+  return n;
+}
+function U(e, n) {
+  let r = p(e, n),
+    t = r.value,
+    o = p(e, r.nextIndex),
+    i = o.value,
+    d = o.nextIndex,
+    c = d + i;
+  if (c > e.length) throw Error("Packed base-3 prefix bytes are missing.");
+  let s = S(e.slice(d, c)),
+    f = Array(t);
+  for (let l = t - 1; l >= 0; l -= 1) {
+    let u = Number(s % 3n),
+      m = D[u];
+    if (!m) throw Error("Decoded base-3 prefix is invalid.");
+    ((f[l] = m), (s /= 3n));
+  }
+  if (s !== 0n) throw Error("Decoded prefix count does not match count.");
+  return { count: t, prefixes: f, nextIndex: c };
+}
+function I(e) {
+  let n = k(e),
+    r = n[0];
+  if (r === void 0 || r > 3) throw Error("Invalid mode.");
+  let t = r,
+    o = t === 3 ? U(n, 1) : L(n, 1, t),
+    i = [],
+    d = 0,
+    c = o.nextIndex;
+  for (let s of o.prefixes) {
+    let f = p(n, c);
+    c = f.nextIndex;
+    let l = N(f.value);
+    R(l, "delta");
+    let u = d + l;
+    if (!Number.isSafeInteger(u) || u < 1 || u > 999999999)
+      throw Error("Decoded numeric part is out of range.");
+    ((d = u), i.push(`${s}${u}`));
+  }
+  if (i.length !== o.count) throw Error("Decoded prefix count does not match count.");
+  if (c !== n.length) throw Error("Unexpected trailing bytes.");
+  return i;
+}
+function B(e) {
+  let n = new URLSearchParams(e),
+    r = n.get("videoIds");
+  if (!r) return { kind: "empty" };
   try {
-    return { kind: "ready", memo: r.get("memo"), title: r.get("title"), videoIds: x(n) };
+    return { kind: "ready", memo: n.get("memo"), title: n.get("title"), videoIds: I(r) };
   } catch (t) {
     return {
       kind: "error",
@@ -73,26 +130,26 @@ function N(e) {
     };
   }
 }
-function b(e) {
+function w(e) {
   return e
     .map(
-      (r) =>
-        `<li><a href="https://www.nicovideo.jp/watch/${encodeURIComponent(r)}">${d(r)}</a></li>`,
+      (n) =>
+        `<li><a href="https://www.nicovideo.jp/watch/${encodeURIComponent(n)}">${h(n)}</a></li>`,
     )
     .join("");
 }
-function P(e) {
-  let r = Math.ceil(e.length / 2),
-    n = e.slice(0, r),
-    t = e.slice(r);
+function $(e) {
+  let n = Math.ceil(e.length / 2),
+    r = e.slice(0, n),
+    t = e.slice(n);
   return `
     <div class="video-id-columns">
-      <ol>${b(n)}</ol>
-      ${t.length > 0 ? `<ol start="${r + 1}">${b(t)}</ol>` : ""}
+      <ol>${w(r)}</ol>
+      ${t.length > 0 ? `<ol start="${n + 1}">${w(t)}</ol>` : ""}
     </div>
   `;
 }
-function d(e) {
+function h(e) {
   return e
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -100,7 +157,7 @@ function d(e) {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
 }
-function k(e) {
+function X(e) {
   return `
     <style>
       :root {
@@ -249,26 +306,26 @@ function k(e) {
           case "error":
             return `
           <div class="status error">共有URLの解析に失敗しました</div>
-          <p class="lead">${d(e.message)}</p>
+          <p class="lead">${h(e.message)}</p>
         `;
           case "ready": {
-            let n = e.title?.trim() || "未指定",
+            let r = e.title?.trim() || "未指定",
               t = e.memo?.trim() || "未指定";
             return `
           <div class="status ready">共有URLを確認しました</div>
           <dl class="meta">
             <div>
               <dt>title</dt>
-              <dd>${d(n)}</dd>
+              <dd>${h(r)}</dd>
             </div>
             <div>
               <dt>memo</dt>
-              <dd>${d(t)}</dd>
+              <dd>${h(t)}</dd>
             </div>
           </dl>
           <div class="section">
             <h2>videoId 一覧 (${e.videoIds.length} 件)</h2>
-            ${P(e.videoIds)}
+            ${$(e.videoIds)}
           </div>
           <p class="lead">
             この共有URLのインポートと再生は、
@@ -282,6 +339,6 @@ function k(e) {
     </main>
   `;
 }
-var y = document.querySelector("#app");
-if (!y) throw Error("#app not found.");
-y.innerHTML = k(N(location.search));
+var P = document.querySelector("#app");
+if (!P) throw Error("#app not found.");
+P.innerHTML = X(B(location.search));

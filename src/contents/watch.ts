@@ -15,7 +15,7 @@ const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitia
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
 const ADVERTISEMENT_SRC_PREFIX = "https://dcdn.cdn.nimg.jp/nicoad/instream/video";
 const CURRENT_TIME_SLIDER_SELECTOR = '[aria-label="video - currentTime"][role="slider"]';
-const WATCH_VIDEO_ID_PATH_PATTERN = /^\/watch\/((sm|so|nm|ss)[1-9][0-9]{0,8})$/u;
+const WATCH_VIDEO_ID_PATH_PATTERN = /^\/watch\/((sm|so|nm)[1-9][0-9]{0,8})$/u;
 const PLAYLIST_COMPLETED_ALERT_MESSAGE = "プレイリストの再生が終了しました。";
 
 function isVideoElement(target: EventTarget | null): target is HTMLVideoElement {

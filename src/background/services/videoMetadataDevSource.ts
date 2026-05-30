@@ -83,13 +83,11 @@ const DEV_VIDEO_METADATA_LOADERS: Record<VideoId, () => Promise<unknown>> = {
     import("@/dev-data/video-metadata/so5364283.json").then((module) => module.default),
   nm2829323: () =>
     import("@/dev-data/video-metadata/nm2829323.json").then((module) => module.default),
-  ss46168863: () =>
-    import("@/dev-data/video-metadata/ss46168863.json").then((module) => module.default),
   sm1: () => import("@/dev-data/video-metadata/sm1.json").then((module) => module.default),
 };
 
 function isKnownVideoIdFormat(watchId: VideoId): boolean {
-  return /^(sm|so|nm|ss)[1-9][0-9]{0,8}$/.test(watchId);
+  return /^(sm|so|nm)[1-9][0-9]{0,8}$/.test(watchId);
 }
 
 function createSyntheticDevVideoMetadataRecord(watchId: VideoId): DevVideoMetadataRecord {

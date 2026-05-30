@@ -1,6 +1,6 @@
 import type { VideoId } from "@/lib/types";
 
-const VIDEO_ID_EXTRACT_PATTERN = /(sm|so|nm|ss)[1-9][0-9]{0,8}/;
+const VIDEO_ID_EXTRACT_PATTERN = /(sm|so|nm)[1-9][0-9]{0,8}/;
 const VIDEO_ID_PATTERN = new RegExp(`^${VIDEO_ID_EXTRACT_PATTERN.source}$`);
 
 function parseWatchUrlVideoId(value: string): VideoId | null {
