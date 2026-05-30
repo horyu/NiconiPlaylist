@@ -223,9 +223,6 @@ export function VideosTab(props: VideosTabProps) {
   const [watchIdQuery, setWatchIdQuery] = createSignal("");
   const [ownerQuery, setOwnerQuery] = createSignal("");
   const [playlistQuery, setPlaylistQuery] = createSignal("");
-  const [selectedMetadataFilter, setSelectedMetadataFilter] = createSignal<
-    "all" | "with" | "without"
-  >("all");
   const [toggledVideoIds, setToggledVideoIds] = createSignal<Set<VideoId>>(new Set());
   const videoRows = createMemo(() => buildVideoRows(props.state, props.videoMetadataState));
   const ownerOptions = createMemo(() =>
@@ -251,17 +248,8 @@ export function VideosTab(props: VideosTabProps) {
     const normalizedWatchIdQuery = watchIdQuery().trim().toLocaleLowerCase();
     const normalizedOwnerQuery = ownerQuery().trim().toLocaleLowerCase();
     const normalizedPlaylistQuery = playlistQuery().trim().toLocaleLowerCase();
-    const metadataFilter = selectedMetadataFilter();
 
     return videoRows().filter((row) => {
-      if (metadataFilter === "with" && row.videoMetadata === undefined) {
-        return false;
-      }
-
-      if (metadataFilter === "without" && row.videoMetadata !== undefined) {
-        return false;
-      }
-
       const title = row.videoMetadata?.title?.toLocaleLowerCase() ?? "";
       const ownerName = row.ownerMetadata?.name?.toLocaleLowerCase() ?? "";
 
@@ -404,24 +392,6 @@ export function VideosTab(props: VideosTabProps) {
               </label>
               <label class="min-w-[9rem] flex-none space-y-2">
                 <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                  メタデータ
-                </span>
-                <select
-                  value={selectedMetadataFilter()}
-                  onChange={(event) =>
-                    setSelectedMetadataFilter(
-                      event.currentTarget.value as "all" | "with" | "without",
-                    )
-                  }
-                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
-                >
-                  <option value="all">すべて</option>
-                  <option value="with">取得済みのみ</option>
-                  <option value="without">未取得のみ</option>
-                </select>
-              </label>
-              <label class="min-w-[9rem] flex-none space-y-2">
-                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
                   ソート
                 </span>
                 <select
@@ -485,14 +455,14 @@ export function VideosTab(props: VideosTabProps) {
                 <table class="min-w-full table-fixed border-separate border-spacing-0 overflow-hidden rounded-2xl border border-stone-800">
                   <thead class="bg-stone-900/80">
                     <tr class="text-left text-xs uppercase tracking-[0.18em] text-stone-500">
-                      <th class="w-16 px-4 py-3 font-medium">#</th>
-                      <th class="w-28 px-4 py-3 font-medium">サムネ</th>
-                      <th class="px-4 py-3 font-medium">タイトル</th>
-                      <th class="w-48 px-4 py-3 font-medium">投稿日時</th>
-                      <th class="w-24 px-4 py-3 font-medium">時間</th>
-                      <th class="w-32 px-4 py-3 font-medium">watchId</th>
-                      <th class="w-36 px-4 py-3 font-medium">投稿者</th>
-                      <th class="w-80 px-4 py-3 font-medium">playlist</th>
+                      <th class="w-12 pl-4 py-3 font-medium">#</th>
+                      <th class="w-28 pl-4 py-3 font-medium">サムネ</th>
+                      <th class="pl-4 py-3 font-medium">タイトル</th>
+                      <th class="w-32 pl-4 py-3 font-medium">投稿日時</th>
+                      <th class="w-12 pl-4 py-3 font-medium">時間</th>
+                      <th class="w-24 pl-4 py-3 font-medium">watchId</th>
+                      <th class="w-36 pl-4 py-3 font-medium">投稿者</th>
+                      <th class="w-72 pl-4 pr-4 py-3 font-medium">playlist</th>
                     </tr>
                   </thead>
                   <tbody class="bg-stone-950/40">
@@ -504,10 +474,10 @@ export function VideosTab(props: VideosTabProps) {
 
                         return (
                           <tr class="align-top text-sm text-stone-200">
-                            <td class="border-t border-stone-800 px-4 py-4 text-xs font-medium text-stone-500">
+                            <td class="border-t border-stone-800 pl-4 py-4 text-xs font-medium text-stone-500">
                               #{index() + 1}
                             </td>
-                            <td class="border-t border-stone-800 px-4 py-4">
+                            <td class="border-t border-stone-800 pl-4 py-4">
                               <a
                                 href={`https://www.nicovideo.jp/watch/${row.videoId}`}
                                 target="_blank"
@@ -525,24 +495,24 @@ export function VideosTab(props: VideosTabProps) {
                                 </Show>
                               </a>
                             </td>
-                            <td class="border-t border-stone-800 px-4 py-4">
+                            <td class="border-t border-stone-800 pl-4 py-4">
                               <p class="line-clamp-3 font-medium text-stone-100">
                                 {row.videoMetadata?.title ?? "未取得"}
                               </p>
                             </td>
-                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
+                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
                               {formatRegisteredAt(row.videoMetadata?.registeredAt)}
                             </td>
-                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-500">
+                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
                               {formatDuration(row.videoMetadata?.duration)}
                             </td>
-                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
+                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
                               {row.videoId}
                             </td>
-                            <td class="border-t border-stone-800 px-4 py-4 text-xs text-stone-400">
+                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
                               {row.ownerMetadata?.name ?? "-"}
                             </td>
-                            <td class="border-t border-stone-800 px-4 py-4">
+                            <td class="border-t border-stone-800 pl-4 pr-4 py-4">
                               <div class="space-y-2">
                                 <button
                                   type="button"
