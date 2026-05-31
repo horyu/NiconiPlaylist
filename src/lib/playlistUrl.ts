@@ -3,7 +3,7 @@ import type { Playlist } from "@/lib/types";
 
 export const SHARED_PLAYLIST_URL = "https://horyu.github.io/NiconiPlaylist/";
 export const SAMPLE_SHARED_PLAYLIST_URL =
-  "https://horyu.github.io/NiconiPlaylist/?videoIds=AwYBjBLk6I4F37i1AoOw2QLk6I4F37i1Ag";
+  "https://horyu.github.io/NiconiPlaylist/?title=NiconiPlaylist+%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB&memo=sm+%2F+so+%2F+nm+%E3%82%92%E5%90%AB%E3%82%80%E5%85%B1%E6%9C%89URL%E4%BE%8B&videoIds=AwYBjBLk6I4F37i1AoOw2QLk6I4F37i1Ag";
 
 export type SharedPlaylistDraft = Pick<Playlist, "title" | "memo" | "videoIds">;
 

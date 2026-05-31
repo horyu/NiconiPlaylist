@@ -86,7 +86,7 @@ const decoded = decodeIds(encoded);
 実際の共有 URL 例として、`sm9`, `so5364283`, `nm2829323`, `sm9`, `so5364283`, `nm2829323` を共有 URL にしたものは以下。
 
 ```txt
-https://horyu.github.io/NiconiPlaylist/?videoIds=AwYBjBLk6I4F37i1AoOw2QLk6I4F37i1Ag
+https://horyu.github.io/NiconiPlaylist/?title=NiconiPlaylist+%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB&memo=sm+%2F+so+%2F+nm+%E3%82%92%E5%90%AB%E3%82%80%E5%85%B1%E6%9C%89URL%E4%BE%8B&videoIds=AwYBjBLk6I4F37i1AoOw2QLk6I4F37i1Ag
 ```
 
 空配列も可逆変換の対象とする。
