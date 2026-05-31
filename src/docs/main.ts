@@ -77,6 +77,7 @@ function showState(preview: SharedPlaylistPreview): void {
   const sampleSharedUrlLink = requireElement<HTMLAnchorElement>("#sample-shared-url-link");
 
   sampleSharedUrlLink.href = SAMPLE_SHARED_PLAYLIST_URL;
+  sampleSharedUrlLink.textContent = SAMPLE_SHARED_PLAYLIST_URL;
 
   emptyView.hidden = preview.kind !== "empty";
   errorView.hidden = preview.kind !== "error";

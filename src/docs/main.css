@@ -131,3 +131,7 @@ ol {
 a {
   color: #99f6e4;
 }
+
+#sample-shared-url-link {
+  overflow-wrap: anywhere;
+}
