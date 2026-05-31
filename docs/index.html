@@ -8,48 +8,51 @@
   <style>:root{--buncss-light: ;--buncss-dark:initial;color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Noto Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif}body{color:#f5f5f4;background:radial-gradient(circle at top,#14b8a624,#0000 32%),#14110f;min-height:100vh;margin:0}#app{padding:40px 16px}main{background:#1c1917f0;border:1px solid #44403c;border-radius:28px;width:min(720px,100%);margin:0 auto;padding:32px;box-shadow:0 24px 64px #00000047}.eyebrow{letter-spacing:.18em;text-transform:uppercase;color:#a8a29e;margin:0 0 8px;font-size:12px}h1{margin:0 0 16px;font-size:30px}h2{margin:0 0 12px;font-size:16px}.lead,.note,dd,li{color:#d6d3d1;line-height:1.8}.status{display:inline-flex;letter-spacing:.08em;border-radius:999px;align-items: center;margin-bottom:16px;padding:6px 12px;font-size:12px;font-weight:600}.status.ready{color:#a7f3d0;background:#10b9811f;border:1px solid #10b98161}.status.error{color:#fecaca;background:#f871711f;border:1px solid #f8717166}.meta{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:0 0 24px}.meta div,.section{background:#0c0a096b;border:1px solid #3f3f46;border-radius:20px;padding:16px}dt{letter-spacing:.14em;text-transform:uppercase;color:#a8a29e;margin:0 0 6px;font-size:12px}dd{word-break:break-word;margin:0}ol{margin:0;padding-left:20px}.video-id-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px}.video-id-columns ol{min-width:0}@media (max-width:720px){.video-id-columns{grid-template-columns:minmax(0,1fr);gap:12px}}a{color:#99f6e4}
 </style></head>
   <body>
-    <div id="app"></div>
-    
-  <script type="module">var M=["sm","so","nm"],T=[["so","nm"],["sm","nm"],["sm","so"]];var D=["sm","so","nm"];function R(e,t){if(!Number.isInteger(e)||e<-2147483647||e>2147483647)throw Error(`Invalid ${t}.`)}function N(e){if(!Number.isInteger(e)||e<0||e>2147483647)throw Error("Invalid ZigZag value.");return e%2===0?e/2:-((e+1)/2)}function p(e,t){let r=0,n=0,o=t;while(o<e.length){let i=e[o];if(r+=(i&127)*2**n,o+=1,(i&128)===0)return{value:r,nextIndex:o};if(n+=7,n>28)throw Error("Invalid varint value.")}throw Error("Incomplete varint.")}function k(e){if(!/^[A-Za-z0-9\-_]*$/u.test(e))throw Error("Invalid base64url.");if(e.length%4===1)throw Error("Invalid base64url.");let t=(4-e.length%4)%4,r=e.replaceAll("-","+").replaceAll("_","/")+"=".repeat(t),n="";try{n=atob(r)}catch{throw Error("Invalid base64url.")}let o=new Uint8Array(n.length);for(let i=0;i<n.length;i+=1)o[i]=n.charCodeAt(i);return o}function L(e,t,r){let n=p(e,t),o=n.value,i=p(e,n.nextIndex),d=i.value,c=Array(d),s=i.nextIndex;for(let a=0;a<d;a+=1){let g=p(e,s);c[a]=g.value,s=g.nextIndex}let f=Math.ceil(d/8),l=s+f;if(l>e.length)throw Error("Packed exception type bits are missing.");let u=e.slice(s,l);s=l;let m=p(e,s),E=m.value;s=m.nextIndex;let b=M[r],[v,_]=T[r],x=[];for(let a=0;a<d;a+=1){let g=c[a];for(let y=0;y<g;y+=1)x.push(b);let A=u[Math.floor(a/8)]>>a%8&1;x.push(A===0?v:_)}for(let a=0;a<E;a+=1)x.push(b);if(x.length!==o)throw Error("Decoded prefix count does not match count.");return{count:o,prefixes:x,nextIndex:s}}function S(e){let t=0n;for(let r of e)t=t<<8n|BigInt(r);return t}function U(e,t){let r=p(e,t),n=r.value,o=p(e,r.nextIndex),i=o.value,d=o.nextIndex,c=d+i;if(c>e.length)throw Error("Packed base-3 prefix bytes are missing.");let s=S(e.slice(d,c)),f=Array(n);for(let l=n-1;l>=0;l-=1){let u=Number(s%3n),m=D[u];if(!m)throw Error("Decoded base-3 prefix is invalid.");f[l]=m,s/=3n}if(s!==0n)throw Error("Decoded prefix count does not match count.");return{count:n,prefixes:f,nextIndex:c}}function I(e){let t=k(e),r=t[0];if(r===void 0||r>3)throw Error("Invalid mode.");let n=r,o=n===3?U(t,1):L(t,1,n),i=[],d=0,c=o.nextIndex;for(let s of o.prefixes){let f=p(t,c);c=f.nextIndex;let l=N(f.value);R(l,"delta");let u=d+l;if(!Number.isSafeInteger(u)||u<1||u>999999999)throw Error("Decoded numeric part is out of range.");d=u,i.push(`${s}${u}`)}if(i.length!==o.count)throw Error("Decoded prefix count does not match count.");if(c!==t.length)throw Error("Unexpected trailing bytes.");return i}function B(e){let t=new URLSearchParams(e),r=t.get("videoIds");if(!r)return{kind:"empty"};try{return{kind:"ready",memo:t.get("memo"),title:t.get("title"),videoIds:I(r)}}catch(n){return{kind:"error",message:n instanceof Error?n.message:"videoIds を解析できませんでした。"}}}function w(e){return e.map((t)=>`<li><a href="https://www.nicovideo.jp/watch/${encodeURIComponent(t)}">${h(t)}</a></li>`).join("")}function $(e){let t=Math.ceil(e.length/2),r=e.slice(0,t),n=e.slice(t);return`
-    <div class="video-id-columns">
-      <ol>${w(r)}</ol>
-      ${n.length>0?`<ol start="${t+1}">${w(n)}</ol>`:""}
-    </div>
-  `}function h(e){return e.replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;")}function X(e){return`
-    <main>
-      <p class="eyebrow">NiconiPlaylist</p>
-      <h1>共有URLプレビュー</h1>
-      ${(()=>{switch(e.kind){case"empty":return`
+    <div id="app">
+      <main>
+        <p class="eyebrow">NiconiPlaylist</p>
+        <h1>共有URLプレビュー</h1>
+
+        <section id="empty-view">
           <p class="lead">
             このページは <a href="https://github.com/horyu/NiconiPlaylist">NiconiPlaylist</a>
             の案内用ページです。プレイリストの作成・インポート・再生は、ブラウザ拡張機能側から行ってください。
           </p>
-        `;case"error":return`
+        </section>
+
+        <section id="error-view" hidden>
           <div class="status error">共有URLの解析に失敗しました</div>
-          <p class="lead">${h(e.message)}</p>
-        `;case"ready":{let r=e.title?.trim()||"未指定",n=e.memo?.trim()||"未指定";return`
+          <p id="error-message" class="lead"></p>
+        </section>
+
+        <section id="ready-view" hidden>
           <div class="status ready">共有URLを確認しました</div>
           <dl class="meta">
             <div>
               <dt>title</dt>
-              <dd>${h(r)}</dd>
+              <dd id="meta-title"></dd>
             </div>
             <div>
               <dt>memo</dt>
-              <dd>${h(n)}</dd>
+              <dd id="meta-memo"></dd>
             </div>
           </dl>
           <div class="section">
-            <h2>videoId 一覧 (${e.videoIds.length} 件)</h2>
-            ${$(e.videoIds)}
+            <h2>videoId 一覧 (<span id="video-count"></span> 件)</h2>
+            <div class="video-id-columns">
+              <ol id="video-list-left"></ol>
+              <ol id="video-list-right" hidden></ol>
+            </div>
           </div>
           <p class="lead">
             この共有URLのインポートと再生は、
             <a href="https://github.com/horyu/NiconiPlaylist">NiconiPlaylist</a>
             のブラウザ拡張機能から行ってください。
           </p>
-        `}}})()}
-    </main>
-  `}var P=document.querySelector("#app");if(!P)throw Error("#app not found.");P.innerHTML=X(B(location.search));
+        </section>
+      </main>
+    </div>
+    
+  <script type="module">var M=["sm","so","nm"],_=[["so","nm"],["sm","nm"],["sm","so"]];var L=["sm","so","nm"];function k(e,t){if(!Number.isInteger(e)||e<-2147483647||e>2147483647)throw Error(`Invalid ${t}.`)}function A(e){if(!Number.isInteger(e)||e<0||e>2147483647)throw Error("Invalid ZigZag value.");return e%2===0?e/2:-((e+1)/2)}function p(e,t){let r=0,n=0,i=t;while(i<e.length){let o=e[i];if(r+=(o&127)*2**n,i+=1,(o&128)===0)return{value:r,nextIndex:i};if(n+=7,n>28)throw Error("Invalid varint value.")}throw Error("Incomplete varint.")}function R(e){if(!/^[A-Za-z0-9\-_]*$/u.test(e))throw Error("Invalid base64url.");if(e.length%4===1)throw Error("Invalid base64url.");let t=(4-e.length%4)%4,r=e.replaceAll("-","+").replaceAll("_","/")+"=".repeat(t),n="";try{n=atob(r)}catch{throw Error("Invalid base64url.")}let i=new Uint8Array(n.length);for(let o=0;o<n.length;o+=1)i[o]=n.charCodeAt(o);return i}function D(e,t,r){let n=p(e,t),i=n.value,o=p(e,n.nextIndex),a=o.value,d=Array(a),s=o.nextIndex;for(let c=0;c<a;c+=1){let g=p(e,s);d[c]=g.value,s=g.nextIndex}let l=Math.ceil(a/8),u=s+l;if(u>e.length)throw Error("Packed exception type bits are missing.");let m=e.slice(s,u);s=u;let x=p(e,s),E=x.value;s=x.nextIndex;let b=M[r],[P,v]=_[r],h=[];for(let c=0;c<a;c+=1){let g=d[c];for(let y=0;y<g;y+=1)h.push(b);let T=m[Math.floor(c/8)]>>c%8&1;h.push(T===0?P:v)}for(let c=0;c<E;c+=1)h.push(b);if(h.length!==i)throw Error("Decoded prefix count does not match count.");return{count:i,prefixes:h,nextIndex:s}}function N(e){let t=0n;for(let r of e)t=t<<8n|BigInt(r);return t}function S(e,t){let r=p(e,t),n=r.value,i=p(e,r.nextIndex),o=i.value,a=i.nextIndex,d=a+o;if(d>e.length)throw Error("Packed base-3 prefix bytes are missing.");let s=N(e.slice(a,d)),l=Array(n);for(let u=n-1;u>=0;u-=1){let m=Number(s%3n),x=L[m];if(!x)throw Error("Decoded base-3 prefix is invalid.");l[u]=x,s/=3n}if(s!==0n)throw Error("Decoded prefix count does not match count.");return{count:n,prefixes:l,nextIndex:d}}function I(e){let t=R(e),r=t[0];if(r===void 0||r>3)throw Error("Invalid mode.");let n=r,i=n===3?S(t,1):D(t,1,n),o=[],a=0,d=i.nextIndex;for(let s of i.prefixes){let l=p(t,d);d=l.nextIndex;let u=A(l.value);k(u,"delta");let m=a+u;if(!Number.isSafeInteger(m)||m<1||m>999999999)throw Error("Decoded numeric part is out of range.");a=m,o.push(`${s}${m}`)}if(o.length!==i.count)throw Error("Decoded prefix count does not match count.");if(d!==t.length)throw Error("Unexpected trailing bytes.");return o}function U(e){let t=new URLSearchParams(e),r=t.get("videoIds");if(!r)return{kind:"empty"};try{return{kind:"ready",memo:t.get("memo"),title:t.get("title"),videoIds:I(r)}}catch(n){return{kind:"error",message:n instanceof Error?n.message:"videoIds を解析できませんでした。"}}}function w(e){return e.map((t)=>{let r=document.createElement("li"),n=document.createElement("a");return n.href=`https://www.nicovideo.jp/watch/${encodeURIComponent(t)}`,n.textContent=t,r.append(n),r})}function B(e){let t=Math.ceil(e.length/2);return{firstHalf:e.slice(0,t),secondHalf:e.slice(t)}}function f(e){let t=document.querySelector(e);if(!t)throw Error(`${e} not found.`);return t}function H(e){let t=f("#empty-view"),r=f("#error-view"),n=f("#ready-view");if(t.hidden=e.kind!=="empty",r.hidden=e.kind!=="error",n.hidden=e.kind!=="ready",e.kind==="error"){f("#error-message").textContent=e.message;return}if(e.kind!=="ready")return;let i=e.title?.trim()||"未指定",o=e.memo?.trim()||"未指定",{firstHalf:a,secondHalf:d}=B(e.videoIds),s=f("#video-list-left"),l=f("#video-list-right");f("#meta-title").textContent=i,f("#meta-memo").textContent=o,f("#video-count").textContent=String(e.videoIds.length),s.replaceChildren(...w(a)),l.replaceChildren(...w(d)),l.hidden=d.length===0,l.start=a.length+1}H(U(location.search));
 </script></body>
 </html>

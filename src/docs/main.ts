@@ -38,101 +38,69 @@ function parseSharedPlaylistPreview(search: string): SharedPlaylistPreview {
   }
 }
 
-function createVideoIdList(videoIds: string[]): string {
-  return videoIds
-    .map(
-      (videoId) =>
-        `<li><a href="https://www.nicovideo.jp/watch/${encodeURIComponent(videoId)}">${escapeHtml(videoId)}</a></li>`,
-    )
-    .join("");
+function createVideoIdListItems(videoIds: string[]): HTMLLIElement[] {
+  return videoIds.map((videoId) => {
+    const listItem = document.createElement("li");
+    const link = document.createElement("a");
+
+    link.href = `https://www.nicovideo.jp/watch/${encodeURIComponent(videoId)}`;
+    link.textContent = videoId;
+    listItem.append(link);
+
+    return listItem;
+  });
 }
 
-function createSplitVideoIdLists(videoIds: string[]): string {
+function splitVideoIds(videoIds: string[]): { firstHalf: string[]; secondHalf: string[] } {
   const middleIndex = Math.ceil(videoIds.length / 2);
-  const firstHalf = videoIds.slice(0, middleIndex);
-  const secondHalf = videoIds.slice(middleIndex);
-
-  return `
-    <div class="video-id-columns">
-      <ol>${createVideoIdList(firstHalf)}</ol>
-      ${
-        secondHalf.length > 0
-          ? `<ol start="${middleIndex + 1}">${createVideoIdList(secondHalf)}</ol>`
-          : ""
-      }
-    </div>
-  `;
+  return {
+    firstHalf: videoIds.slice(0, middleIndex),
+    secondHalf: videoIds.slice(middleIndex),
+  };
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+function requireElement<TElement extends Element>(selector: string): TElement {
+  const element = document.querySelector<TElement>(selector);
+
+  if (!element) {
+    throw new Error(`${selector} not found.`);
+  }
+
+  return element;
 }
 
-function createAppHtml(preview: SharedPlaylistPreview): string {
-  const body = (() => {
-    switch (preview.kind) {
-      case "empty":
-        return `
-          <p class="lead">
-            このページは <a href="https://github.com/horyu/NiconiPlaylist">NiconiPlaylist</a>
-            の案内用ページです。プレイリストの作成・インポート・再生は、ブラウザ拡張機能側から行ってください。
-          </p>
-        `;
+function showState(preview: SharedPlaylistPreview): void {
+  const emptyView = requireElement<HTMLElement>("#empty-view");
+  const errorView = requireElement<HTMLElement>("#error-view");
+  const readyView = requireElement<HTMLElement>("#ready-view");
 
-      case "error":
-        return `
-          <div class="status error">共有URLの解析に失敗しました</div>
-          <p class="lead">${escapeHtml(preview.message)}</p>
-        `;
+  emptyView.hidden = preview.kind !== "empty";
+  errorView.hidden = preview.kind !== "error";
+  readyView.hidden = preview.kind !== "ready";
 
-      case "ready": {
-        const title = preview.title?.trim() || "未指定";
-        const memo = preview.memo?.trim() || "未指定";
+  if (preview.kind === "error") {
+    requireElement<HTMLElement>("#error-message").textContent = preview.message;
+    return;
+  }
 
-        return `
-          <div class="status ready">共有URLを確認しました</div>
-          <dl class="meta">
-            <div>
-              <dt>title</dt>
-              <dd>${escapeHtml(title)}</dd>
-            </div>
-            <div>
-              <dt>memo</dt>
-              <dd>${escapeHtml(memo)}</dd>
-            </div>
-          </dl>
-          <div class="section">
-            <h2>videoId 一覧 (${preview.videoIds.length} 件)</h2>
-            ${createSplitVideoIdLists(preview.videoIds)}
-          </div>
-          <p class="lead">
-            この共有URLのインポートと再生は、
-            <a href="https://github.com/horyu/NiconiPlaylist">NiconiPlaylist</a>
-            のブラウザ拡張機能から行ってください。
-          </p>
-        `;
-      }
-    }
-  })();
+  if (preview.kind !== "ready") {
+    return;
+  }
 
-  return `
-    <main>
-      <p class="eyebrow">NiconiPlaylist</p>
-      <h1>共有URLプレビュー</h1>
-      ${body}
-    </main>
-  `;
+  const title = preview.title?.trim() || "未指定";
+  const memo = preview.memo?.trim() || "未指定";
+  const { firstHalf, secondHalf } = splitVideoIds(preview.videoIds);
+  const leftList = requireElement<HTMLOListElement>("#video-list-left");
+  const rightList = requireElement<HTMLOListElement>("#video-list-right");
+
+  requireElement<HTMLElement>("#meta-title").textContent = title;
+  requireElement<HTMLElement>("#meta-memo").textContent = memo;
+  requireElement<HTMLElement>("#video-count").textContent = String(preview.videoIds.length);
+
+  leftList.replaceChildren(...createVideoIdListItems(firstHalf));
+  rightList.replaceChildren(...createVideoIdListItems(secondHalf));
+  rightList.hidden = secondHalf.length === 0;
+  rightList.start = firstHalf.length + 1;
 }
 
-const app = document.querySelector<HTMLDivElement>("#app");
-
-if (!app) {
-  throw new Error("#app not found.");
-}
-
-app.innerHTML = createAppHtml(parseSharedPlaylistPreview(location.search));
+showState(parseSharedPlaylistPreview(location.search));

@@ -7,7 +7,50 @@
     <link rel="stylesheet" href="./main.css" />
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <main>
+        <p class="eyebrow">NiconiPlaylist</p>
+        <h1>共有URLプレビュー</h1>
+
+        <section id="empty-view">
+          <p class="lead">
+            このページは <a href="https://github.com/horyu/NiconiPlaylist">NiconiPlaylist</a>
+            の案内用ページです。プレイリストの作成・インポート・再生は、ブラウザ拡張機能側から行ってください。
+          </p>
+        </section>
+
+        <section id="error-view" hidden>
+          <div class="status error">共有URLの解析に失敗しました</div>
+          <p id="error-message" class="lead"></p>
+        </section>
+
+        <section id="ready-view" hidden>
+          <div class="status ready">共有URLを確認しました</div>
+          <dl class="meta">
+            <div>
+              <dt>title</dt>
+              <dd id="meta-title"></dd>
+            </div>
+            <div>
+              <dt>memo</dt>
+              <dd id="meta-memo"></dd>
+            </div>
+          </dl>
+          <div class="section">
+            <h2>videoId 一覧 (<span id="video-count"></span> 件)</h2>
+            <div class="video-id-columns">
+              <ol id="video-list-left"></ol>
+              <ol id="video-list-right" hidden></ol>
+            </div>
+          </div>
+          <p class="lead">
+            この共有URLのインポートと再生は、
+            <a href="https://github.com/horyu/NiconiPlaylist">NiconiPlaylist</a>
+            のブラウザ拡張機能から行ってください。
+          </p>
+        </section>
+      </main>
+    </div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
