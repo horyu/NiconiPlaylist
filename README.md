@@ -17,8 +17,8 @@ bun run vp config
 
 設計・仕様書の正本は `project-docs/` に置く。  
 未実装の将来拡張や改善案は `project-docs/TODO.md` に置く。  
-`docs/` は GitHub Pages 公開用ディレクトリとして扱う。
-`src/docs/` は docs ページの source で、`bun run docs` により `docs/index.html` を生成する。
+`docs/` は GitHub Pages 公開用ディレクトリとして扱う。  
+`src/docs/*` は docs ページの source、`docs/index.html` は `bun run docs` で生成する build output として扱う。
 
 - `project-docs/spec.md`
   - 全体仕様、UI 挙動、データ保持方針
