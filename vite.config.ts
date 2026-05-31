@@ -12,6 +12,7 @@ export default defineConfig({
     },
   },
   fmt: {
+    ignorePatterns: ["docs/index.html"],
     sortImports: {
       groups: [["builtin"], ["external"], ["internal"], ["parent", "sibling", "index"], ["style"]],
     },
