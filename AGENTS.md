@@ -1,5 +1,5 @@
-# 開発運用メモ
+# Repo Notes
 
-- 仕様書の正本は `project-docs/` に置く
-- `docs/` は GitHub Pages 公開用ディレクトリとして扱う
-- `project-docs/spec.md` は全体仕様、`project-docs/id-codec.md` は ID 列エンコード仕様、`project-docs/video-metadata-api.md` は動画メタデータ取得・保存方針、`project-docs/user-agent.md` は User-Agent 対応方針の正本とする
+- この repo の概要、開発コマンド、ディレクトリ構成は `README.md` を参照。
+- 仕様書の正本は `project-docs/` を参照。
+- `docs/` は生成物、`src/docs/*` は source として扱う。
