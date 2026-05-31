@@ -10,7 +10,7 @@ import {
   type PlaylistJsonPayload,
 } from "@/background/services/playlistJson";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
-import { parseSharedPlaylistUrl } from "@/lib/playlistUrl";
+import { parseSharedPlaylistUrl, SAMPLE_SHARED_PLAYLIST_URL } from "@/lib/playlistUrl";
 import { PreviewPanel } from "@/options/components/PreviewPanel";
 import { PreviewVideoList } from "@/options/components/PreviewVideoList";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -31,9 +31,6 @@ type ImportSectionProps = {
   onImported: () => Promise<void> | void;
   videoMetadataState: VideoMetadataState | undefined;
 };
-
-const DEFAULT_SHARED_URL =
-  "https://horyu.github.io/NiconiPlaylist/?videoIds=AwYBjBLk6I4F37i1AoOw2QLk6I4F37i1Ag";
 
 function getSourceLabel(source: ImportSource): string {
   switch (source) {
@@ -60,7 +57,9 @@ export function ImportSection(props: ImportSectionProps) {
   const [showAllPreview, setShowAllPreview] = createSignal(false);
   const [playlistTitle, setPlaylistTitle] = createSignal("");
   const [playlistMemo, setPlaylistMemo] = createSignal("");
-  const [sharedUrl, setSharedUrl] = createSignal(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
+  const [sharedUrl, setSharedUrl] = createSignal(
+    import.meta.env.DEV ? SAMPLE_SHARED_PLAYLIST_URL : "",
+  );
   const [playlistJsonPreview, setPlaylistJsonPreview] = createSignal<PlaylistJsonPreviewState>({
     kind: "empty",
   });
@@ -219,7 +218,7 @@ export function ImportSection(props: ImportSectionProps) {
           title: playlistTitle(),
           memo: playlistMemo(),
         });
-        setSharedUrl(import.meta.env.DEV ? DEFAULT_SHARED_URL : "");
+        setSharedUrl(import.meta.env.DEV ? SAMPLE_SHARED_PLAYLIST_URL : "");
       } else {
         const preview = playlistJsonPreview();
 
