@@ -1,4 +1,5 @@
 import { decodeIds } from "../lib/idCodec";
+import { SAMPLE_SHARED_PLAYLIST_URL } from "../lib/playlistUrl";
 
 type SharedPlaylistPreview =
   | {
@@ -73,6 +74,9 @@ function showState(preview: SharedPlaylistPreview): void {
   const emptyView = requireElement<HTMLElement>("#empty-view");
   const errorView = requireElement<HTMLElement>("#error-view");
   const readyView = requireElement<HTMLElement>("#ready-view");
+  const sampleSharedUrlLink = requireElement<HTMLAnchorElement>("#sample-shared-url-link");
+
+  sampleSharedUrlLink.href = SAMPLE_SHARED_PLAYLIST_URL;
 
   emptyView.hidden = preview.kind !== "empty";
   errorView.hidden = preview.kind !== "error";
