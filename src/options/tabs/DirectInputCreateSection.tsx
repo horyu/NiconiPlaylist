@@ -256,9 +256,9 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
 
               <label class="block space-y-2">
                 <span class="text-sm font-medium text-stone-200">メモ</span>
-                <input
-                  type="text"
-                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                <textarea
+                  rows="4"
+                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm leading-6 text-stone-100 outline-none transition focus:border-stone-500"
                   placeholder="未指定"
                   value={directMemo()}
                   onInput={(event) => {
