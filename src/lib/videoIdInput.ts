@@ -1,6 +1,7 @@
 import type { VideoId } from "@/lib/types";
 
 const VIDEO_ID_EXTRACT_PATTERN = /(sm|so|nm)[1-9][0-9]{0,8}/;
+const VIDEO_ID_EXTRACT_GLOBAL_PATTERN = new RegExp(VIDEO_ID_EXTRACT_PATTERN.source, "gu");
 const VIDEO_ID_PATTERN = new RegExp(`^${VIDEO_ID_EXTRACT_PATTERN.source}$`);
 
 function parseWatchUrlVideoId(value: string): VideoId | null {
@@ -28,20 +29,48 @@ export function parseVideoIdInputLine(value: string): VideoId {
   throw new Error("watch URL または動画IDを入力してください。");
 }
 
-export function parseVideoIdInputLines(value: string): VideoId[] {
-  const lines = value.split(/[\s,]+/u).filter(Boolean);
+function extractVideoIds(value: string): VideoId[] {
+  return Array.from(
+    value.matchAll(VIDEO_ID_EXTRACT_GLOBAL_PATTERN),
+    (match) => match[0] as VideoId,
+  );
+}
 
-  if (lines.length === 0) {
+function dedupeConsecutiveVideoIds(videoIds: VideoId[]): VideoId[] {
+  return videoIds.filter((videoId, index) => index === 0 || videoIds[index - 1] !== videoId);
+}
+
+function dedupeAllVideoIds(videoIds: VideoId[]): VideoId[] {
+  const seen = new Set<VideoId>();
+  return videoIds.filter((videoId) => {
+    if (seen.has(videoId)) {
+      return false;
+    }
+    seen.add(videoId);
+    return true;
+  });
+}
+
+export type ParseVideoIdInputOptions = {
+  dedupe?: "none" | "consecutive" | "all";
+};
+
+export function parseVideoIdInputLines(
+  value: string,
+  options: ParseVideoIdInputOptions = {},
+): VideoId[] {
+  const extractedVideoIds = extractVideoIds(value);
+  const dedupeMode = options.dedupe ?? "none";
+  const videoIds =
+    dedupeMode === "consecutive"
+      ? dedupeConsecutiveVideoIds(extractedVideoIds)
+      : dedupeMode === "all"
+        ? dedupeAllVideoIds(extractedVideoIds)
+        : extractedVideoIds;
+
+  if (videoIds.length === 0) {
     throw new Error("watch URL または動画IDを1件以上入力してください。");
   }
 
-  return lines.map((line, index) => {
-    try {
-      return parseVideoIdInputLine(line);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "watch URL または動画IDを解析できません。";
-      throw new Error(`${index + 1}行目: ${message}`);
-    }
-  });
+  return videoIds;
 }

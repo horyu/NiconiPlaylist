@@ -1350,7 +1350,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                                 Append Videos
                               </p>
                               <p class="text-sm text-stone-300">
-                                watch URL / 動画ID を複数行で追加できます。
+                                watch URL / 動画ID / それらを含むテキストを追加できます。
                               </p>
                             </div>
                             <button

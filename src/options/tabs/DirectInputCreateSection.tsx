@@ -7,7 +7,7 @@ import {
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { buildSharedPlaylistUrl } from "@/lib/playlistUrl";
 import { normalizeOptionalText } from "@/lib/text";
-import { parseVideoIdInputLines } from "@/lib/videoIdInput";
+import { parseVideoIdInputLines, type ParseVideoIdInputOptions } from "@/lib/videoIdInput";
 import { PreviewPanel } from "@/options/components/PreviewPanel";
 import { PreviewVideoList } from "@/options/components/PreviewVideoList";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -45,6 +45,8 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
   });
 
   const [directInput, setDirectInput] = createSignal("");
+  const [directInputDedupeMode, setDirectInputDedupeMode] =
+    createSignal<NonNullable<ParseVideoIdInputOptions["dedupe"]>>("none");
   const [directTitle, setDirectTitle] = createSignal("");
   const [directMemo, setDirectMemo] = createSignal("");
   const [directShareInfo, setDirectShareInfo] = createSignal<DirectShareInfo | null>(null);
@@ -61,7 +63,9 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
     try {
       return {
         kind: "ready",
-        videoIds: parseVideoIdInputLines(value),
+        videoIds: parseVideoIdInputLines(value, {
+          dedupe: directInputDedupeMode(),
+        }),
       };
     } catch (error) {
       return {
@@ -195,7 +199,8 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">watch URL / 動画ID から作成</h2>
         <p class="text-sm leading-6 text-stone-400">
-          watch URL または動画IDを複数行で入力し、そのまま新規プレイリストとして保存します。
+          watch
+          URL、動画ID、またはそれらを含むテキストから動画IDを抽出し、新規プレイリストとして保存します。
         </p>
       </div>
 
@@ -216,6 +221,23 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
                   resetDirectShareState();
                 }}
               />
+            </label>
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-stone-200">重複動画の除去</span>
+              <select
+                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                value={directInputDedupeMode()}
+                onChange={(event) => {
+                  setDirectInputDedupeMode(
+                    event.currentTarget.value as NonNullable<ParseVideoIdInputOptions["dedupe"]>,
+                  );
+                  resetDirectShareState();
+                }}
+              >
+                <option value="none">除去しない</option>
+                <option value="consecutive">連続した同じ動画のみ除去する</option>
+                <option value="all">プレイリスト全体で重複動画を除去する</option>
+              </select>
             </label>
             <div class="grid gap-4">
               <label class="block space-y-2">
