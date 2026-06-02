@@ -50,6 +50,14 @@ export async function handleWatchMessage(
         resolveNextVideoForPlaybackContext(tabId, message.videoId),
       ]);
 
+      if (!playbackState.playbackContext) {
+        return {
+          playbackContext: null,
+          nextVideoId: null,
+          playbackSettings: null,
+        };
+      }
+
       return {
         playbackContext: playbackState.playbackContext,
         nextVideoId:

@@ -427,10 +427,13 @@ async function handlePlaybackTerminalEvent(eventType: "pause" | "ended", event: 
   }
 
   const playbackState = await resolveNextVideo(videoId);
+  const hasPlaybackContext =
+    playbackState?.playbackContext !== null && playbackState?.playbackContext !== undefined;
   const nextCompletedPlaybackCount =
     currentLoopVideoId === videoId ? completedPlaybackCount + 1 : 1;
 
   if (
+    hasPlaybackContext &&
     playbackState?.playbackSettings &&
     shouldRepeatCurrentVideo(
       playbackState.playbackSettings,
@@ -449,15 +452,21 @@ async function handlePlaybackTerminalEvent(eventType: "pause" | "ended", event: 
     navigateToNextVideo(playbackState.nextVideoId);
   } else {
     clearExpectedNextVideo();
-    if (playbackState?.playbackSettings && !playbackState.playbackSettings.playlistRepeatEnabled) {
+    if (
+      hasPlaybackContext &&
+      playbackState?.playbackSettings &&
+      !playbackState.playbackSettings.playlistRepeatEnabled
+    ) {
       await handlePlaylistCompleted(playbackState);
     }
     await browser.runtime.sendMessage({
       type: "watch:clear-playback-context",
-      markCompleted:
+      markCompleted: Boolean(
+        hasPlaybackContext &&
         playbackState?.playbackSettings !== null &&
         playbackState?.playbackSettings !== undefined &&
         !playbackState.playbackSettings.playlistRepeatEnabled,
+      ),
     });
   }
 }
