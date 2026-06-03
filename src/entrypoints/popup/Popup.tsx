@@ -322,6 +322,23 @@ function Popup() {
     }
   }
 
+  async function handleStepPlaybackIndex(direction: "previous" | "next") {
+    const playbackIndex = currentPlaybackIndex();
+    const playlist = activePlaylist();
+
+    if (!playlist || playbackIndex === null) {
+      return;
+    }
+
+    const nextIndex = direction === "previous" ? playbackIndex - 1 : playbackIndex + 1;
+
+    if (nextIndex < 0 || nextIndex >= playlist.videoIds.length) {
+      return;
+    }
+
+    await handleMovePlaybackIndex(nextIndex);
+  }
+
   async function handleOpenOptionsPage() {
     await browser.runtime.openOptionsPage();
     window.close();
@@ -448,6 +465,29 @@ function Popup() {
                 aria-label="プレイリストメモを表示"
               >
                 ✎
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleStepPlaybackIndex("previous")}
+                disabled={currentPlaybackIndex() === null || (currentPlaybackIndex() ?? 0) <= 0}
+                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                title="前の動画へ移動"
+                aria-label="前の動画へ移動"
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleStepPlaybackIndex("next")}
+                disabled={
+                  currentPlaybackIndex() === null ||
+                  (currentPlaybackIndex() ?? -1) >= activePlaylistVideoCount() - 1
+                }
+                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                title="次の動画へ移動"
+                aria-label="次の動画へ移動"
+              >
+                ▶
               </button>
             </div>
             <button
