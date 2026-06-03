@@ -429,6 +429,17 @@ function Popup() {
           <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-2">
               <h1 class="text-lg font-semibold text-stone-50">NiconiPlaylist</h1>
+              <button
+                type="button"
+                onClick={() => void handleOpenOptionsPage()}
+                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800"
+                title="オプションを開く"
+                aria-label="オプションを開く"
+              >
+                ⚙
+              </button>
+            </div>
+            <div class="flex shrink-0 items-center gap-2">
               <Show
                 when={showPlaybackSettings()}
                 fallback={
@@ -490,15 +501,6 @@ function Popup() {
                 ▶
               </button>
             </div>
-            <button
-              type="button"
-              onClick={() => void handleOpenOptionsPage()}
-              class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800"
-              title="オプションを開く"
-              aria-label="オプションを開く"
-            >
-              ⚙
-            </button>
           </div>
 
           <Show when={feedback()}>
@@ -532,14 +534,14 @@ function Popup() {
             <div class="flex min-h-0 flex-1 flex-col gap-3">
               <div class="shrink-0 space-y-3">
                 <Show when={showPlaybackSettings()}>
-                  <div class="space-y-1.5">
-                    <div class="flex flex-wrap items-center gap-2 rounded-xl bg-stone-900/40 px-3">
+                  <div class="flex flex-wrap items-center gap-3 rounded-xl bg-stone-900/40 px-3">
+                    <div class="flex items-center gap-[2px]">
                       <span class="text-xs font-medium text-stone-200">
                         プレイリスト全体のリピート
                       </span>
                       <button
                         type="button"
-                        class={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                        class={`inline-flex w-12 justify-center rounded-full border px-3 py-1 text-xs font-medium transition ${
                           currentPlaybackSettings()?.playlistRepeatEnabled
                             ? "border-stone-500 bg-stone-800 text-stone-100 hover:border-stone-400 hover:bg-stone-700"
                             : "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
@@ -550,7 +552,7 @@ function Popup() {
                       </button>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2 rounded-xl bg-stone-900/40 px-3">
+                    <div class="flex items-center gap-[2px]">
                       <span class="text-xs font-medium text-stone-200">各動画のリピート</span>
                       <select
                         class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
