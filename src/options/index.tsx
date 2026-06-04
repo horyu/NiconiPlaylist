@@ -159,7 +159,7 @@ export default function OptionsPage() {
             <VideosTab
               state={state()}
               videoMetadataState={videoMetadataState()}
-              loading={state.loading || videoMetadataState.loading}
+              loading={state.loading}
               error={state.error ?? videoMetadataState.error}
               onOpenPlaylist={openPlaylistDetail}
             />

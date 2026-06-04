@@ -1,4 +1,4 @@
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 
 import { formatSlashTimestampWithSeconds } from "@/lib/dateTime";
 import type { PlaylistId, VideoId } from "@/lib/types";
@@ -13,9 +13,7 @@ type VideoPlaylistMembership = {
 
 type VideoRow = {
   memberships: VideoPlaylistMembership[];
-  ownerMetadata?: OwnerMetadata;
   videoId: VideoId;
-  videoMetadata?: VideoMetadata;
 };
 
 type VideosTabProps = {
@@ -91,9 +89,29 @@ function ClearableFilterInput(props: {
   );
 }
 
-function compareVideoRows(left: VideoRow, right: VideoRow): number {
-  const leftTitle = left.videoMetadata?.title ?? left.videoId;
-  const rightTitle = right.videoMetadata?.title ?? right.videoId;
+function getVideoMetadata(
+  row: VideoRow,
+  videoMetadataState: VideoMetadataState | undefined,
+): VideoMetadata | undefined {
+  return videoMetadataState?.videoMetadataMap[row.videoId];
+}
+
+function getOwnerMetadata(
+  row: VideoRow,
+  videoMetadataState: VideoMetadataState | undefined,
+): OwnerMetadata | undefined {
+  const ownerId = getVideoMetadata(row, videoMetadataState)?.ownerId;
+
+  return ownerId ? videoMetadataState?.ownersMap[ownerId] : undefined;
+}
+
+function compareVideoRows(
+  left: VideoRow,
+  right: VideoRow,
+  videoMetadataState: VideoMetadataState | undefined,
+): number {
+  const leftTitle = getVideoMetadata(left, videoMetadataState)?.title ?? left.videoId;
+  const rightTitle = getVideoMetadata(right, videoMetadataState)?.title ?? right.videoId;
   const titleComparison = leftTitle.localeCompare(rightTitle, "ja");
 
   if (titleComparison !== 0) {
@@ -141,41 +159,50 @@ function compareNullableStrings(
   return left.localeCompare(right, "ja");
 }
 
-function compareBySortKey(left: VideoRow, right: VideoRow, sortKey: VideoSortKey): number {
+function compareBySortKey(
+  left: VideoRow,
+  right: VideoRow,
+  sortKey: VideoSortKey,
+  videoMetadataState: VideoMetadataState | undefined,
+): number {
+  const leftVideoMetadata = getVideoMetadata(left, videoMetadataState);
+  const rightVideoMetadata = getVideoMetadata(right, videoMetadataState);
+  const leftOwnerMetadata = getOwnerMetadata(left, videoMetadataState);
+  const rightOwnerMetadata = getOwnerMetadata(right, videoMetadataState);
+
   switch (sortKey) {
     case "title":
-      return compareVideoRows(left, right);
+      return compareVideoRows(left, right, videoMetadataState);
     case "watch-id":
-      return left.videoId.localeCompare(right.videoId, "ja") || compareVideoRows(left, right);
+      return (
+        left.videoId.localeCompare(right.videoId, "ja") ||
+        compareVideoRows(left, right, videoMetadataState)
+      );
     case "owner":
       return (
-        (left.ownerMetadata?.name ?? "").localeCompare(right.ownerMetadata?.name ?? "", "ja") ||
-        compareVideoRows(left, right)
+        (leftOwnerMetadata?.name ?? "").localeCompare(rightOwnerMetadata?.name ?? "", "ja") ||
+        compareVideoRows(left, right, videoMetadataState)
       );
     case "playlist-count":
-      return left.memberships.length - right.memberships.length || compareVideoRows(left, right);
+      return (
+        left.memberships.length - right.memberships.length ||
+        compareVideoRows(left, right, videoMetadataState)
+      );
     case "duration":
       return (
-        compareNullableNumbers(left.videoMetadata?.duration, right.videoMetadata?.duration) ||
-        compareVideoRows(left, right)
+        compareNullableNumbers(leftVideoMetadata?.duration, rightVideoMetadata?.duration) ||
+        compareVideoRows(left, right, videoMetadataState)
       );
     case "registered-at":
       return (
-        compareNullableStrings(
-          left.videoMetadata?.registeredAt,
-          right.videoMetadata?.registeredAt,
-        ) || compareVideoRows(left, right)
+        compareNullableStrings(leftVideoMetadata?.registeredAt, rightVideoMetadata?.registeredAt) ||
+        compareVideoRows(left, right, videoMetadataState)
       );
   }
 }
 
-function buildVideoRows(
-  playlistsState: PlaylistsState | undefined,
-  videoMetadataState: VideoMetadataState | undefined,
-): VideoRow[] {
+function buildVideoRows(playlistsState: PlaylistsState | undefined): VideoRow[] {
   const playlists = playlistsState?.playlists ?? [];
-  const videoMetadataMap = videoMetadataState?.videoMetadataMap ?? {};
-  const ownersMap = videoMetadataState?.ownersMap ?? {};
   const rowsByVideoId = new Map<VideoId, VideoRow>();
 
   for (const playlist of playlists) {
@@ -194,12 +221,6 @@ function buildVideoRows(
         continue;
       }
 
-      const videoMetadata = videoMetadataMap[videoId];
-      const ownerMetadata =
-        videoMetadata?.ownerId === null || videoMetadata?.ownerId === undefined
-          ? undefined
-          : ownersMap[videoMetadata.ownerId];
-
       rowsByVideoId.set(videoId, {
         memberships: [
           {
@@ -207,14 +228,14 @@ function buildVideoRows(
             playlistTitle,
           },
         ],
-        ownerMetadata,
         videoId,
-        videoMetadata,
       });
     }
   }
 
-  return [...rowsByVideoId.values()].sort(compareVideoRows);
+  return [...rowsByVideoId.values()].sort((left, right) =>
+    compareVideoRows(left, right, undefined),
+  );
 }
 
 export function VideosTab(props: VideosTabProps) {
@@ -226,16 +247,32 @@ export function VideosTab(props: VideosTabProps) {
   const [ownerQuery, setOwnerQuery] = createSignal("");
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [toggledVideoIds, setToggledVideoIds] = createSignal<Set<VideoId>>(new Set());
-  const videoRows = createMemo(() => buildVideoRows(props.state, props.videoMetadataState));
-  const ownerOptions = createMemo(() =>
-    [
+  const [videoMetadataSnapshot, setVideoMetadataSnapshot] = createSignal<
+    VideoMetadataState | undefined
+  >(undefined);
+
+  createEffect(() => {
+    if (videoMetadataSnapshot() !== undefined) {
+      return;
+    }
+
+    if (props.videoMetadataState !== undefined) {
+      setVideoMetadataSnapshot(props.videoMetadataState);
+    }
+  });
+
+  const videoRows = createMemo(() => buildVideoRows(props.state));
+  const ownerOptions = createMemo(() => {
+    const currentVideoMetadataState = videoMetadataSnapshot();
+
+    return [
       ...new Set(
         videoRows()
-          .map((row) => row.ownerMetadata?.name?.trim())
+          .map((row) => getOwnerMetadata(row, currentVideoMetadataState)?.name?.trim())
           .filter((name): name is string => Boolean(name && name.length > 0)),
       ),
-    ].sort((left, right) => left.localeCompare(right, "ja")),
-  );
+    ].sort((left, right) => left.localeCompare(right, "ja"));
+  });
   const playlistOptions = createMemo(() =>
     [
       ...new Set(
@@ -246,14 +283,17 @@ export function VideosTab(props: VideosTabProps) {
     ].sort((left, right) => left.localeCompare(right, "ja")),
   );
   const filteredVideoRows = createMemo(() => {
+    const currentVideoMetadataState = videoMetadataSnapshot();
     const normalizedTitleQuery = titleQuery().trim().toLocaleLowerCase();
     const normalizedWatchIdQuery = watchIdQuery().trim().toLocaleLowerCase();
     const normalizedOwnerQuery = ownerQuery().trim().toLocaleLowerCase();
     const normalizedPlaylistQuery = playlistQuery().trim().toLocaleLowerCase();
 
     return videoRows().filter((row) => {
-      const title = row.videoMetadata?.title?.toLocaleLowerCase() ?? "";
-      const ownerName = row.ownerMetadata?.name?.toLocaleLowerCase() ?? "";
+      const videoMetadata = getVideoMetadata(row, currentVideoMetadataState);
+      const ownerMetadata = getOwnerMetadata(row, currentVideoMetadataState);
+      const title = videoMetadata?.title?.toLocaleLowerCase() ?? "";
+      const ownerName = ownerMetadata?.name?.toLocaleLowerCase() ?? "";
 
       if (normalizedTitleQuery !== "" && !title.includes(normalizedTitleQuery)) {
         return false;
@@ -283,12 +323,15 @@ export function VideosTab(props: VideosTabProps) {
     });
   });
   const sortedFilteredVideoRows = createMemo(() => {
+    const currentVideoMetadataState = videoMetadataSnapshot();
     const key = sortKey();
     const direction = sortOrder() === "asc" ? 1 : -1;
 
     return filteredVideoRows()
       .slice()
-      .sort((left, right) => compareBySortKey(left, right, key) * direction);
+      .sort(
+        (left, right) => compareBySortKey(left, right, key, currentVideoMetadataState) * direction,
+      );
   });
 
   function isRowExpanded(videoId: VideoId): boolean {
@@ -470,9 +513,10 @@ export function VideosTab(props: VideosTabProps) {
                   <tbody class="bg-stone-950/40">
                     <For each={sortedFilteredVideoRows()}>
                       {(row, index) => {
-                        const thumbnailUrl =
-                          row.videoMetadata?.thumbnail.listingUrl ??
-                          row.videoMetadata?.thumbnail.url;
+                        const videoMetadata = () => getVideoMetadata(row, videoMetadataSnapshot());
+                        const ownerMetadata = () => getOwnerMetadata(row, videoMetadataSnapshot());
+                        const thumbnailUrl = () =>
+                          videoMetadata()?.thumbnail.listingUrl ?? videoMetadata()?.thumbnail.url;
 
                         return (
                           <tr class="align-top text-sm text-stone-200">
@@ -486,7 +530,7 @@ export function VideosTab(props: VideosTabProps) {
                                 rel="noreferrer"
                                 class="flex h-16 w-24 items-center justify-center overflow-hidden rounded-xl bg-stone-900 text-[11px] text-stone-500 transition hover:bg-stone-800"
                               >
-                                <Show when={thumbnailUrl} fallback={<span>{row.videoId}</span>}>
+                                <Show when={thumbnailUrl()} fallback={<span>{row.videoId}</span>}>
                                   {(resolvedThumbnailUrl) => (
                                     <img
                                       src={resolvedThumbnailUrl()}
@@ -499,20 +543,20 @@ export function VideosTab(props: VideosTabProps) {
                             </td>
                             <td class="border-t border-stone-800 pl-4 py-4">
                               <p class="line-clamp-3 font-medium text-stone-100">
-                                {row.videoMetadata?.title ?? "未取得"}
+                                {videoMetadata()?.title ?? "未取得"}
                               </p>
                             </td>
                             <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
-                              {formatRegisteredAt(row.videoMetadata?.registeredAt)}
+                              {formatRegisteredAt(videoMetadata()?.registeredAt)}
                             </td>
                             <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
-                              {formatDuration(row.videoMetadata?.duration)}
+                              {formatDuration(videoMetadata()?.duration)}
                             </td>
                             <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
                               {row.videoId}
                             </td>
                             <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
-                              {row.ownerMetadata?.name ?? "-"}
+                              {ownerMetadata()?.name ?? "-"}
                             </td>
                             <td class="border-t border-stone-800 pl-4 pr-4 py-4">
                               <div class="space-y-2">
