@@ -1,4 +1,4 @@
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 
 import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import {
@@ -53,8 +53,11 @@ function clampInteger(value: string, minimum: number, maximum: number, fallback:
 }
 
 export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
+  let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+  let autoSaveRequestId = 0;
+  let lastPersistedRequestId = 0;
+  let autoSaveInFlight = false;
   const [presets, setPresets] = createSignal<RepeatPreset[]>([]);
-  const [savedPresetsJson, setSavedPresetsJson] = createSignal("[]");
   const [completionSettings, setCompletionSettings] = createSignal<PlaybackCompletionSettings>({
     ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   });
@@ -64,30 +67,29 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   const [resumeTabMode, setResumeTabMode] = createSignal<PlaybackResumeTabMode>(
     DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   );
-  const [savedNavigationSettingsJson, setSavedNavigationSettingsJson] = createSignal("{}");
-  const [savedCompletionSettingsJson, setSavedCompletionSettingsJson] = createSignal("{}");
-  const [savedResumeTabMode, setSavedResumeTabMode] = createSignal<PlaybackResumeTabMode>(
-    DEFAULT_PLAYBACK_RESUME_TAB_MODE,
-  );
+  const [loaded, setLoaded] = createSignal(false);
+
+  onCleanup(() => {
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = null;
+    }
+
+    if (loaded() && lastPersistedRequestId !== autoSaveRequestId) {
+      props.onFeedback(null);
+      void persistPlaybackSettings();
+    }
+  });
 
   onMount(() => {
     void getStoredPlaybackSettings().then((playbackSettings) => {
       setPresets(playbackSettings.presets);
-      setSavedPresetsJson(JSON.stringify(playbackSettings.presets));
       setCompletionSettings(playbackSettings.completion);
-      setSavedCompletionSettingsJson(JSON.stringify(playbackSettings.completion));
       setNavigationSettings(playbackSettings.navigation);
-      setSavedNavigationSettingsJson(JSON.stringify(playbackSettings.navigation));
       setResumeTabMode(playbackSettings.resumeTabMode);
-      setSavedResumeTabMode(playbackSettings.resumeTabMode);
+      setLoaded(true);
     });
   });
-
-  const hasUnsavedChanges = () =>
-    JSON.stringify(presets()) !== savedPresetsJson() ||
-    JSON.stringify(completionSettings()) !== savedCompletionSettingsJson() ||
-    JSON.stringify(navigationSettings()) !== savedNavigationSettingsJson() ||
-    resumeTabMode() !== savedResumeTabMode();
 
   const completionNotificationMode = () => {
     const settings = completionSettings();
@@ -103,16 +105,76 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     return "none";
   };
 
+  async function persistPlaybackSettings() {
+    if (autoSaveInFlight) {
+      return;
+    }
+
+    autoSaveInFlight = true;
+
+    while (lastPersistedRequestId !== autoSaveRequestId) {
+      const currentRequestId = autoSaveRequestId;
+
+      try {
+        const currentPlaybackSettings = await getStoredPlaybackSettings();
+        const nextPlaybackSettings = sanitizePlaybackSettings({
+          playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
+          resumeTabMode: resumeTabMode(),
+          activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
+          presets: presets(),
+          navigation: navigationSettings(),
+          completion: completionSettings(),
+        });
+
+        await setStoredPlaybackSettings(nextPlaybackSettings);
+        setPresets(nextPlaybackSettings.presets);
+        setCompletionSettings(nextPlaybackSettings.completion);
+        setNavigationSettings(nextPlaybackSettings.navigation);
+        setResumeTabMode(nextPlaybackSettings.resumeTabMode);
+        lastPersistedRequestId = currentRequestId;
+      } catch (error) {
+        props.onFeedback({
+          text: error instanceof Error ? error.message : "リピート設定の更新に失敗しました。",
+          tone: "error",
+        });
+        break;
+      }
+    }
+
+    autoSaveInFlight = false;
+  }
+
+  function scheduleAutoSave(delayMs: number) {
+    if (!loaded()) {
+      return;
+    }
+
+    autoSaveRequestId += 1;
+
+    if (autoSaveTimeout) {
+      clearTimeout(autoSaveTimeout);
+    }
+
+    autoSaveTimeout = setTimeout(() => {
+      autoSaveTimeout = null;
+      props.onFeedback(null);
+      void persistPlaybackSettings();
+    }, delayMs);
+  }
+
   function handleAddCountPreset() {
     setPresets((currentPresets) => [...currentPresets, createRepeatPreset("count", 2)]);
+    scheduleAutoSave(0);
   }
 
   function handleAddDurationPreset() {
     setPresets((currentPresets) => [...currentPresets, createRepeatPreset("duration", 10 * 60)]);
+    scheduleAutoSave(0);
   }
 
   function handleDeletePreset(presetId: string) {
     setPresets((currentPresets) => currentPresets.filter((preset) => preset.id !== presetId));
+    scheduleAutoSave(0);
   }
 
   function handleUpdateCountPreset(presetId: string, value: string) {
@@ -148,11 +210,32 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     );
   }
 
-  function updateCompletionSettings(partial: Partial<PlaybackCompletionSettings>) {
+  function updateCompletionSettings(
+    partial: Partial<PlaybackCompletionSettings>,
+    saveDelayMs: number | null = 0,
+  ) {
     setCompletionSettings((currentSettings) => ({
       ...currentSettings,
       ...partial,
     }));
+
+    if (saveDelayMs !== null) {
+      scheduleAutoSave(saveDelayMs);
+    }
+  }
+
+  function updateNavigationSettings(
+    partial: Partial<PlaybackNavigationSettings>,
+    saveDelayMs: number | null = 0,
+  ) {
+    setNavigationSettings((currentSettings) => ({
+      ...currentSettings,
+      ...partial,
+    }));
+
+    if (saveDelayMs !== null) {
+      scheduleAutoSave(saveDelayMs);
+    }
   }
 
   function setCompletionNotificationMode(mode: "none" | "sound" | "alert") {
@@ -180,43 +263,13 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     });
   }
 
-  async function handleSavePlaybackSettings() {
-    props.onFeedback(null);
-
-    try {
-      const currentPlaybackSettings = await getStoredPlaybackSettings();
-      const nextPlaybackSettings = sanitizePlaybackSettings({
-        playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
-        resumeTabMode: resumeTabMode(),
-        activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
-        presets: presets(),
-        navigation: navigationSettings(),
-        completion: completionSettings(),
-      });
-
-      await setStoredPlaybackSettings(nextPlaybackSettings);
-      setPresets(nextPlaybackSettings.presets);
-      setSavedPresetsJson(JSON.stringify(nextPlaybackSettings.presets));
-      setCompletionSettings(nextPlaybackSettings.completion);
-      setSavedCompletionSettingsJson(JSON.stringify(nextPlaybackSettings.completion));
-      setNavigationSettings(nextPlaybackSettings.navigation);
-      setSavedNavigationSettingsJson(JSON.stringify(nextPlaybackSettings.navigation));
-      setResumeTabMode(nextPlaybackSettings.resumeTabMode);
-      setSavedResumeTabMode(nextPlaybackSettings.resumeTabMode);
-      props.onFeedback({ text: "リピート設定を更新しました。", tone: "success" });
-    } catch (error) {
-      props.onFeedback({
-        text: error instanceof Error ? error.message : "リピート設定の更新に失敗しました。",
-        tone: "error",
-      });
-    }
-  }
-
   return (
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">再生設定</h2>
-        <p class="text-sm text-stone-400">再開方法、リピート条件、完了後の動作を編集します。</p>
+        <p class="text-sm text-stone-400">
+          再開方法、リピート条件、完了後の動作を編集します。変更は自動保存されます。
+        </p>
       </div>
 
       <div class="space-y-3">
@@ -234,7 +287,10 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 type="radio"
                 name="resume-tab-mode"
                 checked={resumeTabMode() === "new-tab"}
-                onChange={() => setResumeTabMode("new-tab")}
+                onChange={() => {
+                  setResumeTabMode("new-tab");
+                  scheduleAutoSave(0);
+                }}
               />
               <span>新しいタブで開く</span>
             </label>
@@ -243,7 +299,10 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 type="radio"
                 name="resume-tab-mode"
                 checked={resumeTabMode() === "replace-current-tab"}
-                onChange={() => setResumeTabMode("replace-current-tab")}
+                onChange={() => {
+                  setResumeTabMode("replace-current-tab");
+                  scheduleAutoSave(0);
+                }}
               />
               <span>現在のタブを上書きして開く</span>
             </label>
@@ -264,12 +323,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 type="radio"
                 name="navigation-focus-mode"
                 checked={!navigationSettings().restorePreviousTabEnabled}
-                onChange={() =>
-                  setNavigationSettings((currentSettings) => ({
-                    ...currentSettings,
-                    restorePreviousTabEnabled: false,
-                  }))
-                }
+                onChange={() => updateNavigationSettings({ restorePreviousTabEnabled: false })}
               />
               <span>そのまま表示を維持する</span>
             </label>
@@ -278,12 +332,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 type="radio"
                 name="navigation-focus-mode"
                 checked={navigationSettings().restorePreviousTabEnabled}
-                onChange={() =>
-                  setNavigationSettings((currentSettings) => ({
-                    ...currentSettings,
-                    restorePreviousTabEnabled: true,
-                  }))
-                }
+                onChange={() => updateNavigationSettings({ restorePreviousTabEnabled: true })}
               />
               <span>一定時間後に元のタブへ戻す</span>
             </label>
@@ -299,24 +348,25 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 max="99"
                 step="1"
                 value={Math.trunc(navigationSettings().restorePreviousTabDelayMs / 100)}
-                onInput={(event) =>
-                  setNavigationSettings((currentSettings) => {
-                    const delayUnits = Math.max(
-                      clampInteger(
-                        event.currentTarget.value,
-                        1,
-                        99,
-                        Math.trunc(currentSettings.restorePreviousTabDelayMs / 100),
-                      ),
+                onInput={(event) => {
+                  const delayUnits = Math.max(
+                    clampInteger(
+                      event.currentTarget.value,
                       1,
-                    );
+                      99,
+                      Math.trunc(navigationSettings().restorePreviousTabDelayMs / 100),
+                    ),
+                    1,
+                  );
 
-                    return {
-                      ...currentSettings,
+                  updateNavigationSettings(
+                    {
                       restorePreviousTabDelayMs: delayUnits * 100,
-                    };
-                  })
-                }
+                    },
+                    null,
+                  );
+                }}
+                onBlur={() => scheduleAutoSave(0)}
                 class="w-14 rounded-lg border border-stone-700 bg-stone-900 px-2 py-1 text-sm text-stone-100"
               />
               <span>x100ms</span>
@@ -380,6 +430,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                               event.currentTarget.value,
                             )
                           }
+                          onBlur={() => scheduleAutoSave(0)}
                           class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
                         />
                         <span>分</span>
@@ -400,6 +451,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                               event.currentTarget.value,
                             )
                           }
+                          onBlur={() => scheduleAutoSave(0)}
                           class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
                         />
                         <span>秒</span>
@@ -416,6 +468,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                         onInput={(event) =>
                           handleUpdateCountPreset(preset.id, event.currentTarget.value)
                         }
+                        onBlur={() => scheduleAutoSave(0)}
                         class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
                       />
                       <span>回</span>
@@ -486,10 +539,14 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 inputMode="numeric"
                 value={completionSettings().soundVolume.toString()}
                 onInput={(event) =>
-                  updateCompletionSettings({
-                    soundVolume: clampInteger(event.currentTarget.value, 0, 100, 50),
-                  })
+                  updateCompletionSettings(
+                    {
+                      soundVolume: clampInteger(event.currentTarget.value, 0, 100, 50),
+                    },
+                    null,
+                  )
                 }
+                onBlur={() => scheduleAutoSave(0)}
                 class="w-16 rounded-md border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100"
               />
               <span>%</span>
@@ -500,13 +557,17 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 inputMode="numeric"
                 value={completionSettings().soundRepeatCount.toString()}
                 onInput={(event) =>
-                  updateCompletionSettings({
-                    soundRepeatCount: Math.max(
-                      clampInteger(event.currentTarget.value, 1, 99, 1),
-                      1,
-                    ),
-                  })
+                  updateCompletionSettings(
+                    {
+                      soundRepeatCount: Math.max(
+                        clampInteger(event.currentTarget.value, 1, 99, 1),
+                        1,
+                      ),
+                    },
+                    null,
+                  )
                 }
+                onBlur={() => scheduleAutoSave(0)}
                 class="w-16 rounded-md border border-stone-700 bg-stone-900 px-2 py-1 text-xs text-stone-100"
               />
               <span>回</span>
@@ -533,18 +594,6 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
             <span>通知前に再生タブを前面に出す</span>
           </label>
         </div>
-
-        <button
-          type="button"
-          class={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-            hasUnsavedChanges()
-              ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-100 hover:bg-emerald-500/25"
-              : "border-stone-600 text-stone-200 hover:border-stone-500 hover:bg-stone-800"
-          }`}
-          onClick={() => void handleSavePlaybackSettings()}
-        >
-          リピート設定を保存
-        </button>
       </div>
     </section>
   );
