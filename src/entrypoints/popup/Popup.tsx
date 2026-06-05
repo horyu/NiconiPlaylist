@@ -317,6 +317,7 @@ function Popup() {
 
       await browser.runtime.sendMessage(message);
       await refetch();
+      window.close();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "再生位置の更新に失敗しました。");
     }
