@@ -21,9 +21,9 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@voidzero-dev/vite-plus-core": "0.1.19",
+    "@voidzero-dev/vite-plus-core": "0.1.24",
     "solid-js": "1.9.13",
-    "vite-plus": "0.1.19"
+    "vite-plus": "0.1.24"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.0",
@@ -34,6 +34,6 @@
     "wxt": "0.20.26"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.x"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.24"
   }
 }
