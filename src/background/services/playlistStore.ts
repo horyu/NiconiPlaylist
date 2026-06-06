@@ -4,7 +4,6 @@ import { isPlaybackContext, isPlaybackDebugEvent, isPlaylist } from "@/lib/typeG
 import type {
   PlaybackContext,
   PlaybackDebugEvent,
-  PlaybackDebugEventType,
   Playlist,
   PlaylistId,
   VideoId,
@@ -144,7 +143,7 @@ async function appendStoredPlaybackDebugEvent(
 }
 
 export async function recordPlaybackDebugEvent(
-  type: PlaybackDebugEventType,
+  type: string,
   reason: string,
   details: Record<string, unknown> & {
     playlistId?: PlaylistId | null;

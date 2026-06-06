@@ -53,13 +53,7 @@ export function isPlaybackDebugEvent(value: unknown): value is PlaybackDebugEven
 
   return (
     typeof candidate.occurredAt === "string" &&
-    (candidate.type === "clear-playback-context-by-tab" ||
-      candidate.type === "clear-playback-contexts-by-playlist" ||
-      candidate.type === "playback-end-navigation-override" ||
-      candidate.type === "resolve-next-video" ||
-      candidate.type === "sync-playback-context-null" ||
-      candidate.type === "content-playback-event" ||
-      candidate.type === "watch-navigation") &&
+    typeof candidate.type === "string" &&
     typeof candidate.reason === "string" &&
     (candidate.playlistId === null || typeof candidate.playlistId === "string") &&
     (candidate.tabId === null ||

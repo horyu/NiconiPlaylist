@@ -58,18 +58,9 @@ export type PlaybackContext = {
   currentIndex: number;
 };
 
-export type PlaybackDebugEventType =
-  | "clear-playback-context-by-tab"
-  | "clear-playback-contexts-by-playlist"
-  | "playback-end-navigation-override"
-  | "resolve-next-video"
-  | "sync-playback-context-null"
-  | "content-playback-event"
-  | "watch-navigation";
-
 export type PlaybackDebugEvent = {
   occurredAt: string;
-  type: PlaybackDebugEventType;
+  type: string;
   reason: string;
   playlistId: PlaylistId | null;
   tabId: number | null;
