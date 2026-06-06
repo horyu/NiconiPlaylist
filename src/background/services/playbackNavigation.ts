@@ -166,13 +166,13 @@ export async function startPopupPlayback(
       throw new Error("再生中の動画がないため、再生終了後の移動を予約できません。");
     }
 
-    const currentOverride = getPlaybackEndNavigationOverride(message.playbackTabId);
+    const currentOverride = await getPlaybackEndNavigationOverride(message.playbackTabId);
 
     if (
       currentOverride?.playlistId === playlist.id &&
       currentOverride.nextIndex === message.index
     ) {
-      clearPlaybackEndNavigationOverride(message.playbackTabId);
+      await clearPlaybackEndNavigationOverride(message.playbackTabId);
       await recordPlaybackDebugEvent("playback-end-navigation-override", "toggle-off", {
         playlistId: playlist.id,
         tabId: message.playbackTabId,
@@ -182,7 +182,7 @@ export async function startPopupPlayback(
       return;
     }
 
-    setPlaybackEndNavigationOverride(
+    await setPlaybackEndNavigationOverride(
       message.playbackTabId,
       playlist.id,
       message.index,
@@ -198,7 +198,7 @@ export async function startPopupPlayback(
   }
 
   if (message.playbackTabId !== null) {
-    clearPlaybackEndNavigationOverride(message.playbackTabId);
+    await clearPlaybackEndNavigationOverride(message.playbackTabId);
     await setStoredPlaybackContextIndex(message.playbackTabId, playlist.id, message.index);
     await browser.tabs.update(message.playbackTabId, {
       active: true,
@@ -208,7 +208,7 @@ export async function startPopupPlayback(
   }
 
   if (message.activeTabId !== null && playbackSettings.resumeTabMode === "replace-current-tab") {
-    clearPlaybackEndNavigationOverride(message.activeTabId);
+    await clearPlaybackEndNavigationOverride(message.activeTabId);
     await setStoredPlaybackContextIndex(message.activeTabId, playlist.id, message.index);
     await browser.tabs.update(message.activeTabId, {
       active: true,

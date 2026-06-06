@@ -54,7 +54,7 @@ export async function handleWatchMessage(
         getStoredPlaybackSettings(),
         resolveNextVideoForPlaybackContext(tabId, message.videoId),
       ]);
-      const playbackEndNavigationOverride = consumePlaybackEndNavigationOverride(tabId);
+      const playbackEndNavigationOverride = await consumePlaybackEndNavigationOverride(tabId);
 
       if (!playbackState.playbackContext) {
         await recordPlaybackDebugEvent("resolve-next-video", "no-playback-context", {
@@ -98,7 +98,7 @@ export async function handleWatchMessage(
     }
 
     case "watch:clear-playback-context":
-      clearPlaybackEndNavigationOverride(tabId);
+      await clearPlaybackEndNavigationOverride(tabId);
       if (message.markCompleted) {
         await markStoredPlaylistCompletedByTabId(tabId);
       }

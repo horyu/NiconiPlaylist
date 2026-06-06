@@ -34,7 +34,7 @@ const resolveNextVideoForPlaybackContextMock = mock<
   nextVideoId: null,
 }));
 const consumePlaybackEndNavigationOverrideMock = mock(
-  () => null as { nextVideoId: VideoId } | null,
+  async () => null as { nextVideoId: VideoId } | null,
 );
 
 mock.module("wxt/browser", () => ({
@@ -57,7 +57,7 @@ mock.module("@/background/services/playbackSettings", () => ({
 }));
 
 mock.module("@/background/services/playbackEndNavigationOverride", () => ({
-  clearPlaybackEndNavigationOverride: mock(() => undefined),
+  clearPlaybackEndNavigationOverride: mock(async () => undefined),
   consumePlaybackEndNavigationOverride: consumePlaybackEndNavigationOverrideMock,
 }));
 
@@ -65,6 +65,7 @@ mock.module("@/background/services/playlistStore", () => ({
   clearStoredPlaybackContextByTabId: mock(async () => undefined),
   markStoredPlaylistCompletedByTabId: mock(async () => undefined),
   recordContentPlaybackDebugEvent: mock(async () => undefined),
+  recordPlaybackDebugEvent: mock(async () => undefined),
   resolveNextVideoForPlaybackContext: resolveNextVideoForPlaybackContextMock,
   syncPlaybackContextForVideo: mock(async () => null),
 }));
@@ -74,7 +75,7 @@ describe("handleWatchMessage", () => {
     getStoredPlaybackSettingsMock.mockClear();
     resolveNextVideoForPlaybackContextMock.mockClear();
     consumePlaybackEndNavigationOverrideMock.mockClear();
-    consumePlaybackEndNavigationOverrideMock.mockImplementation(() => null);
+    consumePlaybackEndNavigationOverrideMock.mockImplementation(async () => null);
   });
 
   test("プレイリスト再生中でない時は playbackSettings を返さない", async () => {
@@ -145,7 +146,7 @@ describe("handleWatchMessage", () => {
       },
       nextVideoId: "sm1",
     }));
-    consumePlaybackEndNavigationOverrideMock.mockImplementationOnce(() => ({
+    consumePlaybackEndNavigationOverrideMock.mockImplementationOnce(async () => ({
       nextVideoId: "so5364283",
     }));
 
