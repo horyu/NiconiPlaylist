@@ -22,7 +22,7 @@ import { getPopupState } from "@/background/services/popupState";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { isWatchUrl } from "@/lib/nicovideoUrl";
 import { formatRepeatPresetLabel, sanitizePlaybackSettings } from "@/lib/playlistLoop";
-import type { PopupMessage } from "@/lib/popupMessages";
+import type { PopupMessage, PopupPlaybackTransitionMode } from "@/lib/popupMessages";
 import { STORAGE_KEYS } from "@/lib/storageKeys";
 import type { PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
 import { PopupPlaylistVideoList } from "@/popup/components/PopupPlaylistVideoList";
@@ -128,6 +128,15 @@ function Popup() {
     playbackTabId,
   );
   const activePlaylistVideoCount = () => activePlaylist()?.videoIds.length ?? 0;
+  const pendingPlaybackEndNavigationIndex = () => {
+    const playlist = activePlaylist();
+
+    if (!playlist) {
+      return null;
+    }
+
+    return popupState()?.pendingPlaybackEndNavigationByPlaylistId[playlist.id] ?? null;
+  };
   const hasPlaylistPlaybackContext = (playlistId: PlaylistId) =>
     (popupState()?.playbackContexts ?? []).some((context) => context.playlistId === playlistId);
   const currentPlaybackSettings = () =>
@@ -292,7 +301,10 @@ function Popup() {
     }
   }
 
-  async function handleMovePlaybackIndex(index: number) {
+  async function handleMovePlaybackIndex(
+    index: number,
+    transitionMode: PopupPlaybackTransitionMode = "immediate",
+  ) {
     const state = popupState();
     const playlist = activePlaylist();
     const nextVideoId = playlist?.videoIds[index];
@@ -312,12 +324,15 @@ function Popup() {
         index,
         playbackTabId: playbackTabIdValue,
         playlistId: playlist.id,
+        transitionMode,
         type: "popup:start-playback",
       };
 
       await browser.runtime.sendMessage(message);
       await refetch();
-      window.close();
+      if (transitionMode === "immediate") {
+        window.close();
+      }
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "再生位置の更新に失敗しました。");
     }
@@ -338,6 +353,27 @@ function Popup() {
     }
 
     await handleMovePlaybackIndex(nextIndex);
+  }
+
+  async function handleMovePlaybackIndexAfterCurrentEnded(index: number) {
+    await handleMovePlaybackIndex(index, "after-current-ended");
+  }
+
+  async function handleStepPlaybackIndexAfterCurrentEnded(direction: "previous" | "next") {
+    const playbackIndex = currentPlaybackIndex();
+    const playlist = activePlaylist();
+
+    if (!playlist || playbackIndex === null) {
+      return;
+    }
+
+    const nextIndex = direction === "previous" ? playbackIndex - 1 : playbackIndex + 1;
+
+    if (nextIndex < 0 || nextIndex >= playlist.videoIds.length) {
+      return;
+    }
+
+    await handleMovePlaybackIndexAfterCurrentEnded(nextIndex);
   }
 
   async function handleOpenOptionsPage() {
@@ -481,8 +517,17 @@ function Popup() {
               <button
                 type="button"
                 onClick={() => void handleStepPlaybackIndex("previous")}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  void handleStepPlaybackIndexAfterCurrentEnded("previous");
+                }}
                 disabled={currentPlaybackIndex() === null || (currentPlaybackIndex() ?? 0) <= 0}
-                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600 ${
+                  pendingPlaybackEndNavigationIndex() !== null &&
+                  pendingPlaybackEndNavigationIndex() === (currentPlaybackIndex() ?? 0) - 1
+                    ? "border-sky-500/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
+                    : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
+                }`}
                 title="前の動画へ移動"
                 aria-label="前の動画へ移動"
               >
@@ -491,11 +536,20 @@ function Popup() {
               <button
                 type="button"
                 onClick={() => void handleStepPlaybackIndex("next")}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  void handleStepPlaybackIndexAfterCurrentEnded("next");
+                }}
                 disabled={
                   currentPlaybackIndex() === null ||
                   (currentPlaybackIndex() ?? -1) >= activePlaylistVideoCount() - 1
                 }
-                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600 ${
+                  pendingPlaybackEndNavigationIndex() !== null &&
+                  pendingPlaybackEndNavigationIndex() === (currentPlaybackIndex() ?? -1) + 1
+                    ? "border-sky-500/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
+                    : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
+                }`}
                 title="次の動画へ移動"
                 aria-label="次の動画へ移動"
               >
@@ -668,7 +722,11 @@ function Popup() {
                       currentPlaybackIndex={currentPlaybackIndex()}
                       hasPlaybackTab={playbackTabId() !== null}
                       manualScrollRequestKey={manualScrollRequestKey()}
+                      pendingPlaybackEndNavigationIndex={pendingPlaybackEndNavigationIndex()}
                       onFocusPlaybackTab={() => void handleFocusPlaybackTab()}
+                      onMovePlaybackIndexAfterCurrentEnded={(index) =>
+                        void handleMovePlaybackIndexAfterCurrentEnded(index)
+                      }
                       onMovePlaybackIndex={(index) => void handleMovePlaybackIndex(index)}
                       ownersMap={popupState()?.ownersMap ?? {}}
                       playlist={playlist()}

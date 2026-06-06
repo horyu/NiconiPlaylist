@@ -61,8 +61,11 @@ export type PlaybackContext = {
 export type PlaybackDebugEventType =
   | "clear-playback-context-by-tab"
   | "clear-playback-contexts-by-playlist"
+  | "playback-end-navigation-override"
+  | "resolve-next-video"
   | "sync-playback-context-null"
-  | "content-playback-event";
+  | "content-playback-event"
+  | "watch-navigation";
 
 export type PlaybackDebugEvent = {
   occurredAt: string;
@@ -74,14 +77,4 @@ export type PlaybackDebugEvent = {
   currentIndex: number | null;
   playlistVideoCount: number | null;
   previousPlaybackContext: PlaybackContext | null;
-  href?: string | null;
-  isAdvertisementVideo?: boolean | null;
-  isVideoElement?: boolean | null;
-  targetTagName?: string | null;
-  videoCurrentSrc?: string | null;
-  videoCurrentTime?: number | null;
-  videoDuration?: number | null;
-  videoEnded?: boolean | null;
-  videoPaused?: boolean | null;
-  videoTitle?: string | null;
-};
+} & Record<string, unknown>;

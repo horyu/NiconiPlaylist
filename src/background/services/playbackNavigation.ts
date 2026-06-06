@@ -1,8 +1,14 @@
 import { browser } from "wxt/browser";
 
+import {
+  clearPlaybackEndNavigationOverride,
+  getPlaybackEndNavigationOverride,
+  setPlaybackEndNavigationOverride,
+} from "@/background/services/playbackEndNavigationOverride";
 import { getStoredPlaybackSettings } from "@/background/services/playbackSettings";
 import {
   getStoredPlaylists,
+  recordPlaybackDebugEvent,
   setStoredPlaybackContextIndex,
   updateStoredPlaylist,
 } from "@/background/services/playlistStore";
@@ -153,8 +159,46 @@ export async function startPopupPlayback(
   }
 
   const watchUrl = buildWatchUrl(nextVideoId);
+  const transitionMode = message.transitionMode ?? "immediate";
+
+  if (transitionMode === "after-current-ended") {
+    if (message.playbackTabId === null) {
+      throw new Error("再生中の動画がないため、再生終了後の移動を予約できません。");
+    }
+
+    const currentOverride = getPlaybackEndNavigationOverride(message.playbackTabId);
+
+    if (
+      currentOverride?.playlistId === playlist.id &&
+      currentOverride.nextIndex === message.index
+    ) {
+      clearPlaybackEndNavigationOverride(message.playbackTabId);
+      await recordPlaybackDebugEvent("playback-end-navigation-override", "toggle-off", {
+        playlistId: playlist.id,
+        tabId: message.playbackTabId,
+        overrideNextIndex: message.index,
+        overrideNextVideoId: nextVideoId,
+      });
+      return;
+    }
+
+    setPlaybackEndNavigationOverride(
+      message.playbackTabId,
+      playlist.id,
+      message.index,
+      nextVideoId,
+    );
+    await recordPlaybackDebugEvent("playback-end-navigation-override", "set", {
+      playlistId: playlist.id,
+      tabId: message.playbackTabId,
+      overrideNextIndex: message.index,
+      overrideNextVideoId: nextVideoId,
+    });
+    return;
+  }
 
   if (message.playbackTabId !== null) {
+    clearPlaybackEndNavigationOverride(message.playbackTabId);
     await setStoredPlaybackContextIndex(message.playbackTabId, playlist.id, message.index);
     await browser.tabs.update(message.playbackTabId, {
       active: true,
@@ -164,6 +208,7 @@ export async function startPopupPlayback(
   }
 
   if (message.activeTabId !== null && playbackSettings.resumeTabMode === "replace-current-tab") {
+    clearPlaybackEndNavigationOverride(message.activeTabId);
     await setStoredPlaybackContextIndex(message.activeTabId, playlist.id, message.index);
     await browser.tabs.update(message.activeTabId, {
       active: true,

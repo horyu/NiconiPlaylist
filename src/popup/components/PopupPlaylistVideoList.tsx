@@ -23,7 +23,9 @@ type PopupPlaylistVideoListProps = {
   currentPlaybackIndex: number | null;
   hasPlaybackTab: boolean;
   manualScrollRequestKey: number;
+  pendingPlaybackEndNavigationIndex: number | null;
   onFocusPlaybackTab: () => void;
+  onMovePlaybackIndexAfterCurrentEnded: (index: number) => void;
   onMovePlaybackIndex: (index: number) => void;
   ownersMap: Record<string, OwnerMetadata>;
   playlist: Playlist;
@@ -97,6 +99,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
             return ownerId ? props.ownersMap[ownerId] : undefined;
           };
           const isCurrent = () => props.currentPlaybackIndex === index();
+          const isPending = () => props.pendingPlaybackEndNavigationIndex === index();
           const showPlaybackButton = () => !isCurrent() || !props.hasPlaybackTab;
           const canFocusPlaybackTab = () => isCurrent() && props.hasPlaybackTab;
 
@@ -108,7 +111,9 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
               class={`flex items-start gap-3 rounded-xl border p-3 transition ${
                 isCurrent()
                   ? "border-emerald-500/40 bg-emerald-500/10"
-                  : "border-stone-800 bg-stone-900/40"
+                  : isPending()
+                    ? "border-sky-500/40 bg-sky-500/10"
+                    : "border-stone-800 bg-stone-900/40"
               }`}
             >
               <div class="flex w-8 shrink-0 flex-col items-center pt-1 text-center">
@@ -122,6 +127,11 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                 <Show when={isCurrent()}>
                   <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
                     now
+                  </span>
+                </Show>
+                <Show when={!isCurrent() && isPending()}>
+                  <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sky-300">
+                    next
                   </span>
                 </Show>
               </div>
@@ -184,6 +194,10 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                     title="ここから再生"
                     aria-label="ここから再生"
                     onClick={() => props.onMovePlaybackIndex(index())}
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      props.onMovePlaybackIndexAfterCurrentEnded(index());
+                    }}
                   >
                     ▶
                   </button>

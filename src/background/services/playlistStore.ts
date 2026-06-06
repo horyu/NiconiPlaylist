@@ -132,40 +132,31 @@ async function appendStoredPlaybackDebugEvent(
   event: Omit<PlaybackDebugEvent, "occurredAt">,
 ): Promise<void> {
   const playbackDebugEvents = await getStoredPlaybackDebugEvents();
-  const nextPlaybackDebugEvents = [
-    ...playbackDebugEvents,
-    {
-      ...event,
-      occurredAt: new Date().toISOString(),
-    },
-  ].slice(-MAX_PLAYBACK_DEBUG_EVENTS);
+  const nextEvent = {
+    ...event,
+    occurredAt: new Date().toISOString(),
+  } as PlaybackDebugEvent;
+  const nextPlaybackDebugEvents: PlaybackDebugEvent[] = [...playbackDebugEvents, nextEvent].slice(
+    -MAX_PLAYBACK_DEBUG_EVENTS,
+  );
 
   await setStorageData({ playbackDebugEvents: nextPlaybackDebugEvents });
 }
 
-async function recordPlaybackDebugEvent(
+export async function recordPlaybackDebugEvent(
   type: PlaybackDebugEventType,
   reason: string,
-  details: {
+  details: Record<string, unknown> & {
     playlistId?: PlaylistId | null;
     tabId?: number | null;
     videoId?: VideoId | null;
     currentIndex?: number | null;
     playlistVideoCount?: number | null;
     previousPlaybackContext?: PlaybackContext | null;
-    href?: string | null;
-    isAdvertisementVideo?: boolean | null;
-    isVideoElement?: boolean | null;
-    targetTagName?: string | null;
-    videoCurrentSrc?: string | null;
-    videoCurrentTime?: number | null;
-    videoDuration?: number | null;
-    videoEnded?: boolean | null;
-    videoPaused?: boolean | null;
-    videoTitle?: string | null;
   },
 ): Promise<void> {
   await appendStoredPlaybackDebugEvent({
+    ...details,
     type,
     reason,
     playlistId: details.playlistId ?? null,
@@ -174,16 +165,6 @@ async function recordPlaybackDebugEvent(
     currentIndex: details.currentIndex ?? null,
     playlistVideoCount: details.playlistVideoCount ?? null,
     previousPlaybackContext: details.previousPlaybackContext ?? null,
-    href: details.href ?? null,
-    isAdvertisementVideo: details.isAdvertisementVideo ?? null,
-    isVideoElement: details.isVideoElement ?? null,
-    targetTagName: details.targetTagName ?? null,
-    videoCurrentSrc: details.videoCurrentSrc ?? null,
-    videoCurrentTime: details.videoCurrentTime ?? null,
-    videoDuration: details.videoDuration ?? null,
-    videoEnded: details.videoEnded ?? null,
-    videoPaused: details.videoPaused ?? null,
-    videoTitle: details.videoTitle ?? null,
   });
 }
 

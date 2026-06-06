@@ -33,6 +33,9 @@ const resolveNextVideoForPlaybackContextMock = mock<
   playbackContext: null,
   nextVideoId: null,
 }));
+const consumePlaybackEndNavigationOverrideMock = mock(
+  () => null as { nextVideoId: VideoId } | null,
+);
 
 mock.module("wxt/browser", () => ({
   browser: {
@@ -53,6 +56,11 @@ mock.module("@/background/services/playbackSettings", () => ({
   getStoredPlaybackSettings: getStoredPlaybackSettingsMock,
 }));
 
+mock.module("@/background/services/playbackEndNavigationOverride", () => ({
+  clearPlaybackEndNavigationOverride: mock(() => undefined),
+  consumePlaybackEndNavigationOverride: consumePlaybackEndNavigationOverrideMock,
+}));
+
 mock.module("@/background/services/playlistStore", () => ({
   clearStoredPlaybackContextByTabId: mock(async () => undefined),
   markStoredPlaylistCompletedByTabId: mock(async () => undefined),
@@ -65,6 +73,8 @@ describe("handleWatchMessage", () => {
   beforeEach(() => {
     getStoredPlaybackSettingsMock.mockClear();
     resolveNextVideoForPlaybackContextMock.mockClear();
+    consumePlaybackEndNavigationOverrideMock.mockClear();
+    consumePlaybackEndNavigationOverrideMock.mockImplementation(() => null);
   });
 
   test("プレイリスト再生中でない時は playbackSettings を返さない", async () => {
@@ -83,6 +93,7 @@ describe("handleWatchMessage", () => {
     );
 
     expect(response).toEqual({
+      forceSkipCurrentVideoRepeat: false,
       playbackContext: null,
       nextVideoId: null,
       playbackSettings: null,
@@ -119,7 +130,40 @@ describe("handleWatchMessage", () => {
       tabId: 1,
       currentIndex: 0,
     });
+    expect(response?.forceSkipCurrentVideoRepeat).toBe(false);
     expect(response?.nextVideoId).toBe("sm1");
     expect(response?.playbackSettings).not.toBeNull();
+  });
+
+  test("再生終了後移動 override がある時は current repeat を無視してその動画へ進む", async () => {
+    resolveNextVideoForPlaybackContextMock.mockImplementationOnce(async () => ({
+      firstVideoId: "sm9",
+      playbackContext: {
+        playlistId: "playlist-1",
+        tabId: 1,
+        currentIndex: 0,
+      },
+      nextVideoId: "sm1",
+    }));
+    consumePlaybackEndNavigationOverrideMock.mockImplementationOnce(() => ({
+      nextVideoId: "so5364283",
+    }));
+
+    const { handleWatchMessage } = await import("./watch");
+
+    const response = await handleWatchMessage(
+      {
+        type: "watch:resolve-next-video",
+        videoId: "sm9",
+      },
+      {
+        tab: {
+          id: 1,
+        },
+      },
+    );
+
+    expect(response?.forceSkipCurrentVideoRepeat).toBe(true);
+    expect(response?.nextVideoId).toBe("so5364283");
   });
 });

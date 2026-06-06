@@ -1,6 +1,10 @@
 import { browser } from "wxt/browser";
 
 import {
+  clearPlaybackEndNavigationOverride,
+  consumePlaybackEndNavigationOverride,
+} from "@/background/services/playbackEndNavigationOverride";
+import {
   cancelPendingPlaybackTabNavigation,
   completePlaybackTabNavigation,
   focusBrowserTab,
@@ -10,6 +14,7 @@ import { getStoredPlaybackSettings } from "@/background/services/playbackSetting
 import {
   clearStoredPlaybackContextByTabId,
   markStoredPlaylistCompletedByTabId,
+  recordPlaybackDebugEvent,
   recordContentPlaybackDebugEvent,
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
@@ -49,25 +54,51 @@ export async function handleWatchMessage(
         getStoredPlaybackSettings(),
         resolveNextVideoForPlaybackContext(tabId, message.videoId),
       ]);
+      const playbackEndNavigationOverride = consumePlaybackEndNavigationOverride(tabId);
 
       if (!playbackState.playbackContext) {
+        await recordPlaybackDebugEvent("resolve-next-video", "no-playback-context", {
+          tabId,
+          videoId: message.videoId,
+          forceSkipCurrentVideoRepeat: false,
+          overrideNextIndex: playbackEndNavigationOverride?.nextIndex ?? null,
+          overrideNextVideoId: playbackEndNavigationOverride?.nextVideoId ?? null,
+          resolvedNextVideoId: null,
+        });
         return {
+          forceSkipCurrentVideoRepeat: false,
           playbackContext: null,
           nextVideoId: null,
           playbackSettings: null,
         };
       }
 
+      const nextVideoId =
+        playbackEndNavigationOverride?.nextVideoId ??
+        playbackState.nextVideoId ??
+        (playbackSettings.playlistRepeatEnabled ? playbackState.firstVideoId : null);
+
+      await recordPlaybackDebugEvent("resolve-next-video", "resolved", {
+        playlistId: playbackState.playbackContext.playlistId,
+        tabId,
+        videoId: message.videoId,
+        currentIndex: playbackState.playbackContext.currentIndex,
+        forceSkipCurrentVideoRepeat: playbackEndNavigationOverride !== null,
+        overrideNextIndex: playbackEndNavigationOverride?.nextIndex ?? null,
+        overrideNextVideoId: playbackEndNavigationOverride?.nextVideoId ?? null,
+        resolvedNextVideoId: nextVideoId,
+      });
+
       return {
+        forceSkipCurrentVideoRepeat: playbackEndNavigationOverride !== null,
         playbackContext: playbackState.playbackContext,
-        nextVideoId:
-          playbackState.nextVideoId ??
-          (playbackSettings.playlistRepeatEnabled ? playbackState.firstVideoId : null),
+        nextVideoId,
         playbackSettings,
       };
     }
 
     case "watch:clear-playback-context":
+      clearPlaybackEndNavigationOverride(tabId);
       if (message.markCompleted) {
         await markStoredPlaylistCompletedByTabId(tabId);
       }
@@ -87,6 +118,16 @@ export async function handleWatchMessage(
         tabId,
         url: message.url,
         navigation: playbackSettings.navigation,
+      });
+      await recordPlaybackDebugEvent("watch-navigation", "navigate-next-video-requested", {
+        tabId,
+        resolvedNextVideoId: (() => {
+          try {
+            return new URL(message.url).pathname.split("/").at(-1) ?? null;
+          } catch {
+            return null;
+          }
+        })(),
       });
       await preparePlaybackTabForNavigation(tabId, playbackSettings.navigation);
 
@@ -116,11 +157,31 @@ export async function handleWatchMessage(
           tabId,
           url: message.url,
         });
+        await recordPlaybackDebugEvent("watch-navigation", "navigate-next-video-executed", {
+          tabId,
+          resolvedNextVideoId: (() => {
+            try {
+              return new URL(message.url).pathname.split("/").at(-1) ?? null;
+            } catch {
+              return null;
+            }
+          })(),
+        });
       } catch (error) {
         console.error("NiconiPlaylist watch:navigate-next-video failed to execute script.", {
           error,
           tabId,
           url: message.url,
+        });
+        await recordPlaybackDebugEvent("watch-navigation", "navigate-next-video-failed", {
+          tabId,
+          resolvedNextVideoId: (() => {
+            try {
+              return new URL(message.url).pathname.split("/").at(-1) ?? null;
+            } catch {
+              return null;
+            }
+          })(),
         });
         cancelPendingPlaybackTabNavigation(tabId);
         throw error;
@@ -130,6 +191,9 @@ export async function handleWatchMessage(
 
     case "watch:route-ready":
       console.log("NiconiPlaylist handling watch:route-ready.", {
+        tabId,
+      });
+      await recordPlaybackDebugEvent("watch-navigation", "route-ready", {
         tabId,
       });
       await completePlaybackTabNavigation(tabId);

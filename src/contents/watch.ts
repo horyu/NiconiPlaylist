@@ -433,6 +433,7 @@ async function handlePlaybackTerminalEvent(eventType: "pause" | "ended", event: 
     currentLoopVideoId === videoId ? completedPlaybackCount + 1 : 1;
 
   if (
+    !playbackState?.forceSkipCurrentVideoRepeat &&
     hasPlaybackContext &&
     playbackState?.playbackSettings &&
     shouldRepeatCurrentVideo(

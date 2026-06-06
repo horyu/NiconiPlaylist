@@ -65,6 +65,7 @@ export type WatchMessage =
   | WatchRecordPlaybackDebugEventMessage;
 
 export type WatchPlaybackContextResponse = {
+  forceSkipCurrentVideoRepeat?: boolean;
   playbackContext: PlaybackContext | null;
   nextVideoId: VideoId | null;
   playbackSettings: PlaybackSettings | null;

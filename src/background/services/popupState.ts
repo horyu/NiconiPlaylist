@@ -3,6 +3,7 @@ import { browser } from "wxt/browser";
 import { getStorageData } from "@/background/services/storage";
 import { isWatchUrl } from "@/lib/nicovideoUrl";
 import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
+import type { PopupPendingPlaybackEndNavigationResponse } from "@/lib/popupMessages";
 import {
   isPlaybackSettings,
   isOwnerMetadata,
@@ -18,6 +19,7 @@ export type PopupState = {
   activeTabUrl: string | null;
   alivePlaybackContexts: PlaybackContext[];
   ownersMap: Record<string, OwnerMetadata>;
+  pendingPlaybackEndNavigationByPlaylistId: Partial<Record<PlaylistId, number>>;
   playbackContexts: PlaybackContext[];
   playbackSettings: PlaybackSettings;
   playlists: Playlist[];
@@ -61,7 +63,7 @@ async function resolveAlivePlaybackContexts(
 }
 
 export async function getPopupState(): Promise<PopupState> {
-  const [activeTabInfo, storageData] = await Promise.all([
+  const [activeTabInfo, storageData, pendingPlaybackEndNavigations] = await Promise.all([
     getActiveTabInfo(),
     getStorageData([
       "playlists",
@@ -71,6 +73,9 @@ export async function getPopupState(): Promise<PopupState> {
       "owners",
       "playbackContexts",
     ]),
+    browser.runtime.sendMessage({
+      type: "popup:get-pending-playback-end-navigation",
+    }) as Promise<PopupPendingPlaybackEndNavigationResponse | undefined>,
   ]);
 
   const playlists = storageData.playlists.filter(isPlaylist);
@@ -81,6 +86,22 @@ export async function getPopupState(): Promise<PopupState> {
   const visiblePlaylistIds = new Set(
     alivePlaybackContexts.map((playbackContext) => playbackContext.playlistId),
   );
+  const pendingPlaybackEndNavigationByPlaylistId = alivePlaybackContexts.reduce<
+    Partial<Record<PlaylistId, number>>
+  >((result, playbackContext) => {
+    if (result[playbackContext.playlistId] !== undefined) {
+      return result;
+    }
+
+    const override = pendingPlaybackEndNavigations?.[playbackContext.tabId];
+
+    if (!override || override.playlistId !== playbackContext.playlistId) {
+      return result;
+    }
+
+    result[playbackContext.playlistId] = override.nextIndex;
+    return result;
+  }, {});
   const filteredPlaylists = playlists.filter(
     (playlist) =>
       !playlist.popupHidden ||
@@ -97,6 +118,7 @@ export async function getPopupState(): Promise<PopupState> {
         isOwnerMetadata(entry[1]),
       ),
     ),
+    pendingPlaybackEndNavigationByPlaylistId,
     playbackContexts,
     playbackSettings: isPlaybackSettings(storageData.playbackSettings)
       ? sanitizePlaybackSettings(storageData.playbackSettings)
