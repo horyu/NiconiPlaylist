@@ -1,4 +1,4 @@
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, Index, onCleanup, onMount, Show } from "solid-js";
 
 import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import {
@@ -406,85 +406,93 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
           </div>
 
           <div class="space-y-2">
-            <For each={presets()}>
-              {(preset) => (
-                <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-800 bg-stone-900 px-3 py-2 text-xs text-stone-300">
-                  <Show
-                    when={preset.mode === "count"}
-                    fallback={
-                      <div class="flex flex-wrap items-center gap-2">
-                        <span>時間リピート</span>
-                        <input
-                          type="number"
-                          min="0"
-                          inputMode="numeric"
-                          value={
-                            preset.mode === "duration"
-                              ? splitDurationSeconds(preset.durationSeconds).minutes
-                              : "0"
-                          }
-                          onInput={(event) =>
-                            handleUpdateDurationPreset(
-                              preset.id,
-                              "minutes",
-                              event.currentTarget.value,
-                            )
-                          }
-                          onBlur={() => scheduleAutoSave(0)}
-                          class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
-                        />
-                        <span>分</span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="59"
-                          inputMode="numeric"
-                          value={
-                            preset.mode === "duration"
-                              ? splitDurationSeconds(preset.durationSeconds).seconds
-                              : "0"
-                          }
-                          onInput={(event) =>
-                            handleUpdateDurationPreset(
-                              preset.id,
-                              "seconds",
-                              event.currentTarget.value,
-                            )
-                          }
-                          onBlur={() => scheduleAutoSave(0)}
-                          class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
-                        />
-                        <span>秒</span>
-                      </div>
-                    }
-                  >
-                    <div class="flex items-center gap-2">
-                      <span>回数リピート</span>
-                      <input
-                        type="number"
-                        min="1"
-                        inputMode="numeric"
-                        value={preset.mode === "count" ? preset.count.toString() : "1"}
-                        onInput={(event) =>
-                          handleUpdateCountPreset(preset.id, event.currentTarget.value)
-                        }
-                        onBlur={() => scheduleAutoSave(0)}
-                        class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
-                      />
-                      <span>回</span>
-                    </div>
-                  </Show>
+            <Index each={presets()}>
+              {(preset) => {
+                const currentPreset = () => preset();
+                const durationParts = () => {
+                  const presetValue = currentPreset();
 
-                  <button
-                    type="button"
-                    class="rounded-full border border-red-500/40 px-3 py-1 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
-                    onClick={() => handleDeletePreset(preset.id)}
-                  >
-                    削除
-                  </button>
-                </div>
-              )}
-            </For>
+                  return presetValue.mode === "duration"
+                    ? splitDurationSeconds(presetValue.durationSeconds)
+                    : { minutes: "0", seconds: "0" };
+                };
+                const countText = () => {
+                  const presetValue = currentPreset();
+
+                  return presetValue.mode === "count" ? presetValue.count.toString() : "1";
+                };
+
+                return (
+                  <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-800 bg-stone-900 px-3 py-2 text-xs text-stone-300">
+                    <Show
+                      when={currentPreset().mode === "count"}
+                      fallback={
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span>時間リピート</span>
+                          <input
+                            type="number"
+                            min="0"
+                            inputMode="numeric"
+                            value={durationParts().minutes}
+                            onInput={(event) =>
+                              handleUpdateDurationPreset(
+                                currentPreset().id,
+                                "minutes",
+                                event.currentTarget.value,
+                              )
+                            }
+                            onBlur={() => scheduleAutoSave(0)}
+                            class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                          />
+                          <span>分</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="59"
+                            inputMode="numeric"
+                            value={durationParts().seconds}
+                            onInput={(event) =>
+                              handleUpdateDurationPreset(
+                                currentPreset().id,
+                                "seconds",
+                                event.currentTarget.value,
+                              )
+                            }
+                            onBlur={() => scheduleAutoSave(0)}
+                            class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                          />
+                          <span>秒</span>
+                        </div>
+                      }
+                    >
+                      <div class="flex items-center gap-2">
+                        <span>回数リピート</span>
+                        <input
+                          type="number"
+                          min="1"
+                          inputMode="numeric"
+                          value={countText()}
+                          onInput={(event) =>
+                            handleUpdateCountPreset(currentPreset().id, event.currentTarget.value)
+                          }
+                          onBlur={() => scheduleAutoSave(0)}
+                          class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                        />
+                        <span>回</span>
+                      </div>
+                    </Show>
+
+                    <button
+                      type="button"
+                      class="rounded-full border border-red-500/40 px-3 py-1 text-xs font-medium text-red-200 transition hover:bg-red-500/10"
+                      onClick={() => handleDeletePreset(currentPreset().id)}
+                    >
+                      削除
+                    </button>
+                  </div>
+                );
+              }}
+            </Index>
           </div>
         </div>
 
