@@ -68,6 +68,10 @@ function comparePlaylistsByCreatedAtDesc(left: Playlist, right: Playlist): numbe
   return right.createdAt.localeCompare(left.createdAt);
 }
 
+function formatPopupRepeatPresetLabel(preset: PlaybackSettings["presets"][number]): string {
+  return formatRepeatPresetLabel(preset).replace(/リピート$/, "");
+}
+
 function Popup() {
   const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
@@ -152,7 +156,7 @@ function Popup() {
       (preset) => preset.id === selectedRepeatPresetId(),
     );
 
-    return activePreset ? formatRepeatPresetLabel(activePreset).replace(/リピート$/, "") : "なし";
+    return activePreset ? formatPopupRepeatPresetLabel(activePreset) : "なし";
   });
   const repeatStatusLabel = createMemo(() => {
     const playlistRepeatStatusLabel = currentPlaybackSettings()?.playlistRepeatEnabled
@@ -625,7 +629,7 @@ function Popup() {
                               value={preset.id}
                               selected={selectedRepeatPresetId() === preset.id}
                             >
-                              {formatRepeatPresetLabel(preset)}
+                              {formatPopupRepeatPresetLabel(preset)}
                             </option>
                           )}
                         </For>
