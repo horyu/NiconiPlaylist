@@ -1,4 +1,6 @@
 const ID_PATTERN = /^(sm|so|nm)([1-9][0-9]{0,8})$/;
+const BASE64_URL_PADDING_PATTERN = /=+$/u;
+const BASE64_URL_PATTERN = /^[A-Za-z0-9\-_]*$/u;
 
 const MAX_VIDEO_NUMBER = 999_999_999;
 const MAX_SIGNED_INT_32 = 2_147_483_647;
@@ -108,11 +110,14 @@ function bytesToBase64Url(bytes: number[]): string {
     binary += String.fromCharCode(byte);
   }
 
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(BASE64_URL_PADDING_PATTERN, "");
 }
 
 function base64UrlToBytes(encoded: string): Uint8Array {
-  if (!/^[A-Za-z0-9\-_]*$/u.test(encoded)) {
+  if (!BASE64_URL_PATTERN.test(encoded)) {
     throw new Error("Invalid base64url.");
   }
 

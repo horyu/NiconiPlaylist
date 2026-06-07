@@ -11,7 +11,7 @@ export async function handlePopupMessage(
       return;
     case "popup:get-pending-playback-end-navigation":
       return Object.fromEntries(
-        [...(await getPlaybackEndNavigationOverrides()).entries()].map(([tabId, override]) => [
+        Array.from((await getPlaybackEndNavigationOverrides()).entries(), ([tabId, override]) => [
           tabId,
           {
             nextIndex: override.nextIndex,

@@ -232,7 +232,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   });
 
   const sortedPlaylists = createMemo(() =>
-    (props.state?.playlists ?? []).slice().sort(comparePlaylistsByCreatedAtDesc),
+    (props.state?.playlists ?? []).toSorted(comparePlaylistsByCreatedAtDesc),
   );
 
   const filteredPlaylists = createMemo(() => {

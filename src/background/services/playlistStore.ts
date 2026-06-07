@@ -264,7 +264,7 @@ export async function updateStoredPlaylist(
   const nextPlaylists = [...playlists];
 
   nextPlaylists[playlistIndex] = nextPlaylist;
-  const deletedVideoIndices = [...(options?.deletedVideoIndices ?? [])].sort((a, b) => a - b);
+  const deletedVideoIndices = (options?.deletedVideoIndices ?? []).toSorted((a, b) => a - b);
   const currentVideoOccurrenceKeys = buildVideoOccurrenceKeys(currentPlaylist.videoIds);
   const nextVideoOccurrenceKeys = buildVideoOccurrenceKeys(nextPlaylist.videoIds);
   const nextVideoIndexByOccurrenceKey = new Map(

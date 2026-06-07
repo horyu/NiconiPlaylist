@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { decodeIds, encodeIds } from "./idCodec";
 
+const BASE64_URL_PADDING_PATTERN = /=+$/u;
+
 function encodeBytesToBase64Url(bytes: number[]): string {
   let binary = "";
 
@@ -9,7 +11,10 @@ function encodeBytesToBase64Url(bytes: number[]): string {
     binary += String.fromCharCode(byte);
   }
 
-  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+  return btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replace(BASE64_URL_PADDING_PATTERN, "");
 }
 
 function decodeBase64UrlToBytes(encoded: string): Uint8Array {

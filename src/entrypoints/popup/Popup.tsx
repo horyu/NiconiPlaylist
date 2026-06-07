@@ -33,6 +33,7 @@ import {
 } from "@/popup/hooks/usePopupPlaybackState";
 
 type StorageChanges = Record<string, { oldValue?: unknown; newValue?: unknown }>;
+const REPEAT_SUFFIX_PATTERN = /リピート$/;
 
 async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
   const settledTabs = await Promise.allSettled(
@@ -69,7 +70,7 @@ function comparePlaylistsByCreatedAtDesc(left: Playlist, right: Playlist): numbe
 }
 
 function formatPopupRepeatPresetLabel(preset: PlaybackSettings["presets"][number]): string {
-  return formatRepeatPresetLabel(preset).replace(/リピート$/, "");
+  return formatRepeatPresetLabel(preset).replace(REPEAT_SUFFIX_PATTERN, "");
 }
 
 function Popup() {
@@ -89,7 +90,7 @@ function Popup() {
   >({});
   const activePlaylist = createActivePlaylist(() => popupState());
   const selectablePlaylists = createMemo(() =>
-    (popupState()?.playlists ?? []).slice().sort(comparePlaylistsByCreatedAtDesc),
+    (popupState()?.playlists ?? []).toSorted(comparePlaylistsByCreatedAtDesc),
   );
   const activePlaylistAliveTabId = createActivePlaylistAliveTabId(
     activePlaylist,

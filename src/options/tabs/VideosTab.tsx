@@ -233,7 +233,7 @@ function buildVideoRows(playlistsState: PlaylistsState | undefined): VideoRow[] 
     }
   }
 
-  return [...rowsByVideoId.values()].sort((left, right) =>
+  return [...rowsByVideoId.values()].toSorted((left, right) =>
     compareVideoRows(left, right, undefined),
   );
 }
@@ -271,7 +271,7 @@ export function VideosTab(props: VideosTabProps) {
           .map((row) => getOwnerMetadata(row, currentVideoMetadataState)?.name?.trim())
           .filter((name): name is string => Boolean(name && name.length > 0)),
       ),
-    ].sort((left, right) => left.localeCompare(right, "ja"));
+    ].toSorted((left, right) => left.localeCompare(right, "ja"));
   });
   const playlistOptions = createMemo(() =>
     [
@@ -280,7 +280,7 @@ export function VideosTab(props: VideosTabProps) {
           .map((playlist) => playlist.title?.trim() || "(無題)")
           .filter((title): title is string => title.length > 0),
       ),
-    ].sort((left, right) => left.localeCompare(right, "ja")),
+    ].toSorted((left, right) => left.localeCompare(right, "ja")),
   );
   const filteredVideoRows = createMemo(() => {
     const currentVideoMetadataState = videoMetadataSnapshot();
@@ -327,11 +327,9 @@ export function VideosTab(props: VideosTabProps) {
     const key = sortKey();
     const direction = sortOrder() === "asc" ? 1 : -1;
 
-    return filteredVideoRows()
-      .slice()
-      .sort(
-        (left, right) => compareBySortKey(left, right, key, currentVideoMetadataState) * direction,
-      );
+    return filteredVideoRows().toSorted(
+      (left, right) => compareBySortKey(left, right, key, currentVideoMetadataState) * direction,
+    );
   });
 
   function isRowExpanded(videoId: VideoId): boolean {

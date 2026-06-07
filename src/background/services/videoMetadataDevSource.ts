@@ -2,6 +2,7 @@ import type { VideoId } from "@/lib/types";
 import type { DevVideoMetadataRecord, VideoThumbnail } from "@/lib/videoMetadataTypes";
 
 type DevFoundOwner = Extract<DevVideoMetadataRecord, { kind: "found" }>["owner"];
+const KNOWN_VIDEO_ID_PATTERN = /^(sm|so|nm)[1-9][0-9]{0,8}$/;
 
 function isThumbnail(value: unknown): value is VideoThumbnail {
   if (!value || typeof value !== "object") {
@@ -107,7 +108,7 @@ const DEV_VIDEO_METADATA_LOADERS: Record<VideoId, () => Promise<unknown>> = {
 };
 
 function isKnownVideoIdFormat(watchId: VideoId): boolean {
-  return /^(sm|so|nm)[1-9][0-9]{0,8}$/.test(watchId);
+  return KNOWN_VIDEO_ID_PATTERN.test(watchId);
 }
 
 function createSyntheticDevVideoMetadataRecord(watchId: VideoId): DevVideoMetadataRecord {

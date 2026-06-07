@@ -1,5 +1,6 @@
 import { fileURLToPath, URL } from "node:url";
 
+import e18e from "@e18e/eslint-plugin";
 import solid from "eslint-plugin-solid";
 import { defineConfig } from "vite-plus";
 
@@ -29,13 +30,14 @@ export default defineConfig({
     },
   },
   lint: {
-    jsPlugins: ["eslint-plugin-solid"],
+    jsPlugins: ["@e18e/eslint-plugin", "eslint-plugin-solid"],
     options: {
       typeAware: true,
       typeCheck: true,
     },
     plugins: ["promise"],
     rules: {
+      ...e18e.configs.recommended.rules,
       ...solidTypeScriptErrorRules,
     },
     env: {

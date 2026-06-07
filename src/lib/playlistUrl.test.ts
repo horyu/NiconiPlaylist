@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import { buildSharedPlaylistUrl, parseSharedPlaylistUrl, SHARED_PLAYLIST_URL } from "./playlistUrl";
 
+const VIDEO_IDS_QUERY_PATTERN = /videoIds=[A-Za-z0-9\-_]+$/u;
+
 describe("playlistUrl", () => {
   test("title と memo を含む共有 URL を構築できる", () => {
     const url = buildSharedPlaylistUrl({
@@ -13,7 +15,7 @@ describe("playlistUrl", () => {
     expect(url.startsWith(`${SHARED_PLAYLIST_URL}?`)).toBe(true);
     expect(url).toContain("title=My+Playlist");
     expect(url).toContain("memo=memo+text");
-    expect(url).toMatch(/videoIds=[A-Za-z0-9\-_]+$/u);
+    expect(url).toMatch(VIDEO_IDS_QUERY_PATTERN);
   });
 
   test("プレイリスト下書きを共有 URL と相互変換できる", () => {
