@@ -1,6 +1,17 @@
 import { fileURLToPath, URL } from "node:url";
 
+import solid from "eslint-plugin-solid";
 import { defineConfig } from "vite-plus";
+
+const solidTypeScriptErrorRules = Object.fromEntries(
+  Object.entries(solid.configs.typescript.rules).map(([ruleName, ruleConfig]) => {
+    if (Array.isArray(ruleConfig)) {
+      return [ruleName, ["error", ...ruleConfig.slice(1)]];
+    }
+
+    return [ruleName, "error"];
+  }),
+);
 
 export default defineConfig({
   staged: {
@@ -25,24 +36,7 @@ export default defineConfig({
     },
     plugins: ["promise"],
     rules: {
-      // https://github.com/solidjs-community/eslint-plugin-solid#rules
-      "solid/components-return-once": "error",
-      "solid/event-handlers": "error",
-      "solid/imports": "error",
-      "solid/jsx-no-duplicate-props": "error",
-      "solid/jsx-no-script-url": "error",
-      "solid/jsx-no-undef": "error",
-      "solid/jsx-uses-vars": "error",
-      "solid/no-destructure": "error",
-      "solid/no-innerhtml": "error",
-      "solid/no-react-deps": "error",
-      "solid/no-react-specific-props": "error",
-      "solid/no-unknown-namespaces": "error",
-      "solid/prefer-for": "error",
-      "solid/prefer-show": "error",
-      "solid/reactivity": "error",
-      "solid/self-closing-comp": "error",
-      "solid/style-prop": "error",
+      ...solidTypeScriptErrorRules,
     },
     env: {
       builtin: true,
