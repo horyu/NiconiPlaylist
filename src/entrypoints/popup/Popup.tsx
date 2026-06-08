@@ -33,7 +33,6 @@ import {
 } from "@/popup/hooks/usePopupPlaybackState";
 
 type StorageChanges = Record<string, { oldValue?: unknown; newValue?: unknown }>;
-const REPEAT_SUFFIX_PATTERN = /リピート$/;
 
 async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
   const settledTabs = await Promise.allSettled(
@@ -67,10 +66,6 @@ function formatPlaylistOptionLabel(playlist: Playlist, isPlaying: boolean): stri
 
 function comparePlaylistsByCreatedAtDesc(left: Playlist, right: Playlist): number {
   return right.createdAt.localeCompare(left.createdAt);
-}
-
-function formatPopupRepeatPresetLabel(preset: PlaybackSettings["presets"][number]): string {
-  return formatRepeatPresetLabel(preset).replace(REPEAT_SUFFIX_PATTERN, "");
 }
 
 function Popup() {
@@ -157,7 +152,9 @@ function Popup() {
       (preset) => preset.id === selectedRepeatPresetId(),
     );
 
-    return activePreset ? formatPopupRepeatPresetLabel(activePreset) : "なし";
+    return activePreset
+      ? formatRepeatPresetLabel(activePreset, { includeRepeatSuffix: false })
+      : "なし";
   });
   const repeatStatusLabel = createMemo(() => {
     const playlistRepeatStatusLabel = currentPlaybackSettings()?.playlistRepeatEnabled
@@ -630,7 +627,9 @@ function Popup() {
                               value={preset.id}
                               selected={selectedRepeatPresetId() === preset.id}
                             >
-                              {formatPopupRepeatPresetLabel(preset)}
+                              {formatRepeatPresetLabel(preset, {
+                                includeRepeatSuffix: false,
+                              })}
                             </option>
                           )}
                         </For>

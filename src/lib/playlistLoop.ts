@@ -172,23 +172,28 @@ export function resolveActiveRepeatPreset(settings: PlaybackSettings): RepeatPre
   return settings.presets.find((preset) => preset.id === settings.activeRepeatPresetId) ?? null;
 }
 
-export function formatRepeatPresetLabel(preset: RepeatPreset): string {
+export function formatRepeatPresetLabel(
+  preset: RepeatPreset,
+  options?: { includeRepeatSuffix?: boolean },
+): string {
+  const suffix = options?.includeRepeatSuffix === false ? "" : "リピート";
+
   if (preset.mode === "count") {
-    return `${preset.count}回リピート`;
+    return `${preset.count}回${suffix}`;
   }
 
   const minutes = Math.floor(preset.durationSeconds / 60);
   const seconds = preset.durationSeconds % 60;
 
   if (seconds === 0) {
-    return `${minutes}分リピート`;
+    return `${minutes}分${suffix}`;
   }
 
   if (minutes === 0) {
-    return `${seconds}秒リピート`;
+    return `${seconds}秒${suffix}`;
   }
 
-  return `${minutes}分${seconds}秒リピート`;
+  return `${minutes}分${seconds}秒${suffix}`;
 }
 
 export function shouldRepeatCurrentVideo(
