@@ -16,6 +16,7 @@ import {
   getDefaultStorageData,
   getStorageData,
   getRawStorageData,
+  mutateStorage,
   type StorageDataByKey,
   setStorageData,
 } from "./storage";
@@ -141,39 +142,41 @@ export async function cleanupOrphanedStoredData(): Promise<{
   removedOwnerCount: number;
   removedVideoMetadataCount: number;
 }> {
-  const currentStorageData = await getRawStorageData(["owners", "playlists", "videoMetadata"]);
-  const playlists = normalizeStorageData({
-    playlists: currentStorageData.playlists,
-  }).playlists;
-  const referencedVideoIds = new Set(playlists.flatMap((playlist) => playlist.videoIds));
-  const currentVideoMetadata = normalizeStorageData({
-    videoMetadata: currentStorageData.videoMetadata,
-  }).videoMetadata;
-  const nextVideoMetadata = Object.fromEntries(
-    Object.entries(currentVideoMetadata).filter(([watchId]) => referencedVideoIds.has(watchId)),
-  );
-  const referencedOwnerIds = new Set(
-    Object.values(nextVideoMetadata).flatMap((videoMetadata) =>
-      videoMetadata.ownerId ? [videoMetadata.ownerId] : [],
-    ),
-  );
-  const currentOwners = normalizeStorageData({
-    owners: currentStorageData.owners,
-  }).owners;
-  const nextOwners = Object.fromEntries(
-    Object.entries(currentOwners).filter(([ownerId]) => referencedOwnerIds.has(ownerId)),
-  );
+  return mutateStorage(["owners", "playlists", "videoMetadata"], (currentStorageData) => {
+    const playlists = normalizeStorageData({
+      playlists: currentStorageData.playlists,
+    }).playlists;
+    const referencedVideoIds = new Set(playlists.flatMap((playlist) => playlist.videoIds));
+    const currentVideoMetadata = normalizeStorageData({
+      videoMetadata: currentStorageData.videoMetadata,
+    }).videoMetadata;
+    const nextVideoMetadata = Object.fromEntries(
+      Object.entries(currentVideoMetadata).filter(([watchId]) => referencedVideoIds.has(watchId)),
+    );
+    const referencedOwnerIds = new Set(
+      Object.values(nextVideoMetadata).flatMap((videoMetadata) =>
+        videoMetadata.ownerId ? [videoMetadata.ownerId] : [],
+      ),
+    );
+    const currentOwners = normalizeStorageData({
+      owners: currentStorageData.owners,
+    }).owners;
+    const nextOwners = Object.fromEntries(
+      Object.entries(currentOwners).filter(([ownerId]) => referencedOwnerIds.has(ownerId)),
+    );
 
-  await setStorageData({
-    videoMetadata: nextVideoMetadata,
-    owners: nextOwners,
+    return {
+      updates: {
+        videoMetadata: nextVideoMetadata,
+        owners: nextOwners,
+      },
+      result: {
+        removedOwnerCount: Object.keys(currentOwners).length - Object.keys(nextOwners).length,
+        removedVideoMetadataCount:
+          Object.keys(currentVideoMetadata).length - Object.keys(nextVideoMetadata).length,
+      },
+    };
   });
-
-  return {
-    removedOwnerCount: Object.keys(currentOwners).length - Object.keys(nextOwners).length,
-    removedVideoMetadataCount:
-      Object.keys(currentVideoMetadata).length - Object.keys(nextVideoMetadata).length,
-  };
 }
 
 type StalePlaybackCleanupCandidate = {

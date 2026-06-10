@@ -10,12 +10,7 @@ import type {
   VideoMetadata,
 } from "@/lib/videoMetadataTypes";
 
-import {
-  getStoredOwnersMap,
-  getStoredVideoMetadataMap,
-  setStoredOwnersMap,
-  setStoredVideoMetadataMap,
-} from "./videoMetadataStore";
+import { getStoredVideoMetadataMap, mergeStoredVideoMetadata } from "./videoMetadataStore";
 
 const METADATA_FETCH_INTERVAL_MS = 500;
 const METADATA_FETCH_RETRY_COOLDOWN_MS = 60_000;
@@ -143,24 +138,19 @@ async function processQueuedVideoMetadata(): Promise<void> {
       }
 
       if (record.kind === "found") {
-        const [videoMetadataMap, ownersMap] = await Promise.all([
-          getStoredVideoMetadataMap(),
-          getStoredOwnersMap(),
-        ]);
         const fetchedAt = new Date().toISOString();
         const stored = toStoredRecords(record, fetchedAt);
 
-        await setStoredVideoMetadataMap({
-          ...videoMetadataMap,
-          [videoId]: stored.videoMetadata,
+        await mergeStoredVideoMetadata({
+          videoMetadata: {
+            [videoId]: stored.videoMetadata,
+          },
+          owners: stored.ownerMetadata
+            ? {
+                [stored.ownerMetadata.id]: stored.ownerMetadata,
+              }
+            : undefined,
         });
-
-        if (stored.ownerMetadata) {
-          await setStoredOwnersMap({
-            ...ownersMap,
-            [stored.ownerMetadata.id]: stored.ownerMetadata,
-          });
-        }
       }
 
       if (queuedVideoIds.size > 0) {

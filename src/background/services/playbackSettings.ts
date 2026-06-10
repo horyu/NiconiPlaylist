@@ -1,7 +1,7 @@
 import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import type { PlaybackSettings } from "@/lib/types";
 
-import { getStorageData, setStorageData } from "./storage";
+import { getStorageData, mutateStorage } from "./storage";
 
 export async function getStoredPlaybackSettings() {
   const { playbackSettings } = await getStorageData(["playbackSettings"]);
@@ -9,8 +9,17 @@ export async function getStoredPlaybackSettings() {
   return sanitizePlaybackSettings(playbackSettings);
 }
 
-export async function setStoredPlaybackSettings(playbackSettings: PlaybackSettings): Promise<void> {
-  await setStorageData({
-    playbackSettings: sanitizePlaybackSettings(playbackSettings),
+export async function updateStoredPlaybackSettings(
+  updater: (playbackSettings: PlaybackSettings) => PlaybackSettings,
+): Promise<PlaybackSettings> {
+  return mutateStorage(["playbackSettings"], ({ playbackSettings }) => {
+    const nextPlaybackSettings = sanitizePlaybackSettings(
+      updater(sanitizePlaybackSettings(playbackSettings)),
+    );
+
+    return {
+      updates: { playbackSettings: nextPlaybackSettings },
+      result: nextPlaybackSettings,
+    };
   });
 }

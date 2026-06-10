@@ -1,8 +1,9 @@
 import { formatSlashTimestampWithSeconds } from "@/lib/dateTime";
 import { parseSharedPlaylistUrl } from "@/lib/playlistUrl";
+import { isPlaylist } from "@/lib/typeGuards";
 import type { Playlist } from "@/lib/types";
 
-import { getStoredPlaylists, setLastActivePlaylistId, setStoredPlaylists } from "./playlistStore";
+import { mutateStorage } from "./storage";
 
 export const DEFAULT_PLAYLIST_TITLE_SOURCE = {
   playlistJsonImport: "プレイリストJSONインポート",
@@ -64,10 +65,13 @@ export async function createStoredPlaylist(
     videoIds: draft.videoIds,
   };
 
-  const playlists = await getStoredPlaylists();
-
-  await setStoredPlaylists([...playlists, playlist]);
-  await setLastActivePlaylistId(playlist.id);
+  await mutateStorage(["playlists", "lastActivePlaylistId"], ({ playlists }) => ({
+    updates: {
+      playlists: [...playlists.filter(isPlaylist), playlist],
+      lastActivePlaylistId: playlist.id,
+    },
+    result: undefined,
+  }));
 
   return playlist;
 }

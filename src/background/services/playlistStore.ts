@@ -1,4 +1,4 @@
-import { getStorageData, setStorageData } from "@/background/services/storage";
+import { getStorageData, mutateStorage } from "@/background/services/storage";
 import { formatDashedTimestampWithMinutes } from "@/lib/dateTime";
 import { isPlaybackContext, isPlaybackDebugEvent, isPlaylist } from "@/lib/typeGuards";
 import type {
@@ -10,6 +10,16 @@ import type {
 } from "@/lib/types";
 
 const MAX_PLAYBACK_DEBUG_EVENTS = 50;
+
+type PlaybackContextSyncResult = {
+  playbackContext: PlaybackContext | null;
+  debug: {
+    reason: string;
+    playlistId: PlaylistId;
+    playlistVideoCount: number | null;
+    previousPlaybackContext: PlaybackContext;
+  } | null;
+};
 
 function createPlaylistId(): PlaylistId {
   return crypto.randomUUID();
@@ -34,6 +44,36 @@ function createPlaylistTimestampPatch(
     lastPlayedAt: null,
     lastCompletedAt: null,
   };
+}
+
+async function createStoredPlaylistCopyWithVideoIds(
+  playlistId: PlaylistId,
+  createCopyFields: (sourcePlaylist: Playlist) => Pick<Playlist, "title" | "videoIds">,
+): Promise<Playlist> {
+  return mutateStorage(["playlists", "lastActivePlaylistId"], ({ playlists }) => {
+    const storedPlaylists = playlists.filter(isPlaylist);
+    const sourcePlaylist = storedPlaylists.find((playlist) => playlist.id === playlistId);
+
+    if (!sourcePlaylist) {
+      throw new Error("指定したプレイリストは保存されていません。");
+    }
+
+    const nextPlaylist: Playlist = {
+      id: createPlaylistId(),
+      ...createPlaylistTimestampPatch(new Date()),
+      ...createCopyFields(sourcePlaylist),
+      memo: sourcePlaylist.memo,
+      popupHidden: false,
+    };
+
+    return {
+      updates: {
+        playlists: [...storedPlaylists, nextPlaylist],
+        lastActivePlaylistId: nextPlaylist.id,
+      },
+      result: nextPlaylist,
+    };
+  });
 }
 
 function shuffleVideoIds(videoIds: VideoId[]): VideoId[] {
@@ -111,35 +151,28 @@ export async function getStoredPlaylists(): Promise<Playlist[]> {
   return playlists.filter(isPlaylist);
 }
 
-export async function setStoredPlaylists(playlists: Playlist[]): Promise<void> {
-  await setStorageData({ playlists });
-}
-
 export async function getStoredPlaybackContexts(): Promise<PlaybackContext[]> {
   const { playbackContexts } = await getStorageData(["playbackContexts"]);
 
   return playbackContexts.filter(isPlaybackContext);
 }
 
-async function getStoredPlaybackDebugEvents(): Promise<PlaybackDebugEvent[]> {
-  const { playbackDebugEvents } = await getStorageData(["playbackDebugEvents"]);
-
-  return playbackDebugEvents.filter(isPlaybackDebugEvent);
-}
-
 async function appendStoredPlaybackDebugEvent(
   event: Omit<PlaybackDebugEvent, "occurredAt">,
 ): Promise<void> {
-  const playbackDebugEvents = await getStoredPlaybackDebugEvents();
   const nextEvent = {
     ...event,
     occurredAt: new Date().toISOString(),
   } as PlaybackDebugEvent;
-  const nextPlaybackDebugEvents: PlaybackDebugEvent[] = [...playbackDebugEvents, nextEvent].slice(
-    -MAX_PLAYBACK_DEBUG_EVENTS,
-  );
 
-  await setStorageData({ playbackDebugEvents: nextPlaybackDebugEvents });
+  await mutateStorage(["playbackDebugEvents"], ({ playbackDebugEvents }) => ({
+    updates: {
+      playbackDebugEvents: [...playbackDebugEvents.filter(isPlaybackDebugEvent), nextEvent].slice(
+        -MAX_PLAYBACK_DEBUG_EVENTS,
+      ),
+    },
+    result: undefined,
+  }));
 }
 
 export async function recordPlaybackDebugEvent(
@@ -212,29 +245,22 @@ export async function recordContentPlaybackDebugEvent(
   });
 }
 
-export async function setStoredPlaybackContexts(
-  playbackContexts: PlaybackContext[],
-): Promise<void> {
-  await setStorageData({ playbackContexts });
-}
-
 export async function getLastActivePlaylistId(): Promise<PlaylistId | null> {
   const { lastActivePlaylistId } = await getStorageData(["lastActivePlaylistId"]);
   return lastActivePlaylistId;
 }
 
-export async function setLastActivePlaylistId(playlistId: PlaylistId | null): Promise<void> {
-  await setStorageData({ lastActivePlaylistId: playlistId });
-}
-
 export async function activateStoredPlaylist(playlistId: PlaylistId): Promise<void> {
-  const playlists = await getStoredPlaylists();
+  await mutateStorage(["playlists", "lastActivePlaylistId"], ({ playlists }) => {
+    if (!playlists.filter(isPlaylist).some((playlist) => playlist.id === playlistId)) {
+      throw new Error("指定したプレイリストは保存されていません。");
+    }
 
-  if (!playlists.some((playlist) => playlist.id === playlistId)) {
-    throw new Error("指定したプレイリストは保存されていません。");
-  }
-
-  await setLastActivePlaylistId(playlistId);
+    return {
+      updates: { lastActivePlaylistId: playlistId },
+      result: undefined,
+    };
+  });
 }
 
 export async function updateStoredPlaylist(
@@ -244,166 +270,112 @@ export async function updateStoredPlaylist(
     deletedVideoIndices?: number[];
   },
 ): Promise<Playlist> {
-  const [playlists, playbackContexts] = await Promise.all([
-    getStoredPlaylists(),
-    getStoredPlaybackContexts(),
-  ]);
-  const playlistIndex = playlists.findIndex((playlist) => playlist.id === playlistId);
+  return mutateStorage(["playlists", "playbackContexts"], (data) => {
+    const playlists = data.playlists.filter(isPlaylist);
+    const playbackContexts = data.playbackContexts.filter(isPlaybackContext);
+    const playlistIndex = playlists.findIndex((playlist) => playlist.id === playlistId);
 
-  if (playlistIndex < 0) {
-    throw new Error("指定したプレイリストは保存されていません。");
-  }
+    if (playlistIndex < 0) {
+      throw new Error("指定したプレイリストは保存されていません。");
+    }
 
-  const currentPlaylist = playlists[playlistIndex]!;
-  const now = new Date().toISOString();
-  const nextPlaylist: Playlist = {
-    ...currentPlaylist,
-    ...updates,
-    updatedAt: now,
-  };
-  const nextPlaylists = [...playlists];
+    const currentPlaylist = playlists[playlistIndex]!;
+    const nextPlaylist: Playlist = {
+      ...currentPlaylist,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    const nextPlaylists = [...playlists];
 
-  nextPlaylists[playlistIndex] = nextPlaylist;
-  const deletedVideoIndices = (options?.deletedVideoIndices ?? []).toSorted((a, b) => a - b);
-  const currentVideoOccurrenceKeys = buildVideoOccurrenceKeys(currentPlaylist.videoIds);
-  const nextVideoOccurrenceKeys = buildVideoOccurrenceKeys(nextPlaylist.videoIds);
-  const nextVideoIndexByOccurrenceKey = new Map(
-    nextVideoOccurrenceKeys.map((occurrenceKey, index) => [occurrenceKey, index] as const),
-  );
-  const nextPlaybackContexts =
-    updates.videoIds !== undefined
-      ? playbackContexts.flatMap((playbackContext) => {
-          if (playbackContext.playlistId !== playlistId) {
-            return [playbackContext];
-          }
+    nextPlaylists[playlistIndex] = nextPlaylist;
+    const deletedVideoIndices = (options?.deletedVideoIndices ?? []).toSorted((a, b) => a - b);
+    const currentVideoOccurrenceKeys = buildVideoOccurrenceKeys(currentPlaylist.videoIds);
+    const nextVideoOccurrenceKeys = buildVideoOccurrenceKeys(nextPlaylist.videoIds);
+    const nextVideoIndexByOccurrenceKey = new Map(
+      nextVideoOccurrenceKeys.map((occurrenceKey, index) => [occurrenceKey, index] as const),
+    );
+    const nextPlaybackContexts =
+      updates.videoIds !== undefined
+        ? playbackContexts.flatMap((playbackContext) => {
+            if (playbackContext.playlistId !== playlistId) {
+              return [playbackContext];
+            }
 
-          if (nextPlaylist.videoIds.length === 0) {
-            return [];
-          }
+            if (nextPlaylist.videoIds.length === 0) {
+              return [];
+            }
 
-          const currentOccurrenceKey = currentVideoOccurrenceKeys[playbackContext.currentIndex];
-
-          if (currentOccurrenceKey) {
-            const movedCurrentIndex = nextVideoIndexByOccurrenceKey.get(currentOccurrenceKey);
+            const currentOccurrenceKey = currentVideoOccurrenceKeys[playbackContext.currentIndex];
+            const movedCurrentIndex = currentOccurrenceKey
+              ? nextVideoIndexByOccurrenceKey.get(currentOccurrenceKey)
+              : undefined;
 
             if (movedCurrentIndex !== undefined) {
-              return [
-                {
-                  ...playbackContext,
-                  currentIndex: movedCurrentIndex,
-                },
-              ];
+              return [{ ...playbackContext, currentIndex: movedCurrentIndex }];
             }
-          }
 
-          const deletedBeforeCount = countDeletedIndicesBefore(
-            deletedVideoIndices,
-            playbackContext.currentIndex,
-          );
-          const isCurrentVideoDeleted = deletedVideoIndices.includes(playbackContext.currentIndex);
+            const deletedBeforeCount = countDeletedIndicesBefore(
+              deletedVideoIndices,
+              playbackContext.currentIndex,
+            );
+            const nextCurrentIndex = playbackContext.currentIndex - deletedBeforeCount;
 
-          if (!isCurrentVideoDeleted) {
             return [
               {
                 ...playbackContext,
-                currentIndex: Math.min(
-                  playbackContext.currentIndex - deletedBeforeCount,
-                  nextPlaylist.videoIds.length - 1,
-                ),
+                currentIndex: Math.min(nextCurrentIndex, nextPlaylist.videoIds.length - 1),
               },
             ];
-          }
+          })
+        : playbackContexts;
 
-          const nextCurrentIndex = playbackContext.currentIndex - deletedBeforeCount;
-
-          return [
-            {
-              ...playbackContext,
-              currentIndex: Math.min(nextCurrentIndex, nextPlaylist.videoIds.length - 1),
-            },
-          ];
-        })
-      : playbackContexts;
-
-  await Promise.all([
-    setStoredPlaylists(nextPlaylists),
-    setStoredPlaybackContexts(nextPlaybackContexts),
-  ]);
-
-  return nextPlaylist;
+    return {
+      updates: {
+        playlists: nextPlaylists,
+        playbackContexts: nextPlaybackContexts,
+      },
+      result: nextPlaylist,
+    };
+  });
 }
 
 export async function deleteStoredPlaylist(playlistId: PlaylistId): Promise<void> {
-  const [playlists, lastActivePlaylistId, playbackContexts] = await Promise.all([
-    getStoredPlaylists(),
-    getLastActivePlaylistId(),
-    getStoredPlaybackContexts(),
-  ]);
-  const nextPlaylists = playlists.filter((playlist) => playlist.id !== playlistId);
-  const nextPlaybackContexts = playbackContexts.filter(
-    (context) => context.playlistId !== playlistId,
+  await mutateStorage(
+    ["playlists", "lastActivePlaylistId", "playbackContexts"],
+    ({ playlists, lastActivePlaylistId, playbackContexts }) => {
+      const nextPlaylists = playlists
+        .filter(isPlaylist)
+        .filter((playlist) => playlist.id !== playlistId);
+
+      return {
+        updates: {
+          playlists: nextPlaylists,
+          playbackContexts: playbackContexts
+            .filter(isPlaybackContext)
+            .filter((context) => context.playlistId !== playlistId),
+          lastActivePlaylistId:
+            lastActivePlaylistId === playlistId
+              ? (nextPlaylists[0]?.id ?? null)
+              : lastActivePlaylistId,
+        },
+        result: undefined,
+      };
+    },
   );
-
-  await Promise.all([
-    setStoredPlaylists(nextPlaylists),
-    setStoredPlaybackContexts(nextPlaybackContexts),
-  ]);
-
-  if (lastActivePlaylistId === playlistId) {
-    await setLastActivePlaylistId(nextPlaylists[0]?.id ?? null);
-  }
 }
 
 export async function createShuffledStoredPlaylistCopy(playlistId: PlaylistId): Promise<Playlist> {
-  const playlists = await getStoredPlaylists();
-  const sourcePlaylist = playlists.find((playlist) => playlist.id === playlistId);
-
-  if (!sourcePlaylist) {
-    throw new Error("指定したプレイリストは保存されていません。");
-  }
-
-  const now = new Date();
-  const nextPlaylist: Playlist = {
-    id: createPlaylistId(),
-    ...createPlaylistTimestampPatch(now),
+  return createStoredPlaylistCopyWithVideoIds(playlistId, (sourcePlaylist) => ({
     title: createShuffledPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
-    memo: sourcePlaylist.memo,
-    popupHidden: false,
     videoIds: shuffleVideoIds(sourcePlaylist.videoIds),
-  };
-
-  await Promise.all([
-    setStoredPlaylists([...playlists, nextPlaylist]),
-    setLastActivePlaylistId(nextPlaylist.id),
-  ]);
-
-  return nextPlaylist;
+  }));
 }
 
 export async function createStoredPlaylistCopy(playlistId: PlaylistId): Promise<Playlist> {
-  const playlists = await getStoredPlaylists();
-  const sourcePlaylist = playlists.find((playlist) => playlist.id === playlistId);
-
-  if (!sourcePlaylist) {
-    throw new Error("指定したプレイリストは保存されていません。");
-  }
-
-  const now = new Date();
-  const nextPlaylist: Playlist = {
-    id: createPlaylistId(),
-    ...createPlaylistTimestampPatch(now),
+  return createStoredPlaylistCopyWithVideoIds(playlistId, (sourcePlaylist) => ({
     title: createCopiedPlaylistTitle(sourcePlaylist.title ?? sourcePlaylist.id),
-    memo: sourcePlaylist.memo,
-    popupHidden: false,
     videoIds: [...sourcePlaylist.videoIds],
-  };
-
-  await Promise.all([
-    setStoredPlaylists([...playlists, nextPlaylist]),
-    setLastActivePlaylistId(nextPlaylist.id),
-  ]);
-
-  return nextPlaylist;
+  }));
 }
 
 export async function getStoredPlaybackContextByTabId(
@@ -417,35 +389,53 @@ export async function clearStoredPlaybackContextByTabId(
   tabId: number,
   reason = "unspecified",
 ): Promise<void> {
-  const playbackContexts = await getStoredPlaybackContexts();
-  const previousPlaybackContext =
-    playbackContexts.find((context) => context.tabId === tabId) ?? null;
-  const nextPlaybackContexts = playbackContexts.filter((context) => context.tabId !== tabId);
+  const previousPlaybackContext = await mutateStorage(
+    ["playbackContexts"],
+    ({ playbackContexts }) => {
+      const storedPlaybackContexts = playbackContexts.filter(isPlaybackContext);
+      const previousContext =
+        storedPlaybackContexts.find((context) => context.tabId === tabId) ?? null;
 
+      return {
+        updates: {
+          playbackContexts: storedPlaybackContexts.filter((context) => context.tabId !== tabId),
+        },
+        result: previousContext,
+      };
+    },
+  );
   await recordPlaybackDebugEvent("clear-playback-context-by-tab", reason, {
     playlistId: previousPlaybackContext?.playlistId ?? null,
     tabId,
     currentIndex: previousPlaybackContext?.currentIndex ?? null,
     previousPlaybackContext,
   });
-  await setStoredPlaybackContexts(nextPlaybackContexts);
 }
 
 export async function clearStoredPlaybackContextsByPlaylistId(
   playlistId: PlaylistId,
   reason = "unspecified",
 ): Promise<void> {
-  const playbackContexts = await getStoredPlaybackContexts();
-  const nextPlaybackContexts = playbackContexts.filter(
-    (context) => context.playlistId !== playlistId,
+  const previousPlaybackContext = await mutateStorage(
+    ["playbackContexts"],
+    ({ playbackContexts }) => {
+      const storedPlaybackContexts = playbackContexts.filter(isPlaybackContext);
+
+      return {
+        updates: {
+          playbackContexts: storedPlaybackContexts.filter(
+            (context) => context.playlistId !== playlistId,
+          ),
+        },
+        result: storedPlaybackContexts.find((context) => context.playlistId === playlistId) ?? null,
+      };
+    },
   );
 
   await recordPlaybackDebugEvent("clear-playback-contexts-by-playlist", reason, {
     playlistId,
-    previousPlaybackContext:
-      playbackContexts.find((context) => context.playlistId === playlistId) ?? null,
+    previousPlaybackContext,
   });
-  await setStoredPlaybackContexts(nextPlaybackContexts);
 }
 
 export async function setStoredPlaybackContextIndex(
@@ -453,141 +443,168 @@ export async function setStoredPlaybackContextIndex(
   playlistId: PlaylistId,
   currentIndex: number,
 ): Promise<PlaybackContext> {
-  const [playlists, playbackContexts] = await Promise.all([
-    getStoredPlaylists(),
-    getStoredPlaybackContexts(),
-  ]);
-  const playlist = playlists.find((currentPlaylist) => currentPlaylist.id === playlistId);
+  return mutateStorage(
+    ["playlists", "playbackContexts", "lastActivePlaylistId"],
+    ({ playlists, playbackContexts }) => {
+      const storedPlaylists = playlists.filter(isPlaylist);
+      const playlist = storedPlaylists.find((currentPlaylist) => currentPlaylist.id === playlistId);
 
-  if (!playlist) {
-    throw new Error("指定したプレイリストは保存されていません。");
-  }
+      if (!playlist) {
+        throw new Error("指定したプレイリストは保存されていません。");
+      }
 
-  if (currentIndex < 0 || currentIndex >= playlist.videoIds.length) {
-    throw new Error("指定した再生位置がプレイリスト範囲外です。");
-  }
+      if (currentIndex < 0 || currentIndex >= playlist.videoIds.length) {
+        throw new Error("指定した再生位置がプレイリスト範囲外です。");
+      }
 
-  const playbackContext: PlaybackContext = {
-    playlistId,
-    tabId,
-    currentIndex,
-  };
-  const nextPlaybackContexts = playbackContexts.filter(
-    (context) => context.tabId !== tabId && context.playlistId !== playlistId,
+      const playbackContext: PlaybackContext = {
+        playlistId,
+        tabId,
+        currentIndex,
+      };
+      const nextPlaybackContexts = playbackContexts
+        .filter(isPlaybackContext)
+        .filter((context) => context.tabId !== tabId && context.playlistId !== playlistId);
+
+      nextPlaybackContexts.push(playbackContext);
+
+      return {
+        updates: {
+          playbackContexts: nextPlaybackContexts,
+          playlists: storedPlaylists.map((currentPlaylist) =>
+            currentPlaylist.id === playlistId
+              ? {
+                  ...currentPlaylist,
+                  lastPlayedAt: new Date().toISOString(),
+                }
+              : currentPlaylist,
+          ),
+          lastActivePlaylistId: playlistId,
+        },
+        result: playbackContext,
+      };
+    },
   );
-  const playedAt = new Date().toISOString();
-  const nextPlaylists = playlists.map((currentPlaylist) =>
-    currentPlaylist.id === playlistId
-      ? {
-          ...currentPlaylist,
-          lastPlayedAt: playedAt,
-        }
-      : currentPlaylist,
-  );
-
-  nextPlaybackContexts.push(playbackContext);
-
-  await Promise.all([
-    setStoredPlaybackContexts(nextPlaybackContexts),
-    setStoredPlaylists(nextPlaylists),
-    setLastActivePlaylistId(playlistId),
-  ]);
-
-  return playbackContext;
 }
 
 export async function markStoredPlaylistCompleted(playlistId: PlaylistId): Promise<void> {
-  const playlists = await getStoredPlaylists();
-  const completedAt = new Date().toISOString();
-  const nextPlaylists = playlists.map((playlist) =>
-    playlist.id === playlistId
-      ? {
-          ...playlist,
-          lastCompletedAt: completedAt,
-        }
-      : playlist,
-  );
-
-  await setStoredPlaylists(nextPlaylists);
+  await mutateStorage(["playlists"], ({ playlists }) => ({
+    updates: {
+      playlists: playlists.filter(isPlaylist).map((playlist) =>
+        playlist.id === playlistId
+          ? {
+              ...playlist,
+              lastCompletedAt: new Date().toISOString(),
+            }
+          : playlist,
+      ),
+    },
+    result: undefined,
+  }));
 }
 
 export async function markStoredPlaylistCompletedByTabId(tabId: number): Promise<void> {
-  const playbackContext = await getStoredPlaybackContextByTabId(tabId);
+  await mutateStorage(["playlists", "playbackContexts"], ({ playlists, playbackContexts }) => {
+    const playbackContext = playbackContexts
+      .filter(isPlaybackContext)
+      .find((context) => context.tabId === tabId);
 
-  if (!playbackContext) {
-    return;
-  }
+    if (!playbackContext) {
+      return {
+        updates: {},
+        result: undefined,
+      };
+    }
 
-  await markStoredPlaylistCompleted(playbackContext.playlistId);
+    return {
+      updates: {
+        playlists: playlists.filter(isPlaylist).map((playlist) =>
+          playlist.id === playbackContext.playlistId
+            ? {
+                ...playlist,
+                lastCompletedAt: new Date().toISOString(),
+              }
+            : playlist,
+        ),
+      },
+      result: undefined,
+    };
+  });
 }
 
 export async function syncPlaybackContextForVideo(
   tabId: number,
   videoId: VideoId,
 ): Promise<PlaybackContext | null> {
-  const [playlists, playbackContexts] = await Promise.all([
-    getStoredPlaylists(),
-    getStoredPlaybackContexts(),
-  ]);
-  const previousPlaybackContext = playbackContexts.find((context) => context.tabId === tabId);
-  const activePlaylist = previousPlaybackContext
-    ? playlists.find((playlist) => playlist.id === previousPlaybackContext.playlistId)
-    : null;
-  const currentIndex: number | null = activePlaylist
-    ? resolvePlaybackIndex(activePlaylist, videoId, previousPlaybackContext)
-    : null;
+  const syncResult = await mutateStorage<
+    "playlists" | "playbackContexts",
+    PlaybackContextSyncResult
+  >(["playlists", "playbackContexts"], ({ playlists, playbackContexts }) => {
+    const storedPlaylists = playlists.filter(isPlaylist);
+    const storedPlaybackContexts = playbackContexts.filter(isPlaybackContext);
+    const previousPlaybackContext = storedPlaybackContexts.find(
+      (context) => context.tabId === tabId,
+    );
+    const activePlaylist = previousPlaybackContext
+      ? storedPlaylists.find((playlist) => playlist.id === previousPlaybackContext.playlistId)
+      : null;
+    const currentIndex = activePlaylist
+      ? resolvePlaybackIndex(activePlaylist, videoId, previousPlaybackContext)
+      : null;
 
-  if (!activePlaylist || currentIndex === null || currentIndex < 0) {
-    if (!previousPlaybackContext) {
-      return null;
+    if (!activePlaylist || currentIndex === null || currentIndex < 0) {
+      return {
+        updates: {},
+        result: {
+          playbackContext: null,
+          debug:
+            previousPlaybackContext === undefined
+              ? null
+              : {
+                  reason: !activePlaylist
+                    ? "playlist-not-found"
+                    : currentIndex === null
+                      ? "video-not-in-playlist"
+                      : "invalid-current-index",
+                  playlistId: previousPlaybackContext.playlistId,
+                  playlistVideoCount: activePlaylist?.videoIds.length ?? null,
+                  previousPlaybackContext,
+                },
+        },
+      };
     }
 
-    const reason = !activePlaylist
-      ? "playlist-not-found"
-      : currentIndex === null
-        ? "video-not-in-playlist"
-        : "invalid-current-index";
-    await recordPlaybackDebugEvent("sync-playback-context-null", reason, {
-      playlistId: previousPlaybackContext?.playlistId ?? null,
+    const playbackContext: PlaybackContext = {
+      playlistId: activePlaylist.id,
       tabId,
-      videoId,
-      playlistVideoCount: activePlaylist?.videoIds.length ?? null,
-      previousPlaybackContext: previousPlaybackContext ?? null,
-    });
-    return null;
-  }
-
-  const latestPlaybackContexts = await getStoredPlaybackContexts();
-  const latestPlaybackContext = latestPlaybackContexts.find((context) => context.tabId === tabId);
-
-  if (
-    !latestPlaybackContext ||
-    latestPlaybackContext.playlistId !== previousPlaybackContext?.playlistId
-  ) {
-    await recordPlaybackDebugEvent("sync-playback-context-null", "latest-context-mismatch", {
-      playlistId: previousPlaybackContext?.playlistId ?? null,
-      tabId,
-      videoId,
       currentIndex,
-      playlistVideoCount: activePlaylist.videoIds.length,
-      previousPlaybackContext: previousPlaybackContext ?? null,
+    };
+    const nextPlaybackContexts = storedPlaybackContexts.filter(
+      (context) => context.tabId !== tabId && context.playlistId !== activePlaylist.id,
+    );
+
+    nextPlaybackContexts.push(playbackContext);
+
+    return {
+      updates: { playbackContexts: nextPlaybackContexts },
+      result: {
+        playbackContext,
+        debug: null,
+      },
+    };
+  });
+
+  if (syncResult.debug) {
+    await recordPlaybackDebugEvent("sync-playback-context-null", syncResult.debug.reason, {
+      playlistId: syncResult.debug.playlistId,
+      tabId,
+      videoId,
+      playlistVideoCount: syncResult.debug.playlistVideoCount,
+      previousPlaybackContext: syncResult.debug.previousPlaybackContext,
     });
-    return null;
   }
 
-  const playbackContext: PlaybackContext = {
-    playlistId: activePlaylist.id,
-    tabId,
-    currentIndex,
-  };
-  const nextPlaybackContexts = latestPlaybackContexts.filter(
-    (context) => context.tabId !== tabId && context.playlistId !== activePlaylist.id,
-  );
-
-  nextPlaybackContexts.push(playbackContext);
-  await setStoredPlaybackContexts(nextPlaybackContexts);
-
-  return playbackContext;
+  return syncResult.playbackContext;
 }
 
 export async function resolveNextVideoForPlaybackContext(

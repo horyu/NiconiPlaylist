@@ -8,8 +8,7 @@ import { getStoredPlaylists } from "./playlistStore";
 import {
   getStoredOwnersMap,
   getStoredVideoMetadataMap,
-  setStoredOwnersMap,
-  setStoredVideoMetadataMap,
+  mergeStoredVideoMetadata,
 } from "./videoMetadataStore";
 
 const PLAYLIST_JSON_VERSION = 1;
@@ -160,21 +159,16 @@ export async function importPlaylistJson(payload: unknown): Promise<Playlist> {
   const nextPlaylist = await createStoredPlaylist(normalizedPayload.playlist, {
     defaultTitleSource: DEFAULT_PLAYLIST_TITLE_SOURCE.playlistJsonImport,
   });
-  const [currentVideoMetadataMap, currentOwnersMap] = await Promise.all([
-    getStoredVideoMetadataMap(),
-    getStoredOwnersMap(),
-  ]);
 
-  await Promise.all([
-    setStoredVideoMetadataMap({
-      ...normalizedPayload.videoMetadata,
-      ...currentVideoMetadataMap,
-    }),
-    setStoredOwnersMap({
-      ...normalizedPayload.owners,
-      ...currentOwnersMap,
-    }),
-  ]);
+  await mergeStoredVideoMetadata(
+    {
+      videoMetadata: normalizedPayload.videoMetadata,
+      owners: normalizedPayload.owners,
+    },
+    {
+      overwriteExisting: false,
+    },
+  );
 
   return nextPlaylist;
 }

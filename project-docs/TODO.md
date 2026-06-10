@@ -19,24 +19,7 @@
 
 以下は、変更時の不具合リスクと今後の保守コストを基準にした推奨着手順である。
 
-### 5.1 storage 更新の直列化・トランザクション化
-
-- 対象:
-  - `src/background/services/storage.ts`
-  - `src/background/services/playlistStore.ts`
-  - `src/background/services/importPlaylist.ts`
-- 背景:
-  - playlist や playback context の更新では、storage から現在値を読み込み、加工後の配列全体を書き戻している。
-  - popup、options、content script から複数の更新が並行した場合、先に完了した変更を古い読み込み結果で上書きする可能性がある。
-- 対応方針:
-  - `mutateStorage(keys, updater)` のような共通更新関数を用意し、read-modify-write を直列実行する。
-  - playlist 作成、更新、削除、複製と playback context 更新を共通更新関数経由にする。
-  - 複数の storage key を同時に変更する処理では、関連データの整合性を一つの更新単位として扱う。
-- 完了条件:
-  - 並行して複数の更新を実行しても、各更新結果が失われないことをテストで確認できる。
-  - playlist と playback context の関連が途中状態のまま保存されない。
-
-### 5.2 再生遷移ロジックの状態機械化
+### 5.1 再生遷移ロジックの状態機械化
 
 - 対象:
   - `src/contents/watch.ts`
@@ -54,7 +37,7 @@
   - 主要な再生遷移をブラウザなしの単体テストで再現できる。
   - content script が保持する可変状態と、各状態を更新する箇所を限定できる。
 
-### 5.3 `PlaylistsTab` の責務分割
+### 5.2 `PlaylistsTab` の責務分割
 
 - 対象:
   - `src/options/tabs/PlaylistsTab.tsx`
@@ -72,7 +55,7 @@
   - 編集状態の初期化・キャンセル処理が一箇所に集約される。
   - `PlaylistsTab` は画面全体の構成と主要状態の接続を中心に担当する。
 
-### 5.4 再生設定の自動保存処理の分離
+### 5.3 再生設定の自動保存処理の分離
 
 - 対象:
   - `src/options/tabs/RepeatSettingsTab.tsx`
@@ -88,7 +71,7 @@
   - 連続入力、保存中の追加更新、blur 保存、アンマウント時保存を単体テストできる。
   - 自動保存によって入力要素のフォーカスや入力途中の値が失われない。
 
-### 5.5 動画タブの metadata 更新方式の見直し
+### 5.4 動画タブの metadata 更新方式の見直し
 
 - 対象:
   - `src/options/tabs/VideosTab.tsx`
@@ -106,7 +89,7 @@
   - 新しく取得した metadata を、タブの再表示や明示操作によって確実に反映できる。
   - 大量の動画がある場合も操作可能な表示速度を維持できる。
 
-### 5.6 storage schema と検証・正規化処理の一元化
+### 5.5 storage schema と検証・正規化処理の一元化
 
 - 対象:
   - `src/lib/typeGuards.ts`
@@ -123,7 +106,7 @@
   - storage 項目追加時に更新すべき定義箇所が明確になる。
   - 不正データ、旧形式データ、部分的に欠損したデータの正規化をテストできる。
 
-### 5.7 重要領域のテスト拡充
+### 5.6 重要領域のテスト拡充
 
 - 対象:
   - `src/background/services/playlistStore.ts`

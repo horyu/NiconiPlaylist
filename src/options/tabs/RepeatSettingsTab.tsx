@@ -3,7 +3,7 @@ import { createSignal, Index, onCleanup, onMount, Show } from "solid-js";
 import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import {
   getStoredPlaybackSettings,
-  setStoredPlaybackSettings,
+  updateStoredPlaybackSettings,
 } from "@/background/services/playbackSettings";
 import {
   createRepeatPreset,
@@ -116,17 +116,22 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       const currentRequestId = autoSaveRequestId;
 
       try {
-        const currentPlaybackSettings = await getStoredPlaybackSettings();
-        const nextPlaybackSettings = sanitizePlaybackSettings({
-          playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
-          resumeTabMode: resumeTabMode(),
-          activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
-          presets: presets(),
-          navigation: navigationSettings(),
+        const draftSettings = {
           completion: completionSettings(),
-        });
-
-        await setStoredPlaybackSettings(nextPlaybackSettings);
+          navigation: navigationSettings(),
+          presets: presets(),
+          resumeTabMode: resumeTabMode(),
+        };
+        const nextPlaybackSettings = await updateStoredPlaybackSettings((currentPlaybackSettings) =>
+          sanitizePlaybackSettings({
+            playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
+            resumeTabMode: draftSettings.resumeTabMode,
+            activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
+            presets: draftSettings.presets,
+            navigation: draftSettings.navigation,
+            completion: draftSettings.completion,
+          }),
+        );
         setPresets(nextPlaybackSettings.presets);
         setCompletionSettings(nextPlaybackSettings.completion);
         setNavigationSettings(nextPlaybackSettings.navigation);

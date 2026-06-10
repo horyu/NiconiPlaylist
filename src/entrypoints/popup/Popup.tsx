@@ -12,7 +12,7 @@ import {
 } from "solid-js";
 import { browser } from "wxt/browser";
 
-import { setStoredPlaybackSettings } from "@/background/services/playbackSettings";
+import { updateStoredPlaybackSettings } from "@/background/services/playbackSettings";
 import {
   activateStoredPlaylist,
   getStoredPlaybackContexts,
@@ -396,14 +396,14 @@ function Popup() {
     setFeedback(null);
 
     try {
-      const nextPlaybackSettings = sanitizePlaybackSettings({
-        ...playbackSettings,
-        playlistRepeatEnabled: playbackSettings.playlistRepeatEnabled,
-        activeRepeatPresetId: nextValue === "none" ? null : nextValue,
-      });
+      const nextPlaybackSettings = await updateStoredPlaybackSettings((currentPlaybackSettings) =>
+        sanitizePlaybackSettings({
+          ...currentPlaybackSettings,
+          activeRepeatPresetId: nextValue === "none" ? null : nextValue,
+        }),
+      );
 
       setPlaybackSettingsDraft(nextPlaybackSettings);
-      await setStoredPlaybackSettings(nextPlaybackSettings);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "リピート設定の更新に失敗しました。");
     }
@@ -421,15 +421,16 @@ function Popup() {
     setFeedback(null);
 
     try {
-      const nextPlaybackSettings = sanitizePlaybackSettings({
-        ...playbackSettings,
-        playlistRepeatEnabled: !playbackSettings.playlistRepeatEnabled,
-        activeRepeatPresetId:
-          selectedRepeatPresetIdValue === "none" ? null : selectedRepeatPresetIdValue,
-      });
+      const nextPlaybackSettings = await updateStoredPlaybackSettings((currentPlaybackSettings) =>
+        sanitizePlaybackSettings({
+          ...currentPlaybackSettings,
+          playlistRepeatEnabled: !currentPlaybackSettings.playlistRepeatEnabled,
+          activeRepeatPresetId:
+            selectedRepeatPresetIdValue === "none" ? null : selectedRepeatPresetIdValue,
+        }),
+      );
 
       setPlaybackSettingsDraft(nextPlaybackSettings);
-      await setStoredPlaybackSettings(nextPlaybackSettings);
     } catch (error) {
       setFeedback(
         error instanceof Error ? error.message : "プレイリストリピートの更新に失敗しました。",
