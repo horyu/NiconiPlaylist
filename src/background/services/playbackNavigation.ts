@@ -13,16 +13,11 @@ import {
   updateStoredPlaylist,
 } from "@/background/services/playlistStore";
 import { buildWatchUrl } from "@/lib/nicovideoUrl";
+import { resolveCompletedTabNavigation, type PendingTabRestore } from "@/lib/playbackTransition";
 import type { PopupMessage } from "@/lib/popupMessages";
 import type { PlaybackNavigationSettings } from "@/lib/types";
 
-type PendingRestore = {
-  delayMs: number;
-  previousActiveTabId: number | null;
-  restorePreviousTabEnabled: boolean;
-};
-
-const pendingRestoreByPlaybackTabId = new Map<number, PendingRestore>();
+const pendingRestoreByPlaybackTabId = new Map<number, PendingTabRestore>();
 const restoreTimeoutIdByPlaybackTabId = new Map<number, ReturnType<typeof setTimeout>>();
 
 export async function focusBrowserTab(tabId: number): Promise<void> {
@@ -90,16 +85,17 @@ export function cancelPendingPlaybackTabNavigation(tabId: number): void {
 }
 
 export async function completePlaybackTabNavigation(tabId: number): Promise<void> {
-  const pendingRestore = pendingRestoreByPlaybackTabId.get(tabId);
+  const pendingRestore = pendingRestoreByPlaybackTabId.get(tabId) ?? null;
+  const command = resolveCompletedTabNavigation(tabId, pendingRestore);
+  pendingRestoreByPlaybackTabId.delete(tabId);
 
-  if (!pendingRestore) {
+  if (command.type === "no-pending-navigation") {
     console.log("NiconiPlaylist route-ready received without pending tab restore.", {
       tabId,
     });
     return;
   }
 
-  pendingRestoreByPlaybackTabId.delete(tabId);
   console.log("NiconiPlaylist completing playback tab navigation.", {
     pendingRestore,
     tabId,
@@ -107,11 +103,7 @@ export async function completePlaybackTabNavigation(tabId: number): Promise<void
 
   await focusBrowserTab(tabId);
 
-  if (
-    !pendingRestore.restorePreviousTabEnabled ||
-    pendingRestore.previousActiveTabId === null ||
-    pendingRestore.previousActiveTabId === tabId
-  ) {
+  if (command.type === "keep-playback-tab-visible") {
     console.log("NiconiPlaylist keeping playback tab visible after route-ready.", {
       pendingRestore,
       tabId,
@@ -119,7 +111,7 @@ export async function completePlaybackTabNavigation(tabId: number): Promise<void
     return;
   }
 
-  const previousActiveTabId = pendingRestore.previousActiveTabId;
+  const previousActiveTabId = command.previousActiveTabId;
   const timeoutId = globalThis.setTimeout(() => {
     restoreTimeoutIdByPlaybackTabId.delete(tabId);
     console.log("NiconiPlaylist restoring previously focused tab after navigation.", {
@@ -133,7 +125,7 @@ export async function completePlaybackTabNavigation(tabId: number): Promise<void
         tabId,
       });
     });
-  }, pendingRestore.delayMs);
+  }, command.delayMs);
 
   restoreTimeoutIdByPlaybackTabId.set(tabId, timeoutId);
 }

@@ -19,6 +19,7 @@ import {
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
 } from "@/background/services/playlistStore";
+import { resolveNextPlaybackVideo } from "@/lib/playbackTransition";
 import type { WatchMessage, WatchPlaybackContextResponse } from "@/lib/watchMessages";
 
 type MessageSender = {
@@ -55,8 +56,15 @@ export async function handleWatchMessage(
         resolveNextVideoForPlaybackContext(tabId, message.videoId),
       ]);
       const playbackEndNavigationOverride = await consumePlaybackEndNavigationOverride(tabId);
+      const resolvedPlaybackState = resolveNextPlaybackVideo({
+        firstVideoId: playbackState.firstVideoId,
+        nextVideoId: playbackState.nextVideoId,
+        overrideNextVideoId: playbackEndNavigationOverride?.nextVideoId ?? null,
+        playbackContext: playbackState.playbackContext,
+        playbackSettings,
+      });
 
-      if (!playbackState.playbackContext) {
+      if (!resolvedPlaybackState.playbackContext) {
         await recordPlaybackDebugEvent("resolve-next-video", "no-playback-context", {
           tabId,
           videoId: message.videoId,
@@ -65,36 +73,21 @@ export async function handleWatchMessage(
           overrideNextVideoId: playbackEndNavigationOverride?.nextVideoId ?? null,
           resolvedNextVideoId: null,
         });
-        return {
-          forceSkipCurrentVideoRepeat: false,
-          playbackContext: null,
-          nextVideoId: null,
-          playbackSettings: null,
-        };
+        return resolvedPlaybackState;
       }
 
-      const nextVideoId =
-        playbackEndNavigationOverride?.nextVideoId ??
-        playbackState.nextVideoId ??
-        (playbackSettings.playlistRepeatEnabled ? playbackState.firstVideoId : null);
-
       await recordPlaybackDebugEvent("resolve-next-video", "resolved", {
-        playlistId: playbackState.playbackContext.playlistId,
+        playlistId: resolvedPlaybackState.playbackContext.playlistId,
         tabId,
         videoId: message.videoId,
-        currentIndex: playbackState.playbackContext.currentIndex,
-        forceSkipCurrentVideoRepeat: playbackEndNavigationOverride !== null,
+        currentIndex: resolvedPlaybackState.playbackContext.currentIndex,
+        forceSkipCurrentVideoRepeat: resolvedPlaybackState.forceSkipCurrentVideoRepeat,
         overrideNextIndex: playbackEndNavigationOverride?.nextIndex ?? null,
         overrideNextVideoId: playbackEndNavigationOverride?.nextVideoId ?? null,
-        resolvedNextVideoId: nextVideoId,
+        resolvedNextVideoId: resolvedPlaybackState.nextVideoId,
       });
 
-      return {
-        forceSkipCurrentVideoRepeat: playbackEndNavigationOverride !== null,
-        playbackContext: playbackState.playbackContext,
-        nextVideoId,
-        playbackSettings,
-      };
+      return resolvedPlaybackState;
     }
 
     case "watch:clear-playback-context":

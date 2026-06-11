@@ -2,7 +2,16 @@ import { browser } from "wxt/browser";
 
 import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import { buildWatchUrl } from "@/lib/nicovideoUrl";
-import { shouldRepeatCurrentVideo } from "@/lib/playlistLoop";
+import {
+  armWatchRouteReady,
+  createPlaybackTransitionState,
+  createWatchRouteState,
+  observePlaybackEnd,
+  observeWatchRouteChange,
+  resetPlaybackLoopProgress,
+  resolvePlaybackEndTransition,
+  setExpectedWatchNavigation,
+} from "@/lib/playbackTransition";
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
 import type { PlaybackCompletionSettings } from "@/lib/types";
 import type { WatchPlaybackContextResponse } from "@/lib/watchMessages";
@@ -121,30 +130,20 @@ async function resolveNextVideo(videoId: string): Promise<WatchPlaybackContextRe
 }
 
 let lastSyncedVideoId: string | null = null;
-let routeReadyArmed = false;
-let routeReadySawFromZero = false;
 let routeReadyTimeoutId: ReturnType<typeof setTimeout> | null = null;
-let currentLoopVideoId: string | null = null;
-let completedPlaybackCount = 0;
-let expectedNextVideoId: string | null = null;
-let lastHandledPlaybackEnd: {
-  at: number;
-  eventType: "pause" | "ended";
-  signature: string;
-} | null = null;
+let playbackTransitionState = createPlaybackTransitionState();
+let watchRouteState = createWatchRouteState();
 
 function clearExpectedNextVideo(): void {
-  expectedNextVideoId = null;
+  watchRouteState = setExpectedWatchNavigation(watchRouteState, null);
 }
 
 function setExpectedNextVideo(nextVideoId: string): void {
-  clearExpectedNextVideo();
-  expectedNextVideoId = nextVideoId;
+  watchRouteState = setExpectedWatchNavigation(watchRouteState, nextVideoId);
 }
 
 function resetLoopProgress(videoId: string | null): void {
-  currentLoopVideoId = videoId;
-  completedPlaybackCount = 0;
+  playbackTransitionState = resetPlaybackLoopProgress(playbackTransitionState, videoId);
 }
 
 function buildPlaybackEndSignature(videoId: string, video: HTMLVideoElement): string {
@@ -154,26 +153,6 @@ function buildPlaybackEndSignature(videoId: string, video: HTMLVideoElement): st
     Math.round(video.currentTime * 1000),
     Math.round(video.duration * 1000),
   ].join("|");
-}
-
-function shouldSkipDuplicatePlaybackEnd(eventType: "pause" | "ended", signature: string): boolean {
-  const now = Date.now();
-
-  if (
-    lastHandledPlaybackEnd !== null &&
-    lastHandledPlaybackEnd.signature === signature &&
-    lastHandledPlaybackEnd.eventType !== eventType &&
-    now - lastHandledPlaybackEnd.at <= PLAYBACK_END_DEDUPLICATION_WINDOW_MS
-  ) {
-    return true;
-  }
-
-  lastHandledPlaybackEnd = {
-    at: now,
-    eventType,
-    signature,
-  };
-  return false;
 }
 
 function syncPlaybackContextIfNeeded(): void {
@@ -189,19 +168,13 @@ function syncPlaybackContextIfNeeded(): void {
 }
 
 function sendRouteReady(): void {
-  if (!routeReadyArmed) {
-    console.log("NiconiPlaylist route-ready skipped because it is not armed.");
-    return;
-  }
-
-  routeReadyArmed = false;
   if (routeReadyTimeoutId !== null) {
     clearTimeout(routeReadyTimeoutId);
   }
 
   console.log("NiconiPlaylist route-ready scheduled after timeout.", {
     delayMs: ROUTE_READY_DELAY_MS,
-    expectedNextVideoId,
+    expectedNextVideoId: watchRouteState.expectedNextVideoId,
   });
   routeReadyTimeoutId = setTimeout(() => {
     routeReadyTimeoutId = null;
@@ -231,11 +204,13 @@ function armRouteReady(): void {
     routeReadyTimeoutId = null;
   }
 
-  routeReadyArmed = true;
-  routeReadySawFromZero = hasFromZeroSearchParam();
+  watchRouteState = armWatchRouteReady(watchRouteState, {
+    currentVideoId: videoId,
+    hasFromZero: hasFromZeroSearchParam(),
+  });
   console.log("NiconiPlaylist route-ready armed.", {
-    expectedNextVideoId,
-    hasFromZeroSearchParam: routeReadySawFromZero,
+    expectedNextVideoId: watchRouteState.expectedNextVideoId,
+    hasFromZeroSearchParam: watchRouteState.routeReadySawFromZero,
     videoId,
   });
 }
@@ -253,11 +228,7 @@ function navigateToNextVideo(nextVideoId: string): void {
   });
 }
 
-function forceNavigateToExpectedNextVideo(): void {
-  if (!expectedNextVideoId) {
-    return;
-  }
-
+function forceNavigateToExpectedNextVideo(expectedNextVideoId: string): void {
   const expectedNextVideoUrl = buildWatchUrl(expectedNextVideoId);
   if (location.href === expectedNextVideoUrl) {
     return;
@@ -352,41 +323,41 @@ function initWatchLocationObserver(): void {
   window.addEventListener("niconiplaylist:locationchange", () => {
     const hasFromZero = hasFromZeroSearchParam();
     const currentVideoId = getCurrentWatchVideoId();
-    let handledAsRouteReady = false;
     console.log("NiconiPlaylist observed location change.", {
       currentVideoId,
-      expectedNextVideoId,
+      expectedNextVideoId: watchRouteState.expectedNextVideoId,
       hasFromZeroSearchParam: hasFromZero,
       pathname: location.pathname,
       href: location.href,
     });
+    const transition = observeWatchRouteChange(watchRouteState, {
+      currentVideoId,
+      hasFromZero,
+    });
 
-    if (expectedNextVideoId !== null && currentVideoId !== expectedNextVideoId) {
-      forceNavigateToExpectedNextVideo();
-      return;
-    }
+    watchRouteState = transition.state;
 
-    if (
-      routeReadyArmed &&
-      routeReadySawFromZero &&
-      !hasFromZero &&
-      (expectedNextVideoId === null || currentVideoId === expectedNextVideoId)
-    ) {
-      console.log("NiconiPlaylist treating canonical URL change as route-ready.", {
-        expectedNextVideoId,
-        currentVideoId,
-        pathname: location.pathname,
-        href: location.href,
-      });
-      sendRouteReady();
-      handledAsRouteReady = true;
+    switch (transition.command.type) {
+      case "force-expected-navigation":
+        forceNavigateToExpectedNextVideo(transition.command.expectedNextVideoId);
+        return;
+      case "route-ready":
+        console.log("NiconiPlaylist treating canonical URL change as route-ready.", {
+          expectedNextVideoId: watchRouteState.expectedNextVideoId,
+          currentVideoId,
+          pathname: location.pathname,
+          href: location.href,
+        });
+        sendRouteReady();
+        if (transition.command.syncPlaybackContext) {
+          syncPlaybackContextIfNeeded();
+        }
+        return;
+      case "sync-and-arm-route-ready":
+        syncPlaybackContextIfNeeded();
+        armRouteReady();
+        return;
     }
-
-    syncPlaybackContextIfNeeded();
-    if (handledAsRouteReady) {
-      return;
-    }
-    armRouteReady();
   });
   void browser.runtime.sendMessage({
     type: "watch:init-location-observer",
@@ -416,8 +387,19 @@ async function handlePlaybackTerminalEvent(eventType: "pause" | "ended", event: 
   }
 
   const playbackEndSignature = buildPlaybackEndSignature(videoId, target);
+  const observedPlaybackEnd = observePlaybackEnd(
+    playbackTransitionState,
+    {
+      at: Date.now(),
+      eventType,
+      signature: playbackEndSignature,
+    },
+    PLAYBACK_END_DEDUPLICATION_WINDOW_MS,
+  );
 
-  if (shouldSkipDuplicatePlaybackEnd(eventType, playbackEndSignature)) {
+  playbackTransitionState = observedPlaybackEnd.state;
+
+  if (!observedPlaybackEnd.shouldResolve) {
     console.log("NiconiPlaylist skipped duplicate playback end handling.", {
       eventType,
       playbackEndSignature,
@@ -427,48 +409,31 @@ async function handlePlaybackTerminalEvent(eventType: "pause" | "ended", event: 
   }
 
   const playbackState = await resolveNextVideo(videoId);
-  const hasPlaybackContext =
-    playbackState?.playbackContext !== null && playbackState?.playbackContext !== undefined;
-  const nextCompletedPlaybackCount =
-    currentLoopVideoId === videoId ? completedPlaybackCount + 1 : 1;
+  const transition = resolvePlaybackEndTransition(playbackTransitionState, {
+    durationSeconds: target.duration,
+    playbackState,
+    videoId,
+  });
 
-  if (
-    !playbackState?.forceSkipCurrentVideoRepeat &&
-    hasPlaybackContext &&
-    playbackState?.playbackSettings &&
-    shouldRepeatCurrentVideo(
-      playbackState.playbackSettings,
-      nextCompletedPlaybackCount,
-      target.duration,
-    )
-  ) {
-    currentLoopVideoId = videoId;
-    completedPlaybackCount = nextCompletedPlaybackCount;
-    restartCurrentVideo();
-    return;
-  }
+  playbackTransitionState = transition.state;
 
-  resetLoopProgress(null);
-  if (playbackState?.nextVideoId) {
-    navigateToNextVideo(playbackState.nextVideoId);
-  } else {
-    clearExpectedNextVideo();
-    if (
-      hasPlaybackContext &&
-      playbackState?.playbackSettings &&
-      !playbackState.playbackSettings.playlistRepeatEnabled
-    ) {
-      await handlePlaylistCompleted(playbackState);
-    }
-    await browser.runtime.sendMessage({
-      type: "watch:clear-playback-context",
-      markCompleted: Boolean(
-        hasPlaybackContext &&
-        playbackState?.playbackSettings !== null &&
-        playbackState?.playbackSettings !== undefined &&
-        !playbackState.playbackSettings.playlistRepeatEnabled,
-      ),
-    });
+  switch (transition.command.type) {
+    case "restart-current-video":
+      restartCurrentVideo();
+      return;
+    case "navigate-next-video":
+      navigateToNextVideo(transition.command.nextVideoId);
+      return;
+    case "clear-playback-context":
+      clearExpectedNextVideo();
+      if (transition.command.notifyCompletion) {
+        await handlePlaylistCompleted(playbackState);
+      }
+      await browser.runtime.sendMessage({
+        type: "watch:clear-playback-context",
+        markCompleted: transition.command.markCompleted,
+      });
+      return;
   }
 }
 

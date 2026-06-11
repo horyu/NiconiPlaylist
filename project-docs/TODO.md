@@ -19,25 +19,7 @@
 
 以下は、変更時の不具合リスクと今後の保守コストを基準にした推奨着手順である。
 
-### 5.1 再生遷移ロジックの状態機械化
-
-- 対象:
-  - `src/contents/watch.ts`
-  - `src/background/handlers/watch.ts`
-  - `src/background/services/playbackNavigation.ts`
-  - `src/background/services/playbackEndNavigationOverride.ts`
-- 背景:
-  - ループ、再生終了、予約遷移、SPA のルート変更、重複イベント抑止などの状態が複数ファイルとモジュール変数に分散している。
-  - 想定外の動画遷移が発生した際、ブラウザ上での再現とデバッグイベントログに依存しやすい。
-- 対応方針:
-  - 現在の再生状態と発生イベントを入力し、次の状態と実行命令を返す純粋な遷移関数を作成する。
-  - DOM 操作、runtime message、タブ操作は遷移関数の結果を実行する adapter として分離する。
-  - `pause` と `ended` の重複、現在動画リピート、次動画予約、プレイリスト終端、ルート変更失敗をテストケース化する。
-- 完了条件:
-  - 主要な再生遷移をブラウザなしの単体テストで再現できる。
-  - content script が保持する可変状態と、各状態を更新する箇所を限定できる。
-
-### 5.2 `PlaylistsTab` の責務分割
+### 5.1 `PlaylistsTab` の責務分割
 
 - 対象:
   - `src/options/tabs/PlaylistsTab.tsx`
@@ -55,7 +37,7 @@
   - 編集状態の初期化・キャンセル処理が一箇所に集約される。
   - `PlaylistsTab` は画面全体の構成と主要状態の接続を中心に担当する。
 
-### 5.3 再生設定の自動保存処理の分離
+### 5.2 再生設定の自動保存処理の分離
 
 - 対象:
   - `src/options/tabs/RepeatSettingsTab.tsx`
@@ -71,7 +53,7 @@
   - 連続入力、保存中の追加更新、blur 保存、アンマウント時保存を単体テストできる。
   - 自動保存によって入力要素のフォーカスや入力途中の値が失われない。
 
-### 5.4 動画タブの metadata 更新方式の見直し
+### 5.3 動画タブの metadata 更新方式の見直し
 
 - 対象:
   - `src/options/tabs/VideosTab.tsx`
@@ -89,7 +71,7 @@
   - 新しく取得した metadata を、タブの再表示や明示操作によって確実に反映できる。
   - 大量の動画がある場合も操作可能な表示速度を維持できる。
 
-### 5.5 storage schema と検証・正規化処理の一元化
+### 5.4 storage schema と検証・正規化処理の一元化
 
 - 対象:
   - `src/lib/typeGuards.ts`
@@ -106,7 +88,7 @@
   - storage 項目追加時に更新すべき定義箇所が明確になる。
   - 不正データ、旧形式データ、部分的に欠損したデータの正規化をテストできる。
 
-### 5.6 重要領域のテスト拡充
+### 5.5 重要領域のテスト拡充
 
 - 対象:
   - `src/background/services/playlistStore.ts`
