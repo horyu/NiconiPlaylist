@@ -11,6 +11,7 @@ import {
   resolveCompletedTabNavigation,
   resolveNextPlaybackVideo,
   resolvePlaybackEndTransition,
+  restorePlaybackLoopProgress,
   setExpectedWatchNavigation,
 } from "./playbackTransition";
 
@@ -94,8 +95,27 @@ describe("playback end transition", () => {
       videoId: "sm9",
     });
 
-    expect(transition.command).toEqual({ type: "restart-current-video" });
+    expect(transition.command).toEqual({ type: "restart-current-video", videoId: "sm9" });
     expect(transition.state.completedPlaybackCount).toBe(1);
+  });
+
+  test("強制復帰後のループ進捗からリピート判定を継続する", () => {
+    const settings = createPlaybackSettings({
+      activeRepeatPresetId: "count-2",
+      presets: [{ id: "count-2", mode: "count", count: 2 }],
+    });
+    const restoredState = restorePlaybackLoopProgress(createPlaybackTransitionState(), "sm9", 1);
+    const transition = resolvePlaybackEndTransition(restoredState, {
+      durationSeconds: 100,
+      playbackState: {
+        playbackContext,
+        playbackSettings: settings,
+        nextVideoId: "sm1",
+      },
+      videoId: "sm9",
+    });
+
+    expect(transition.command).toEqual({ type: "navigate-next-video", nextVideoId: "sm1" });
   });
 
   test("予約遷移では現在動画リピートを無視して次動画へ進む", () => {

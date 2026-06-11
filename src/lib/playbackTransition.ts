@@ -21,7 +21,7 @@ export type PlaybackEndResolution = {
 };
 
 export type PlaybackEndCommand =
-  | { type: "restart-current-video" }
+  | { type: "restart-current-video"; videoId: VideoId }
   | { type: "navigate-next-video"; nextVideoId: VideoId }
   | { type: "clear-playback-context"; markCompleted: boolean; notifyCompletion: boolean };
 
@@ -62,6 +62,18 @@ export function resetPlaybackLoopProgress(
   return {
     ...state,
     completedPlaybackCount: 0,
+    currentLoopVideoId: videoId,
+  };
+}
+
+export function restorePlaybackLoopProgress(
+  state: PlaybackTransitionState,
+  videoId: VideoId,
+  completedPlaybackCount: number,
+): PlaybackTransitionState {
+  return {
+    ...state,
+    completedPlaybackCount,
     currentLoopVideoId: videoId,
   };
 }
@@ -122,7 +134,7 @@ export function resolvePlaybackEndTransition(
     )
   ) {
     return {
-      command: { type: "restart-current-video" },
+      command: { type: "restart-current-video", videoId },
       state: {
         ...state,
         completedPlaybackCount: nextCompletedPlaybackCount,

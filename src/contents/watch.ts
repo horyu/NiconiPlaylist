@@ -9,6 +9,7 @@ import {
   observePlaybackEnd,
   observeWatchRouteChange,
   resetPlaybackLoopProgress,
+  restorePlaybackLoopProgress,
   resolvePlaybackEndTransition,
   setExpectedWatchNavigation,
 } from "@/lib/playbackTransition";
@@ -21,6 +22,8 @@ const PLAYBACK_END_DEDUPLICATION_WINDOW_MS = 5_000;
 const ROUTE_READY_DELAY_MS = 50;
 const WATCH_CONTENT_INIT_KEY = "__niconiPlaylistWatchContentInitialized";
 const WATCH_LOCATION_OBSERVER_KEY = "__niconiPlaylistWatchLocationObserverInitialized";
+const LOOP_PROGRESS_RESTORE_STORAGE_KEY = "__niconiPlaylistLoopProgressRestore";
+const LOOP_PROGRESS_RESTORE_TTL_MS = 10_000;
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
 const ADVERTISEMENT_SRC_PREFIX = "https://dcdn.cdn.nimg.jp/nicoad/instream/video";
 const CURRENT_TIME_SLIDER_SELECTOR = '[aria-label="video - currentTime"][role="slider"]';
@@ -146,6 +149,70 @@ function resetLoopProgress(videoId: string | null): void {
   playbackTransitionState = resetPlaybackLoopProgress(playbackTransitionState, videoId);
 }
 
+function persistLoopProgressForForcedNavigation(expectedVideoId: string): void {
+  if (
+    playbackTransitionState.currentLoopVideoId !== expectedVideoId ||
+    playbackTransitionState.completedPlaybackCount <= 0
+  ) {
+    return;
+  }
+
+  try {
+    sessionStorage.setItem(
+      LOOP_PROGRESS_RESTORE_STORAGE_KEY,
+      JSON.stringify({
+        completedPlaybackCount: playbackTransitionState.completedPlaybackCount,
+        expiresAt: Date.now() + LOOP_PROGRESS_RESTORE_TTL_MS,
+        videoId: expectedVideoId,
+      }),
+    );
+  } catch (error) {
+    console.warn("NiconiPlaylist failed to persist loop progress for forced navigation.", {
+      error,
+    });
+  }
+}
+
+function restoreLoopProgressAfterForcedNavigation(): void {
+  try {
+    const serialized = sessionStorage.getItem(LOOP_PROGRESS_RESTORE_STORAGE_KEY);
+
+    if (serialized === null) {
+      return;
+    }
+
+    sessionStorage.removeItem(LOOP_PROGRESS_RESTORE_STORAGE_KEY);
+    const snapshot: unknown = JSON.parse(serialized);
+
+    if (
+      typeof snapshot !== "object" ||
+      snapshot === null ||
+      !("completedPlaybackCount" in snapshot) ||
+      !("expiresAt" in snapshot) ||
+      !("videoId" in snapshot) ||
+      typeof snapshot.completedPlaybackCount !== "number" ||
+      !Number.isInteger(snapshot.completedPlaybackCount) ||
+      snapshot.completedPlaybackCount <= 0 ||
+      typeof snapshot.expiresAt !== "number" ||
+      snapshot.expiresAt < Date.now() ||
+      typeof snapshot.videoId !== "string" ||
+      snapshot.videoId !== getCurrentWatchVideoId()
+    ) {
+      return;
+    }
+
+    playbackTransitionState = restorePlaybackLoopProgress(
+      playbackTransitionState,
+      snapshot.videoId,
+      snapshot.completedPlaybackCount,
+    );
+  } catch (error) {
+    console.warn("NiconiPlaylist failed to restore loop progress after forced navigation.", {
+      error,
+    });
+  }
+}
+
 function buildPlaybackEndSignature(videoId: string, video: HTMLVideoElement): string {
   return [
     videoId,
@@ -240,6 +307,7 @@ function forceNavigateToExpectedNextVideo(expectedNextVideoId: string): void {
     expectedNextVideoId,
     expectedNextVideoUrl,
   });
+  persistLoopProgressForForcedNavigation(expectedNextVideoId);
   location.href = expectedNextVideoUrl;
 }
 
@@ -419,6 +487,7 @@ async function handlePlaybackTerminalEvent(eventType: "pause" | "ended", event: 
 
   switch (transition.command.type) {
     case "restart-current-video":
+      setExpectedNextVideo(transition.command.videoId);
       restartCurrentVideo();
       return;
     case "navigate-next-video":
@@ -459,6 +528,7 @@ export function initWatchContent() {
   document.addEventListener("pause", handlePause, true);
   initWatchLocationObserver();
   syncPlaybackContextIfNeeded();
+  restoreLoopProgressAfterForcedNavigation();
   armRouteReady();
   void browser.runtime.sendMessage({ type: "badge:refresh" });
 }
