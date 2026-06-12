@@ -1,13 +1,4 @@
-import {
-  createEffect,
-  createMemo,
-  createSignal,
-  For,
-  Match,
-  onCleanup,
-  Show,
-  Switch,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, Match, onCleanup, Show, Switch } from "solid-js";
 import { browser } from "wxt/browser";
 
 import { createPlaylistJsonFilename, exportPlaylistJson } from "@/background/services/playlistJson";
@@ -25,8 +16,12 @@ import { buildSharedPlaylistUrl } from "@/lib/playlistUrl";
 import type { PopupMessage } from "@/lib/popupMessages";
 import { normalizeOptionalText } from "@/lib/text";
 import type { Playlist, PlaylistId } from "@/lib/types";
-import { parseVideoIdInputLines } from "@/lib/videoIdInput";
+import { PlaylistActionMenu } from "@/options/components/PlaylistActionMenu";
 import { PlaylistDetailVideoList } from "@/options/components/PlaylistDetailVideoList";
+import { PlaylistListPane } from "@/options/components/PlaylistListPane";
+import { PlaylistShareUrlPanel } from "@/options/components/PlaylistShareUrlPanel";
+import { PlaylistVideoAppendForm } from "@/options/components/PlaylistVideoAppendForm";
+import { usePlaylistDetailEditor } from "@/options/hooks/usePlaylistDetailEditor";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
 import type { OptionsToast } from "@/options/toast";
@@ -41,19 +36,17 @@ type ShareInfo = {
   formatLabel: string;
 };
 
-type DetailDraftVideoRow = {
-  originalIndex: number | null;
-  rowId: string;
-  videoId: string;
-};
+const SHARE_OPTIONS: readonly { label: string; value: ShareUrlKind }[] = [
+  { label: "動画IDのみ", value: "id-only" },
+  { label: "タイトル付き", value: "with-title" },
+  { label: "タイトル・メモ付き", value: "with-title-and-memo" },
+];
 
-type DetailDraft = {
-  memo: string;
-  title: string;
-  videoRows: DetailDraftVideoRow[];
-};
-
-type VideoInsertPosition = "append" | "prepend" | "before-index" | "after-index";
+const JSON_EXPORT_OPTIONS: readonly { label: string; value: PlaylistJsonExportKind }[] = [
+  { label: "タイトルなし", value: "without-title" },
+  { label: "タイトル付き", value: "with-title" },
+  { label: "タイトル・メモ付き", value: "with-title-and-memo" },
+];
 
 type PlaylistsTabProps = {
   state: PlaylistsState | undefined;
@@ -102,61 +95,13 @@ function getShareFormatLabel(kind: ShareUrlKind): string {
   }
 }
 
-function getPlaylistJsonFormatLabel(kind: PlaylistJsonExportKind): string {
-  switch (kind) {
-    case "without-title":
-      return "タイトルなし";
-    case "with-title":
-      return "タイトル付き";
-    case "with-title-and-memo":
-      return "タイトル・メモ付き";
-  }
-}
-
-function createDetailDraftVideoRow(
-  videoId: string,
-  originalIndex: number | null,
-): DetailDraftVideoRow {
-  return {
-    originalIndex,
-    rowId: crypto.randomUUID(),
-    videoId,
-  };
-}
-
-function createDetailDraftVideoRows(videoIds: string[]): DetailDraftVideoRow[] {
-  return videoIds.map((videoId, index) => createDetailDraftVideoRow(videoId, index));
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
 export function PlaylistsTab(props: PlaylistsTabProps) {
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [selectedPlaylistId, setSelectedPlaylistId] = createSignal<PlaylistId | null>(null);
   const [lastHandledPlaylistSelectionRequestKey, setLastHandledPlaylistSelectionRequestKey] =
     createSignal<number | null>(null);
   const [exportingPlaylistJson, setExportingPlaylistJson] = createSignal(false);
-  const [isEditingDetail, setIsEditingDetail] = createSignal(false);
-  const [detailVideoInput, setDetailVideoInput] = createSignal("");
   const [detailInfoOpen, setDetailInfoOpen] = createSignal(false);
-  const [detailVideoInsertPosition, setDetailVideoInsertPosition] =
-    createSignal<VideoInsertPosition>("append");
-  const [detailVideoInsertIndexInput, setDetailVideoInsertIndexInput] = createSignal("1");
-  const [detailReadonlyVideoRows, setDetailReadonlyVideoRows] = createSignal<DetailDraftVideoRow[]>(
-    [],
-  );
-  const [detailReadonlyVideoRowsKey, setDetailReadonlyVideoRowsKey] = createSignal("");
-  const [detailDraft, setDetailDraft] = createSignal<DetailDraft>({
-    memo: "",
-    title: "",
-    videoRows: [],
-  });
-  const [deletedDraftVideoCount, setDeletedDraftVideoCount] = createSignal(0);
-  const [hasDraftVideoChanges, setHasDraftVideoChanges] = createSignal(false);
-  const [detailDraftResetKey, setDetailDraftResetKey] = createSignal(0);
-  const [detailDraftPlaylistId, setDetailDraftPlaylistId] = createSignal<PlaylistId | null>(null);
   const [openShareMenuPlaylistId, setOpenShareMenuPlaylistId] = createSignal<PlaylistId | null>(
     null,
   );
@@ -167,23 +112,10 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   let shareCopiedTimer: ReturnType<typeof setTimeout> | null = null;
   let currentSharedUrl = "";
   let currentSharedUrlPlaylistId: PlaylistId | null = null;
-  let deletedDraftVideoRowIds = new Set<string>();
 
   createEffect(() => {
     const playlists = props.state?.playlists ?? [];
     const videoIds = playlists.flatMap((playlist) => playlist.videoIds);
-
-    if (videoIds.length > 0) {
-      enqueueVideoMetadataForVideoIds(videoIds);
-    }
-  });
-
-  createEffect(() => {
-    if (!isEditingDetail()) {
-      return;
-    }
-
-    const videoIds = detailDraft().videoRows.map((videoRow) => videoRow.videoId);
 
     if (videoIds.length > 0) {
       enqueueVideoMetadataForVideoIds(videoIds);
@@ -256,6 +188,32 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
   const selectedPlaylist = createMemo(
     () => props.state?.playlists.find((playlist) => playlist.id === selectedPlaylistId()) ?? null,
   );
+  const {
+    appendVideos: handleAppendDraftVideos,
+    cancelEditing: handleCancelEditingDetail,
+    detailDraft,
+    detailDraftResetKey,
+    detailReadonlyVideoRows,
+    detailVideoInput,
+    detailVideoInsertIndexInput,
+    detailVideoInsertPosition,
+    dropVideo: handleDropDraftVideo,
+    hasDetailUnsavedChanges,
+    isEditingDetail,
+    moveVideo: handleMoveDraftVideo,
+    save: handleSaveDetail,
+    setDetailDraft,
+    setDetailVideoInput,
+    setDetailVideoInsertIndexInput,
+    setDetailVideoInsertPosition,
+    setVideoDeleted: handleSetDraftVideoDeleted,
+    startEditing: handleStartEditingDetail,
+  } = usePlaylistDetailEditor({
+    createFallbackTitle: createTimestampTitle,
+    onFeedback: (toast) => props.onFeedback(toast),
+    onUpdated: () => props.onUpdated(),
+    selectedPlaylist,
+  });
   const selectedPlaybackContext = createMemo(
     () =>
       props.state?.playbackContexts.find(
@@ -263,69 +221,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
       ) ?? null,
   );
   const currentPlaybackIndex = createMemo(() => selectedPlaybackContext()?.currentIndex ?? null);
-
-  createEffect(() => {
-    const playlist = selectedPlaylist();
-
-    if (!playlist) {
-      return;
-    }
-
-    if (detailDraftPlaylistId() === playlist.id) {
-      return;
-    }
-
-    setDetailDraft({
-      memo: playlist.memo ?? "",
-      title: playlist.title ?? "",
-      videoRows: createDetailDraftVideoRows(playlist.videoIds),
-    });
-    deletedDraftVideoRowIds = new Set<string>();
-    setDeletedDraftVideoCount(0);
-    setHasDraftVideoChanges(false);
-    setDetailVideoInput("");
-    setDetailVideoInsertPosition("append");
-    setDetailVideoInsertIndexInput("1");
-    setDetailDraftResetKey((currentKey) => currentKey + 1);
-    setDetailDraftPlaylistId(playlist.id);
-    setIsEditingDetail(false);
-  });
-
-  createEffect(() => {
-    const playlist = selectedPlaylist();
-
-    if (!playlist) {
-      setDetailReadonlyVideoRows([]);
-      setDetailReadonlyVideoRowsKey("");
-      return;
-    }
-
-    const nextKey = `${playlist.id}:${playlist.videoIds.join("\u0000")}`;
-
-    if (detailReadonlyVideoRowsKey() === nextKey) {
-      return;
-    }
-
-    setDetailReadonlyVideoRows(createDetailDraftVideoRows(playlist.videoIds));
-    setDetailReadonlyVideoRowsKey(nextKey);
-  });
-
-  const hasDetailUnsavedChanges = createMemo(() => {
-    const playlist = selectedPlaylist();
-
-    if (!playlist) {
-      return false;
-    }
-
-    const draft = detailDraft();
-
-    return (
-      draft.title !== (playlist.title ?? "") ||
-      draft.memo !== (playlist.memo ?? "") ||
-      deletedDraftVideoCount() > 0 ||
-      hasDraftVideoChanges()
-    );
-  });
 
   onCleanup(() => {
     if (shareCopiedTimer) {
@@ -597,254 +492,6 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
     }
   }
 
-  function handleStartEditingDetail() {
-    const playlist = selectedPlaylist();
-
-    if (!playlist) {
-      return;
-    }
-
-    setDetailDraft({
-      memo: playlist.memo ?? "",
-      title: playlist.title ?? "",
-      videoRows: createDetailDraftVideoRows(playlist.videoIds),
-    });
-    deletedDraftVideoRowIds = new Set<string>();
-    setDeletedDraftVideoCount(0);
-    setHasDraftVideoChanges(false);
-    setDetailVideoInput("");
-    setDetailVideoInsertPosition("append");
-    setDetailVideoInsertIndexInput("1");
-    setDetailDraftResetKey((currentKey) => currentKey + 1);
-    setDetailDraftPlaylistId(playlist.id);
-    setIsEditingDetail(true);
-    props.onFeedback(null);
-  }
-
-  function handleCancelEditingDetail() {
-    const playlist = selectedPlaylist();
-
-    if (!playlist) {
-      return;
-    }
-
-    setDetailDraft({
-      memo: playlist.memo ?? "",
-      title: playlist.title ?? "",
-      videoRows: createDetailDraftVideoRows(playlist.videoIds),
-    });
-    deletedDraftVideoRowIds = new Set<string>();
-    setDeletedDraftVideoCount(0);
-    setHasDraftVideoChanges(false);
-    setDetailVideoInput("");
-    setDetailVideoInsertPosition("append");
-    setDetailVideoInsertIndexInput("1");
-    setDetailDraftResetKey((currentKey) => currentKey + 1);
-    setIsEditingDetail(false);
-    props.onFeedback(null);
-  }
-
-  async function handleSaveDetail() {
-    const playlist = selectedPlaylist();
-
-    if (!playlist) {
-      return;
-    }
-
-    props.onFeedback(null);
-
-    try {
-      const draft = detailDraft();
-      const deletedVideoIndices = draft.videoRows
-        .filter(
-          (videoRow) =>
-            videoRow.originalIndex !== null && deletedDraftVideoRowIds.has(videoRow.rowId),
-        )
-        .map((videoRow) => videoRow.originalIndex!)
-        .sort((a, b) => a - b);
-
-      await updateStoredPlaylist(
-        playlist.id,
-        {
-          memo: normalizeOptionalText(draft.memo),
-          title: normalizeOptionalText(draft.title) ?? createTimestampTitle(),
-          videoIds: draft.videoRows
-            .filter((videoRow) => !deletedDraftVideoRowIds.has(videoRow.rowId))
-            .map((videoRow) => videoRow.videoId),
-        },
-        {
-          deletedVideoIndices,
-        },
-      );
-      deletedDraftVideoRowIds = new Set<string>();
-      setDeletedDraftVideoCount(0);
-      setHasDraftVideoChanges(false);
-      setDetailVideoInput("");
-      setDetailDraftResetKey((currentKey) => currentKey + 1);
-      setIsEditingDetail(false);
-      props.onFeedback({ text: "プレイリストを更新しました。", tone: "success" });
-      await props.onUpdated();
-    } catch (error) {
-      props.onFeedback({
-        text: error instanceof Error ? error.message : "プレイリストの更新に失敗しました。",
-        tone: "error",
-      });
-    }
-  }
-
-  function handleSetDraftVideoDeleted(rowId: string, isDeleted: boolean) {
-    const hasRowId = deletedDraftVideoRowIds.has(rowId);
-
-    if (isDeleted && !hasRowId) {
-      deletedDraftVideoRowIds.add(rowId);
-      setDeletedDraftVideoCount((currentCount) => currentCount + 1);
-      setHasDraftVideoChanges(true);
-      return;
-    }
-
-    if (!isDeleted && hasRowId) {
-      deletedDraftVideoRowIds.delete(rowId);
-      setDeletedDraftVideoCount((currentCount) => currentCount - 1);
-      setHasDraftVideoChanges(true);
-    }
-  }
-
-  function handleAppendDraftVideos() {
-    const value = detailVideoInput().trim();
-
-    if (!value) {
-      props.onFeedback({
-        text: "watch URL または動画IDを入力してください。",
-        tone: "error",
-      });
-      return;
-    }
-
-    try {
-      const nextVideoIds = parseVideoIdInputLines(value);
-      const nextVideoRows = nextVideoIds.map((videoId) => createDetailDraftVideoRow(videoId, null));
-
-      setDetailDraft((currentDraft) => ({
-        ...currentDraft,
-        videoRows: (() => {
-          const currentVideoRows = currentDraft.videoRows;
-          const currentLength = currentVideoRows.length;
-
-          const insertAt = (() => {
-            switch (detailVideoInsertPosition()) {
-              case "prepend":
-                return 0;
-              case "before-index":
-              case "after-index": {
-                const parsedIndex = Number.parseInt(detailVideoInsertIndexInput().trim(), 10);
-
-                if (!Number.isFinite(parsedIndex)) {
-                  return currentLength;
-                }
-
-                const normalizedIndex = clamp(parsedIndex, 1, Math.max(currentLength, 1));
-
-                return detailVideoInsertPosition() === "before-index"
-                  ? normalizedIndex - 1
-                  : normalizedIndex;
-              }
-              case "append":
-              default:
-                return currentLength;
-            }
-          })();
-
-          const safeInsertAt = clamp(insertAt, 0, currentLength);
-
-          return [
-            ...currentVideoRows.slice(0, safeInsertAt),
-            ...nextVideoRows,
-            ...currentVideoRows.slice(safeInsertAt),
-          ];
-        })(),
-      }));
-      setHasDraftVideoChanges(true);
-      setDetailVideoInput("");
-      props.onFeedback(null);
-    } catch (error) {
-      props.onFeedback({
-        text:
-          error instanceof Error
-            ? error.message
-            : "watch URL または動画IDの入力を解析できませんでした。",
-        tone: "error",
-      });
-    }
-  }
-
-  function handleMoveDraftVideo(rowId: string, direction: "up" | "down") {
-    const currentIndex = detailDraft().videoRows.findIndex((videoRow) => videoRow.rowId === rowId);
-    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
-
-    if (currentIndex < 0) {
-      return;
-    }
-
-    setDetailDraft((currentDraft) => {
-      if (targetIndex < 0 || targetIndex >= currentDraft.videoRows.length) {
-        return currentDraft;
-      }
-
-      const nextVideoRows = [...currentDraft.videoRows];
-      const [movedVideoRow] = nextVideoRows.splice(currentIndex, 1);
-
-      nextVideoRows.splice(targetIndex, 0, movedVideoRow!);
-
-      return {
-        ...currentDraft,
-        videoRows: nextVideoRows,
-      };
-    });
-    setHasDraftVideoChanges(true);
-    props.onFeedback(null);
-  }
-
-  function handleDropDraftVideo(
-    sourceRowId: string,
-    targetRowId: string,
-    placement: "before" | "after",
-  ) {
-    if (sourceRowId === targetRowId) {
-      return;
-    }
-
-    setDetailDraft((currentDraft) => {
-      const sourceIndex = currentDraft.videoRows.findIndex(
-        (videoRow) => videoRow.rowId === sourceRowId,
-      );
-      const targetIndex = currentDraft.videoRows.findIndex(
-        (videoRow) => videoRow.rowId === targetRowId,
-      );
-
-      if (sourceIndex < 0 || targetIndex < 0) {
-        return currentDraft;
-      }
-
-      const nextVideoRows = [...currentDraft.videoRows];
-      const [movedVideoRow] = nextVideoRows.splice(sourceIndex, 1);
-
-      let insertIndex = placement === "before" ? targetIndex : targetIndex + 1;
-
-      if (sourceIndex < insertIndex) {
-        insertIndex -= 1;
-      }
-
-      nextVideoRows.splice(insertIndex, 0, movedVideoRow!);
-
-      return {
-        ...currentDraft,
-        videoRows: nextVideoRows,
-      };
-    });
-    setHasDraftVideoChanges(true);
-    props.onFeedback(null);
-  }
-
   return (
     <section class="rounded-3xl border border-stone-800 bg-stone-900/80 p-5 shadow-lg shadow-black/20">
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -871,74 +518,14 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
 
         <Match when={props.state?.playlists.length}>
           <div class="grid min-w-0 gap-5 xl:grid-cols-[minmax(280px,340px)_minmax(0,1fr)]">
-            <section class="min-w-0 space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
-              <div class="space-y-2">
-                <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                  Playlist List
-                </p>
-                <label class="block">
-                  <input
-                    type="text"
-                    class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
-                    placeholder="プレイリストを検索"
-                    value={playlistQuery()}
-                    onInput={(event) => setPlaylistQuery(event.currentTarget.value)}
-                  />
-                </label>
-              </div>
-
-              <div class="max-h-[44rem] space-y-2 overflow-y-auto pr-1">
-                <For each={filteredPlaylists()}>
-                  {(playlist) => {
-                    const isSelected = () => playlist.id === selectedPlaylistId();
-                    const isActive = () => playlist.id === props.state?.lastActivePlaylistId;
-
-                    return (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedPlaylistId(playlist.id)}
-                        class={`block w-full rounded-2xl border px-4 py-3 text-left transition ${
-                          isSelected()
-                            ? "border-stone-400 bg-stone-900 text-stone-50"
-                            : "border-stone-800 bg-stone-950/50 text-stone-200 hover:border-stone-700 hover:bg-stone-900/70"
-                        }`}
-                      >
-                        <div class="flex items-start justify-between gap-3">
-                          <div class="min-w-0 space-y-1">
-                            <p class="truncate text-sm font-medium">{getPlaylistLabel(playlist)}</p>
-                            <div class="flex flex-wrap items-center gap-2 text-xs text-stone-400">
-                              <span>{playlist.videoIds.length} videos</span>
-                              <Show when={playlist.popupHidden}>
-                                <span class="rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[11px] font-medium text-stone-400">
-                                  popup非表示
-                                </span>
-                              </Show>
-                            </div>
-                          </div>
-                          <Show when={isActive()}>
-                            <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
-                              Active
-                            </span>
-                          </Show>
-                        </div>
-
-                        <Show when={playlist.memo}>
-                          <p class="mt-2 overflow-hidden text-xs leading-5 text-stone-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                            {playlist.memo}
-                          </p>
-                        </Show>
-                      </button>
-                    );
-                  }}
-                </For>
-
-                <Show when={!filteredPlaylists().length}>
-                  <p class="rounded-2xl border border-dashed border-stone-800 px-4 py-6 text-sm text-stone-500">
-                    条件に一致するプレイリストはありません。
-                  </p>
-                </Show>
-              </div>
-            </section>
+            <PlaylistListPane
+              activePlaylistId={props.state?.lastActivePlaylistId}
+              playlists={filteredPlaylists()}
+              query={playlistQuery()}
+              selectedPlaylistId={selectedPlaylistId()}
+              onQueryInput={setPlaylistQuery}
+              onSelect={setSelectedPlaylistId}
+            />
 
             <section class="min-w-0 space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
               <Show
@@ -1142,126 +729,42 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                               >
                                 編集
                               </button>
-                              <div class="relative">
-                                <button
-                                  type="button"
-                                  class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                                  onClick={() =>
-                                    setOpenShareMenuPlaylistId((currentId) =>
-                                      currentId === detailPlaylist.id ? null : detailPlaylist.id,
-                                    )
-                                  }
-                                >
-                                  共有
-                                </button>
-                                <Show when={openShareMenuPlaylistId() === detailPlaylist.id}>
-                                  <div class="absolute left-0 z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-stone-700 bg-stone-950 shadow-lg shadow-black/30">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleCreateSharedUrl(
-                                          detailPlaylist.id,
-                                          detailPlaylist.videoIds,
-                                          detailPlaylist.title,
-                                          detailPlaylist.memo,
-                                          "id-only",
-                                        )
-                                      }
-                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                                    >
-                                      動画IDのみ
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleCreateSharedUrl(
-                                          detailPlaylist.id,
-                                          detailPlaylist.videoIds,
-                                          detailPlaylist.title,
-                                          detailPlaylist.memo,
-                                          "with-title",
-                                        )
-                                      }
-                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                                    >
-                                      タイトル付き
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleCreateSharedUrl(
-                                          detailPlaylist.id,
-                                          detailPlaylist.videoIds,
-                                          detailPlaylist.title,
-                                          detailPlaylist.memo,
-                                          "with-title-and-memo",
-                                        )
-                                      }
-                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                                    >
-                                      タイトル・メモ付き
-                                    </button>
-                                  </div>
-                                </Show>
-                              </div>
-                              <div class="relative">
-                                <button
-                                  type="button"
-                                  class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
-                                  onClick={() =>
-                                    setOpenPlaylistJsonExportMenuPlaylistId((currentId) =>
-                                      currentId === detailPlaylist.id ? null : detailPlaylist.id,
-                                    )
-                                  }
-                                  disabled={exportingPlaylistJson()}
-                                >
-                                  JSON エクスポート
-                                </button>
-                                <Show
-                                  when={
-                                    openPlaylistJsonExportMenuPlaylistId() === detailPlaylist.id
-                                  }
-                                >
-                                  <div class="absolute left-0 z-10 mt-2 w-44 overflow-hidden rounded-2xl border border-stone-700 bg-stone-950 shadow-lg shadow-black/30">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        void handleExportPlaylistJson(
-                                          detailPlaylist.id,
-                                          "without-title",
-                                        )
-                                      }
-                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                                    >
-                                      {getPlaylistJsonFormatLabel("without-title")}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        void handleExportPlaylistJson(
-                                          detailPlaylist.id,
-                                          "with-title",
-                                        )
-                                      }
-                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                                    >
-                                      {getPlaylistJsonFormatLabel("with-title")}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        void handleExportPlaylistJson(
-                                          detailPlaylist.id,
-                                          "with-title-and-memo",
-                                        )
-                                      }
-                                      class="block w-full px-3 py-2 text-left text-sm text-stone-200 transition hover:bg-stone-900"
-                                    >
-                                      {getPlaylistJsonFormatLabel("with-title-and-memo")}
-                                    </button>
-                                  </div>
-                                </Show>
-                              </div>
+                              <PlaylistActionMenu
+                                buttonLabel="共有"
+                                open={openShareMenuPlaylistId() === detailPlaylist.id}
+                                options={SHARE_OPTIONS}
+                                onSelect={(kind) =>
+                                  handleCreateSharedUrl(
+                                    detailPlaylist.id,
+                                    detailPlaylist.videoIds,
+                                    detailPlaylist.title,
+                                    detailPlaylist.memo,
+                                    kind as ShareUrlKind,
+                                  )
+                                }
+                                onToggle={() =>
+                                  setOpenShareMenuPlaylistId((currentId) =>
+                                    currentId === detailPlaylist.id ? null : detailPlaylist.id,
+                                  )
+                                }
+                              />
+                              <PlaylistActionMenu
+                                buttonLabel="JSON エクスポート"
+                                disabled={exportingPlaylistJson()}
+                                open={openPlaylistJsonExportMenuPlaylistId() === detailPlaylist.id}
+                                options={JSON_EXPORT_OPTIONS}
+                                onSelect={(kind) =>
+                                  void handleExportPlaylistJson(
+                                    detailPlaylist.id,
+                                    kind as PlaylistJsonExportKind,
+                                  )
+                                }
+                                onToggle={() =>
+                                  setOpenPlaylistJsonExportMenuPlaylistId((currentId) =>
+                                    currentId === detailPlaylist.id ? null : detailPlaylist.id,
+                                  )
+                                }
+                              />
                               <button
                                 type="button"
                                 class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
@@ -1342,109 +845,28 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                       </div>
 
                       <Show when={isEditingDetail()}>
-                        <div class="rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3">
-                          <div class="flex flex-wrap items-center justify-between gap-3">
-                            <div class="space-y-1">
-                              <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
-                                Append Videos
-                              </p>
-                              <p class="text-sm text-stone-300">
-                                watch URL / 動画ID / それらを含むテキストを追加できます。
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              class="rounded-full border border-stone-600 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
-                              onClick={handleAppendDraftVideos}
-                            >
-                              追加
-                            </button>
-                          </div>
-                          <div class="mt-3 grid gap-3 md:grid-cols-[180px_8rem]">
-                            <label>
-                              <select
-                                aria-label="動画追加位置"
-                                class="w-[170px] rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none transition focus:border-stone-500"
-                                value={detailVideoInsertPosition()}
-                                onChange={(event) =>
-                                  setDetailVideoInsertPosition(
-                                    event.currentTarget.value as VideoInsertPosition,
-                                  )
-                                }
-                              >
-                                <option value="append">末尾に追加</option>
-                                <option value="prepend">先頭に追加</option>
-                                <option value="before-index">指定位置の前に追加</option>
-                                <option value="after-index">指定位置の後に追加</option>
-                              </select>
-                            </label>
-                            <Show
-                              when={
-                                detailVideoInsertPosition() === "before-index" ||
-                                detailVideoInsertPosition() === "after-index"
-                              }
-                              fallback={<div />}
-                            >
-                              <label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  aria-label="動画追加位置の番号"
-                                  class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none transition focus:border-stone-500"
-                                  value={detailVideoInsertIndexInput()}
-                                  onInput={(event) =>
-                                    setDetailVideoInsertIndexInput(event.currentTarget.value)
-                                  }
-                                  placeholder="1"
-                                />
-                              </label>
-                            </Show>
-                          </div>
-                          <textarea
-                            rows="3"
-                            class="mt-3 w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm leading-6 text-stone-200 outline-none transition focus:border-stone-500"
-                            value={detailVideoInput()}
-                            onInput={(event) => setDetailVideoInput(event.currentTarget.value)}
-                            placeholder={[
-                              "sm9",
-                              "https://www.nicovideo.jp/watch/so5364283",
-                              "nm2829323",
-                            ].join("\n")}
-                          />
-                        </div>
+                        <PlaylistVideoAppendForm
+                          indexInput={detailVideoInsertIndexInput()}
+                          input={detailVideoInput()}
+                          position={detailVideoInsertPosition()}
+                          onAdd={handleAppendDraftVideos}
+                          onIndexInput={setDetailVideoInsertIndexInput}
+                          onInput={setDetailVideoInput}
+                          onPositionChange={setDetailVideoInsertPosition}
+                        />
                       </Show>
 
                       <Show when={playlistShareInfo()}>
                         {(info) => (
-                          <div class="space-y-2 rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3 text-sm text-stone-400">
-                            <div class="flex flex-wrap items-center gap-2">
-                              <button
-                                type="button"
-                                class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50"
-                                onClick={handleCloseSharedUrl}
-                              >
-                                閉じる
-                              </button>
-                              <button
-                                type="button"
-                                class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
-                                onClick={() => void handleCopySharedUrl()}
-                                disabled={shareCopied() || !hasCurrentSharedUrl()}
-                              >
-                                {shareCopied() ? "コピー済み" : "コピー"}
-                              </button>
-                              <span>{info().formatLabel}</span>
-                              <span>{info().byteCount} byte</span>
-                            </div>
-                            <a
-                              href={hasCurrentSharedUrl() ? currentSharedUrl : undefined}
-                              target="_blank"
-                              rel="noreferrer"
-                              class="break-all text-stone-200 underline decoration-stone-500 underline-offset-4 transition hover:text-white"
-                            >
-                              {info().displayUrl}
-                            </a>
-                          </div>
+                          <PlaylistShareUrlPanel
+                            byteCount={info().byteCount}
+                            copied={shareCopied()}
+                            displayUrl={info().displayUrl}
+                            formatLabel={info().formatLabel}
+                            url={hasCurrentSharedUrl() ? currentSharedUrl : undefined}
+                            onClose={handleCloseSharedUrl}
+                            onCopy={() => void handleCopySharedUrl()}
+                          />
                         )}
                       </Show>
 
