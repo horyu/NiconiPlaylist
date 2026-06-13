@@ -5,6 +5,7 @@ import type { PlaylistId, VideoId } from "@/lib/types";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 import type { PlaylistsState } from "@/options/hooks/usePlaylistsState";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
+import { clampPage, getPageCount, paginateItems } from "@/options/pagination";
 
 type VideoPlaylistMembership = {
   playlistId: string;
@@ -32,6 +33,7 @@ type VideoSortKey =
   | "title"
   | "watch-id";
 type SortOrder = "asc" | "desc";
+const PAGE_SIZE = 100;
 
 function formatDuration(duration: number | null | undefined): string {
   if (duration === null || duration === undefined) {
@@ -247,18 +249,27 @@ export function VideosTab(props: VideosTabProps) {
   const [ownerQuery, setOwnerQuery] = createSignal("");
   const [playlistQuery, setPlaylistQuery] = createSignal("");
   const [toggledVideoIds, setToggledVideoIds] = createSignal<Set<VideoId>>(new Set());
+  const [currentPage, setCurrentPage] = createSignal(1);
+  const [hasMetadataUpdate, setHasMetadataUpdate] = createSignal(false);
   const [videoMetadataSnapshot, setVideoMetadataSnapshot] = createSignal<
     VideoMetadataState | undefined
   >(undefined);
 
   createEffect(() => {
-    if (videoMetadataSnapshot() !== undefined) {
+    const nextVideoMetadataState = props.videoMetadataState;
+
+    if (nextVideoMetadataState === undefined) {
       return;
     }
 
-    if (props.videoMetadataState !== undefined) {
-      setVideoMetadataSnapshot(props.videoMetadataState);
+    const currentSnapshot = videoMetadataSnapshot();
+
+    if (currentSnapshot === undefined) {
+      setVideoMetadataSnapshot(nextVideoMetadataState);
+      return;
     }
+
+    setHasMetadataUpdate(nextVideoMetadataState !== currentSnapshot);
   });
 
   const videoRows = createMemo(() => buildVideoRows(props.state));
@@ -331,6 +342,29 @@ export function VideosTab(props: VideosTabProps) {
       (left, right) => compareBySortKey(left, right, key, currentVideoMetadataState) * direction,
     );
   });
+  const pageCount = createMemo(() => getPageCount(sortedFilteredVideoRows().length, PAGE_SIZE));
+  const pagedVideoRows = createMemo(() =>
+    paginateItems(sortedFilteredVideoRows(), currentPage(), PAGE_SIZE),
+  );
+
+  createEffect(() => {
+    setCurrentPage((page) => clampPage(page, sortedFilteredVideoRows().length, PAGE_SIZE));
+  });
+
+  function applyLatestMetadata() {
+    if (props.videoMetadataState === undefined) {
+      return;
+    }
+
+    setVideoMetadataSnapshot(props.videoMetadataState);
+    setHasMetadataUpdate(false);
+    setCurrentPage(1);
+  }
+
+  function resetPageAndRun(action: () => void) {
+    action();
+    setCurrentPage(1);
+  }
 
   function isRowExpanded(videoId: VideoId): boolean {
     return allExpanded() ? !toggledVideoIds().has(videoId) : toggledVideoIds().has(videoId);
@@ -362,6 +396,15 @@ export function VideosTab(props: VideosTabProps) {
         <p class="text-sm text-stone-400">
           保存済みプレイリストに含まれる動画を、playlist 横断で一覧表示します。
         </p>
+        <Show when={hasMetadataUpdate()}>
+          <button
+            type="button"
+            onClick={applyLatestMetadata}
+            class="rounded-full border border-sky-500/50 bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-200 transition hover:bg-sky-500/20"
+          >
+            新しい動画情報を反映
+          </button>
+        </Show>
       </header>
 
       <Show when={props.error}>
@@ -385,8 +428,8 @@ export function VideosTab(props: VideosTabProps) {
                 </span>
                 <ClearableFilterInput
                   value={titleQuery()}
-                  onInput={setTitleQuery}
-                  onClear={() => setTitleQuery("")}
+                  onInput={(value) => resetPageAndRun(() => setTitleQuery(value))}
+                  onClear={() => resetPageAndRun(() => setTitleQuery(""))}
                   placeholder="タイトルで検索"
                 />
               </label>
@@ -396,8 +439,8 @@ export function VideosTab(props: VideosTabProps) {
                 </span>
                 <ClearableFilterInput
                   value={watchIdQuery()}
-                  onInput={setWatchIdQuery}
-                  onClear={() => setWatchIdQuery("")}
+                  onInput={(value) => resetPageAndRun(() => setWatchIdQuery(value))}
+                  onClear={() => resetPageAndRun(() => setWatchIdQuery(""))}
                   placeholder="watchIdで検索"
                 />
               </label>
@@ -408,8 +451,8 @@ export function VideosTab(props: VideosTabProps) {
                 <ClearableFilterInput
                   list="np-video-owner-list"
                   value={ownerQuery()}
-                  onInput={setOwnerQuery}
-                  onClear={() => setOwnerQuery("")}
+                  onInput={(value) => resetPageAndRun(() => setOwnerQuery(value))}
+                  onClear={() => resetPageAndRun(() => setOwnerQuery(""))}
                   placeholder="投稿者で検索"
                 />
                 <datalist id="np-video-owner-list">
@@ -423,8 +466,8 @@ export function VideosTab(props: VideosTabProps) {
                 <ClearableFilterInput
                   list="np-video-playlist-list"
                   value={playlistQuery()}
-                  onInput={setPlaylistQuery}
-                  onClear={() => setPlaylistQuery("")}
+                  onInput={(value) => resetPageAndRun(() => setPlaylistQuery(value))}
+                  onClear={() => resetPageAndRun(() => setPlaylistQuery(""))}
                   placeholder="プレイリストで検索"
                 />
                 <datalist id="np-video-playlist-list">
@@ -439,7 +482,9 @@ export function VideosTab(props: VideosTabProps) {
                 </span>
                 <select
                   value={sortKey()}
-                  onChange={(event) => setSortKey(event.currentTarget.value as VideoSortKey)}
+                  onChange={(event) =>
+                    resetPageAndRun(() => setSortKey(event.currentTarget.value as VideoSortKey))
+                  }
                   class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
                 >
                   <option value="title">タイトル</option>
@@ -456,7 +501,11 @@ export function VideosTab(props: VideosTabProps) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setSortOrder((current) => (current === "asc" ? "desc" : "asc"))}
+                  onClick={() =>
+                    resetPageAndRun(() =>
+                      setSortOrder((current) => (current === "asc" ? "desc" : "asc")),
+                    )
+                  }
                   class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-left text-sm text-stone-100 outline-none transition hover:border-stone-700 hover:bg-stone-900 focus:border-stone-600"
                 >
                   {sortOrder() === "asc" ? "昇順" : "降順"}
@@ -478,6 +527,29 @@ export function VideosTab(props: VideosTabProps) {
                 <span class="font-medium text-stone-200">{videoRows().length}</span> 件
               </p>
             </div>
+            <Show when={pageCount() > 1}>
+              <div class="flex flex-wrap items-center justify-end gap-2 text-sm text-stone-400">
+                <button
+                  type="button"
+                  disabled={currentPage() <= 1}
+                  onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+                  class="rounded-full border border-stone-700 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                >
+                  前へ
+                </button>
+                <span>
+                  {currentPage()} / {pageCount()} ページ
+                </span>
+                <button
+                  type="button"
+                  disabled={currentPage() >= pageCount()}
+                  onClick={() => setCurrentPage((page) => Math.min(page + 1, pageCount()))}
+                  class="rounded-full border border-stone-700 px-3 py-1.5 text-xs font-medium text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+                >
+                  次へ
+                </button>
+              </div>
+            </Show>
           </div>
 
           <Show
@@ -509,7 +581,7 @@ export function VideosTab(props: VideosTabProps) {
                     </tr>
                   </thead>
                   <tbody class="bg-stone-950/40">
-                    <For each={sortedFilteredVideoRows()}>
+                    <For each={pagedVideoRows()}>
                       {(row, index) => {
                         const videoMetadata = () => getVideoMetadata(row, videoMetadataSnapshot());
                         const ownerMetadata = () => getOwnerMetadata(row, videoMetadataSnapshot());
@@ -519,7 +591,7 @@ export function VideosTab(props: VideosTabProps) {
                         return (
                           <tr class="align-top text-sm text-stone-200">
                             <td class="border-t border-stone-800 pl-4 py-4 text-xs font-medium text-stone-500">
-                              #{index() + 1}
+                              #{(currentPage() - 1) * PAGE_SIZE + index() + 1}
                             </td>
                             <td class="border-t border-stone-800 pl-4 py-4">
                               <a
