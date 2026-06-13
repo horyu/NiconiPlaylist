@@ -19,23 +19,7 @@
 
 以下は、変更時の不具合リスクと今後の保守コストを基準にした推奨着手順である。
 
-### 5.1 再生設定の自動保存処理の分離
-
-- 対象:
-  - `src/options/tabs/RepeatSettingsTab.tsx`
-  - `src/background/services/playbackSettings.ts`
-- 背景:
-  - `RepeatSettingsTab` がフォーム表示に加えて、debounce、保存中の追加更新、アンマウント時保存、エラー通知を管理している。
-  - 保存タイミングの変更が入力フォーカスやフォーム表示へ影響しやすい。
-- 対応方針:
-  - 最新の更新要求まで順番に保存する `createAutoSaveQueue` などの共通処理を切り出す。
-  - 設定値の編集状態と永続化状態を明確に分離する。
-  - 必要に応じて、リピートプリセット、完了通知、ナビゲーション設定を個別コンポーネントへ分割する。
-- 完了条件:
-  - 連続入力、保存中の追加更新、blur 保存、アンマウント時保存を単体テストできる。
-  - 自動保存によって入力要素のフォーカスや入力途中の値が失われない。
-
-### 5.2 動画タブの metadata 更新方式の見直し
+### 5.1 動画タブの metadata 更新方式の見直し
 
 - 対象:
   - `src/options/tabs/VideosTab.tsx`
@@ -53,7 +37,7 @@
   - 新しく取得した metadata を、タブの再表示や明示操作によって確実に反映できる。
   - 大量の動画がある場合も操作可能な表示速度を維持できる。
 
-### 5.3 storage schema と検証・正規化処理の一元化
+### 5.2 storage schema と検証・正規化処理の一元化
 
 - 対象:
   - `src/lib/typeGuards.ts`
@@ -70,20 +54,19 @@
   - storage 項目追加時に更新すべき定義箇所が明確になる。
   - 不正データ、旧形式データ、部分的に欠損したデータの正規化をテストできる。
 
-### 5.4 重要領域のテスト拡充
+### 5.3 重要領域のテスト拡充
 
 - 対象:
   - `src/background/services/playlistStore.ts`
   - `src/contents/watch.ts`
   - `src/options/tabs/PlaylistsTab.tsx` から切り出した編集ロジック
-  - `src/options/tabs/RepeatSettingsTab.tsx` から切り出した自動保存処理
 - 背景:
   - 現在のテストは ID codec、共有 URL、動画 ID 入力、ループ判定、watch message handler の一部に集中している。
-  - storage 更新、再生遷移、playlist 編集、自動保存には回帰テストが不足している。
+  - storage 更新、再生遷移、playlist 編集には回帰テストが不足している。
 - 対応方針:
   - 上記のリファクタリングで純粋関数または副作用境界を切り出した後、単体テストを追加する。
   - 過去に発生した不具合を再現するテストケースを優先する。
   - browser API を利用する処理は adapter を mock し、判断ロジック自体を直接テストする。
 - 完了条件:
-  - storage の並行更新、主要な再生遷移、playlist 編集操作、自動保存競合に回帰テストがある。
+  - storage の並行更新、主要な再生遷移、playlist 編集操作に回帰テストがある。
   - 不具合修正時に、同じ問題を再現するテストを追加できる構造になっている。

@@ -3,14 +3,13 @@ import { createSignal, Index, onCleanup, onMount, Show } from "solid-js";
 import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import {
   getStoredPlaybackSettings,
-  updateStoredPlaybackSettings,
+  saveStoredPlaybackSettingsDraft,
 } from "@/background/services/playbackSettings";
 import {
   createRepeatPreset,
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
   DEFAULT_PLAYBACK_RESUME_TAB_MODE,
-  sanitizePlaybackSettings,
 } from "@/lib/playlistLoop";
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
 import type {
@@ -19,6 +18,7 @@ import type {
   PlaybackResumeTabMode,
   RepeatPreset,
 } from "@/lib/types";
+import { createAutoSaveQueue } from "@/options/autoSaveQueue";
 import type { OptionsToast } from "@/options/toast";
 
 type RepeatSettingsTabProps = {
@@ -53,10 +53,6 @@ function clampInteger(value: string, minimum: number, maximum: number, fallback:
 }
 
 export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
-  let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
-  let autoSaveRequestId = 0;
-  let lastPersistedRequestId = 0;
-  let autoSaveInFlight = false;
   const [presets, setPresets] = createSignal<RepeatPreset[]>([]);
   const [completionSettings, setCompletionSettings] = createSignal<PlaybackCompletionSettings>({
     ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
@@ -68,18 +64,24 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   );
   const [loaded, setLoaded] = createSignal(false);
-
-  onCleanup(() => {
-    if (autoSaveTimeout) {
-      clearTimeout(autoSaveTimeout);
-      autoSaveTimeout = null;
-    }
-
-    if (loaded() && lastPersistedRequestId !== autoSaveRequestId) {
-      props.onFeedback(null);
-      void persistPlaybackSettings();
-    }
+  const autoSaveQueue = createAutoSaveQueue({
+    getSnapshot: () => ({
+      completion: completionSettings(),
+      navigation: navigationSettings(),
+      presets: presets(),
+      resumeTabMode: resumeTabMode(),
+    }),
+    onError: (error) => {
+      props.onFeedback({
+        text: error instanceof Error ? error.message : "再生設定の更新に失敗しました。",
+        tone: "error",
+      });
+    },
+    onSaveStart: () => props.onFeedback(null),
+    save: saveStoredPlaybackSettingsDraft,
   });
+
+  onCleanup(() => void autoSaveQueue.dispose());
 
   onMount(() => {
     void getStoredPlaybackSettings().then((playbackSettings) => {
@@ -105,66 +107,12 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     return "none";
   };
 
-  async function persistPlaybackSettings() {
-    if (autoSaveInFlight) {
-      return;
-    }
-
-    autoSaveInFlight = true;
-
-    while (lastPersistedRequestId !== autoSaveRequestId) {
-      const currentRequestId = autoSaveRequestId;
-
-      try {
-        const draftSettings = {
-          completion: completionSettings(),
-          navigation: navigationSettings(),
-          presets: presets(),
-          resumeTabMode: resumeTabMode(),
-        };
-        const nextPlaybackSettings = await updateStoredPlaybackSettings((currentPlaybackSettings) =>
-          sanitizePlaybackSettings({
-            playlistRepeatEnabled: currentPlaybackSettings.playlistRepeatEnabled,
-            resumeTabMode: draftSettings.resumeTabMode,
-            activeRepeatPresetId: currentPlaybackSettings.activeRepeatPresetId,
-            presets: draftSettings.presets,
-            navigation: draftSettings.navigation,
-            completion: draftSettings.completion,
-          }),
-        );
-        setPresets(nextPlaybackSettings.presets);
-        setCompletionSettings(nextPlaybackSettings.completion);
-        setNavigationSettings(nextPlaybackSettings.navigation);
-        setResumeTabMode(nextPlaybackSettings.resumeTabMode);
-        lastPersistedRequestId = currentRequestId;
-      } catch (error) {
-        props.onFeedback({
-          text: error instanceof Error ? error.message : "リピート設定の更新に失敗しました。",
-          tone: "error",
-        });
-        break;
-      }
-    }
-
-    autoSaveInFlight = false;
-  }
-
   function scheduleAutoSave(delayMs: number) {
     if (!loaded()) {
       return;
     }
 
-    autoSaveRequestId += 1;
-
-    if (autoSaveTimeout) {
-      clearTimeout(autoSaveTimeout);
-    }
-
-    autoSaveTimeout = setTimeout(() => {
-      autoSaveTimeout = null;
-      props.onFeedback(null);
-      void persistPlaybackSettings();
-    }, delayMs);
+    autoSaveQueue.schedule(delayMs);
   }
 
   function handleAddCountPreset() {
@@ -273,7 +221,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       <div class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <h2 class="text-lg font-semibold text-stone-50">再生設定</h2>
         <p class="text-sm text-stone-400">
-          再開方法、リピート条件、完了後の動作を編集します。変更は自動保存されます。
+          再生方法、リピート条件、完了後の動作を編集します。変更は自動保存されます。
         </p>
       </div>
 

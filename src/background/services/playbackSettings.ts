@@ -1,5 +1,11 @@
 import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
-import type { PlaybackSettings } from "@/lib/types";
+import type {
+  PlaybackCompletionSettings,
+  PlaybackNavigationSettings,
+  PlaybackResumeTabMode,
+  PlaybackSettings,
+  RepeatPreset,
+} from "@/lib/types";
 
 import { getStorageData, mutateStorage } from "./storage";
 
@@ -22,4 +28,20 @@ export async function updateStoredPlaybackSettings(
       result: nextPlaybackSettings,
     };
   });
+}
+
+export type PlaybackSettingsDraft = {
+  completion: PlaybackCompletionSettings;
+  navigation: PlaybackNavigationSettings;
+  presets: RepeatPreset[];
+  resumeTabMode: PlaybackResumeTabMode;
+};
+
+export async function saveStoredPlaybackSettingsDraft(draft: PlaybackSettingsDraft): Promise<void> {
+  await updateStoredPlaybackSettings((currentPlaybackSettings) =>
+    sanitizePlaybackSettings({
+      ...currentPlaybackSettings,
+      ...draft,
+    }),
+  );
 }
