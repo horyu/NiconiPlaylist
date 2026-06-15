@@ -19,24 +19,7 @@
 
 以下は、変更時の不具合リスクと今後の保守コストを基準にした推奨着手順である。
 
-### 5.1 storage schema と検証・正規化処理の一元化
-
-- 対象:
-  - `src/lib/typeGuards.ts`
-  - `src/background/services/storage.ts`
-  - `src/background/services/dataManagement.ts`
-- 背景:
-  - storage データの型検証、デフォルト値、正規化、インポート時の補完処理が複数ファイルに分散している。
-  - storage 項目や型を追加した際に、検証処理やバックアップ復元処理の更新が漏れる可能性がある。
-- 対応方針:
-  - storage key ごとに default、validate、normalize を定義する schema を一箇所へ集約する。
-  - 通常読み込み、JSON インポート、バックアップ復元で同じ正規化処理を使用する。
-  - 外部 schema ライブラリは、現在の手書き実装より保守コストを下げられる場合のみ導入する。
-- 完了条件:
-  - storage 項目追加時に更新すべき定義箇所が明確になる。
-  - 不正データ、旧形式データ、部分的に欠損したデータの正規化をテストできる。
-
-### 5.2 重要領域のテスト拡充
+### 5.1 重要領域のテスト拡充
 
 - 対象:
   - `src/background/services/playlistStore.ts`

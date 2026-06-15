@@ -103,4 +103,15 @@ describe("mutateStorage", () => {
 
     expect(playlists.map((playlist) => playlist.id)).toEqual(["replacement"]);
   });
+
+  test("通常読み込み時に schema で不正データを正規化する", async () => {
+    storedValues.np_playlists = [createPlaylist("valid"), { id: "invalid" }];
+    storedValues.np_last_active_playlist_id = 123;
+
+    const { getStorageData } = await import("./storage");
+    const data = await getStorageData(["playlists", "lastActivePlaylistId"]);
+
+    expect(data.playlists.map((playlist) => playlist.id)).toEqual(["valid"]);
+    expect(data.lastActivePlaylistId).toBeNull();
+  });
 });

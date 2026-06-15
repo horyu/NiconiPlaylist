@@ -5,7 +5,7 @@ import { handleWatchMessage } from "@/background/handlers/watch";
 import { getStorageData } from "@/background/services/storage";
 import { initUserAgentOverride } from "@/background/services/userAgent";
 import type { PopupMessage } from "@/lib/popupMessages";
-import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { STORAGE_KEYS } from "@/lib/storageSchema";
 import { isPlaybackContext } from "@/lib/typeGuards";
 import type { WatchMessage } from "@/lib/watchMessages";
 

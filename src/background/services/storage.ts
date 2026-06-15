@@ -1,32 +1,13 @@
 import { browser } from "wxt/browser";
 
 import {
-  DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
-  DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
-  DEFAULT_PLAYBACK_RESUME_TAB_MODE,
-  DEFAULT_REPEAT_PRESETS,
-} from "@/lib/playlistLoop";
-import { STORAGE_KEYS } from "@/lib/storageKeys";
-import type {
-  PlaybackContext,
-  PlaybackDebugEvent,
-  PlaybackSettings,
-  Playlist,
-  PlaylistId,
-} from "@/lib/types";
-import type { OwnerId, OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
+  normalizeStorageValue,
+  STORAGE_KEYS,
+  type StorageDataByKey,
+  type StorageKey,
+} from "@/lib/storageSchema";
 
-export interface StorageDataByKey {
-  playlists: Playlist[];
-  playbackSettings: PlaybackSettings;
-  playbackContexts: PlaybackContext[];
-  playbackDebugEvents: PlaybackDebugEvent[];
-  lastActivePlaylistId: PlaylistId | null;
-  videoMetadata: Record<string, VideoMetadata>;
-  owners: Record<OwnerId, OwnerMetadata>;
-}
-
-export type StorageKey = keyof StorageDataByKey;
+export type { StorageDataByKey, StorageKey } from "@/lib/storageSchema";
 
 type StorageMutation<K extends StorageKey, R> = {
   updates: Partial<Pick<StorageDataByKey, K>>;
@@ -37,38 +18,7 @@ const STORAGE_MUTATION_LOCK_NAME = "niconiplaylist:storage-mutation";
 // Web Locks coordinates mutations across extension pages and the background worker.
 let localStorageMutationQueue = Promise.resolve();
 
-const DEFAULT_BY_KEY: StorageDataByKey = {
-  playlists: [],
-  playbackSettings: {
-    playlistRepeatEnabled: false,
-    resumeTabMode: DEFAULT_PLAYBACK_RESUME_TAB_MODE,
-    activeRepeatPresetId: null,
-    presets: DEFAULT_REPEAT_PRESETS,
-    navigation: DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
-    completion: DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
-  },
-  playbackContexts: [],
-  playbackDebugEvents: [],
-  lastActivePlaylistId: null,
-  videoMetadata: {},
-  owners: {},
-};
-
-function cloneDefaultValue<K extends StorageKey>(key: K): StorageDataByKey[K] {
-  return structuredClone(DEFAULT_BY_KEY[key]);
-}
-
-export function getDefaultStorageData(): StorageDataByKey {
-  return {
-    playlists: cloneDefaultValue("playlists"),
-    playbackSettings: cloneDefaultValue("playbackSettings"),
-    playbackContexts: cloneDefaultValue("playbackContexts"),
-    playbackDebugEvents: cloneDefaultValue("playbackDebugEvents"),
-    lastActivePlaylistId: cloneDefaultValue("lastActivePlaylistId"),
-    videoMetadata: cloneDefaultValue("videoMetadata"),
-    owners: cloneDefaultValue("owners"),
-  };
-}
+export { getDefaultStorageData } from "@/lib/storageSchema";
 
 function ensureStorageAvailable(): typeof browser.storage.local {
   const storage = browser?.storage?.local;
@@ -139,7 +89,7 @@ export async function getStorageData<K extends StorageKey>(
 
   for (const key of keys) {
     const storageKey = STORAGE_KEYS[key];
-    data[key] = (result[storageKey] ?? cloneDefaultValue(key)) as StorageDataByKey[K];
+    data[key] = normalizeStorageValue(key, result[storageKey]);
   }
 
   return data;

@@ -1,19 +1,10 @@
 import { browser } from "wxt/browser";
 
 import { isWatchUrl } from "@/lib/nicovideoUrl";
-import { sanitizePlaybackSettings } from "@/lib/playlistLoop";
-import {
-  isOwnerMetadata,
-  isPlaybackContext,
-  isPlaybackDebugEvent,
-  isPlaybackSettings,
-  isPlaylist,
-  isVideoMetadata,
-} from "@/lib/typeGuards";
+import { getDefaultStorageData, normalizeStorageData } from "@/lib/storageSchema";
 
 import { clearStoredPlaybackContextsByPlaylistId } from "./playlistStore";
 import {
-  getDefaultStorageData,
   getStorageData,
   getRawStorageData,
   mutateStorage,
@@ -37,83 +28,6 @@ type StorageExportPayload = {
   exportedAt: string;
   version: number;
 };
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-function normalizeStorageData(
-  value: unknown,
-  options?: {
-    includePlaybackDebugEvents?: boolean;
-  },
-): StorageDataByKey {
-  const candidate = (() => {
-    if (!isRecord(value)) {
-      return {};
-    }
-
-    if (isRecord(value.data)) {
-      return value.data;
-    }
-
-    return value;
-  })();
-  const defaultStorageData = getDefaultStorageData();
-  const playlists = Array.isArray(candidate.playlists)
-    ? candidate.playlists.filter(isPlaylist)
-    : defaultStorageData.playlists;
-  const playlistIds = new Set(playlists.map((playlist) => playlist.id));
-  const playbackContexts = Array.isArray(candidate.playbackContexts)
-    ? candidate.playbackContexts.filter(
-        (playbackContext) =>
-          isPlaybackContext(playbackContext) &&
-          playlistIds.has(playbackContext.playlistId) &&
-          playbackContext.currentIndex >= 0 &&
-          playbackContext.currentIndex <
-            (playlists.find((playlist) => playlist.id === playbackContext.playlistId)?.videoIds
-              .length ?? 0),
-      )
-    : defaultStorageData.playbackContexts;
-  const playbackDebugEvents =
-    options?.includePlaybackDebugEvents && Array.isArray(candidate.playbackDebugEvents)
-      ? candidate.playbackDebugEvents.filter(isPlaybackDebugEvent)
-      : defaultStorageData.playbackDebugEvents;
-  const lastActivePlaylistId =
-    typeof candidate.lastActivePlaylistId === "string" &&
-    playlistIds.has(candidate.lastActivePlaylistId)
-      ? candidate.lastActivePlaylistId
-      : null;
-  const playbackSettings = sanitizePlaybackSettings(
-    isPlaybackSettings(candidate.playbackSettings) ? candidate.playbackSettings : undefined,
-  );
-  const videoMetadata = isRecord(candidate.videoMetadata)
-    ? (Object.fromEntries(
-        Object.entries(candidate.videoMetadata).filter(
-          (entry): entry is [string, StorageDataByKey["videoMetadata"][string]] =>
-            isVideoMetadata(entry[1]),
-        ),
-      ) as StorageDataByKey["videoMetadata"])
-    : defaultStorageData.videoMetadata;
-  const owners = isRecord(candidate.owners)
-    ? (Object.fromEntries(
-        Object.entries(candidate.owners).filter(
-          (entry): entry is [string, StorageDataByKey["owners"][string]] =>
-            isOwnerMetadata(entry[1]),
-        ),
-      ) as StorageDataByKey["owners"])
-    : defaultStorageData.owners;
-
-  return {
-    playlists,
-    playbackSettings,
-    playbackContexts,
-    playbackDebugEvents,
-    lastActivePlaylistId,
-    videoMetadata,
-    owners,
-  };
-}
 
 export async function exportStorageData(): Promise<StorageExportPayload> {
   const rawStorageData = await getRawStorageData(STORAGE_EXPORT_KEYS);
@@ -211,12 +125,7 @@ async function findStalePlaybackCleanupCandidates(
   olderThanDays: number,
 ): Promise<StalePlaybackCleanupCandidate[]> {
   const normalizedDays = Math.max(1, Math.trunc(olderThanDays));
-  const [playlists, playbackContexts] = await Promise.all([
-    getStorageData(["playlists"]).then((data) => data.playlists.filter(isPlaylist)),
-    getStorageData(["playbackContexts"]).then((data) =>
-      data.playbackContexts.filter(isPlaybackContext),
-    ),
-  ]);
+  const { playlists, playbackContexts } = await getStorageData(["playlists", "playbackContexts"]);
   const aliveTabIds = await resolveAlivePlaybackTabIds(playbackContexts);
   const cutoffTime = Date.now() - normalizedDays * 24 * 60 * 60 * 1000;
   const stalePlaylistIds = new Set(

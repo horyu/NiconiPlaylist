@@ -23,7 +23,7 @@ import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMeta
 import { isWatchUrl } from "@/lib/nicovideoUrl";
 import { formatRepeatPresetLabel, sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import type { PopupMessage, PopupPlaybackTransitionMode } from "@/lib/popupMessages";
-import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { STORAGE_KEYS } from "@/lib/storageSchema";
 import type { PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
 import { PopupPlaylistVideoList } from "@/popup/components/PopupPlaylistVideoList";
 import {

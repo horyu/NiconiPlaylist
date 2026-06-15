@@ -148,13 +148,13 @@ function resolvePlaybackIndex(
 export async function getStoredPlaylists(): Promise<Playlist[]> {
   const { playlists } = await getStorageData(["playlists"]);
 
-  return playlists.filter(isPlaylist);
+  return playlists;
 }
 
 export async function getStoredPlaybackContexts(): Promise<PlaybackContext[]> {
   const { playbackContexts } = await getStorageData(["playbackContexts"]);
 
-  return playbackContexts.filter(isPlaybackContext);
+  return playbackContexts;
 }
 
 async function appendStoredPlaybackDebugEvent(

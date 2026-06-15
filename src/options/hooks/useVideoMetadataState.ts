@@ -5,7 +5,7 @@ import {
   getStoredOwnersMap,
   getStoredVideoMetadataMap,
 } from "@/background/services/videoMetadataStore";
-import { STORAGE_KEYS } from "@/lib/storageKeys";
+import { STORAGE_KEYS } from "@/lib/storageSchema";
 import type { OwnerMetadata, VideoMetadata } from "@/lib/videoMetadataTypes";
 
 export type VideoMetadataState = {
