@@ -1,86 +1,100 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
-import type { PlaybackContext, PlaybackSettings, VideoId } from "@/lib/types";
+import type { PlaybackContext, PlaybackSettings, Playlist } from "@/lib/types";
 
-type ResolveNextVideoForPlaybackContextResult = {
-  firstVideoId: VideoId | null;
-  playbackContext: PlaybackContext | null;
-  nextVideoId: VideoId | null;
-};
-
-const getStoredPlaybackSettingsMock = mock<() => Promise<PlaybackSettings>>(async () => ({
-  playlistRepeatEnabled: false,
-  resumeTabMode: "replace-current-tab",
-  activeRepeatPresetId: null,
-  presets: [],
-  navigation: {
-    restorePreviousTabEnabled: false,
-    restorePreviousTabDelayMs: 0,
-  },
-  completion: {
-    playSoundEnabled: false,
-    soundVolume: 1,
-    soundRepeatCount: 1,
-    focusTabEnabled: false,
-    alertEnabled: false,
-  },
-}));
-
-const resolveNextVideoForPlaybackContextMock = mock<
-  () => Promise<ResolveNextVideoForPlaybackContextResult>
->(async () => ({
-  firstVideoId: null,
-  playbackContext: null,
-  nextVideoId: null,
-}));
-const consumePlaybackEndNavigationOverrideMock = mock(
-  async () => null as { nextVideoId: VideoId } | null,
-);
+const localStorageValues: Record<string, unknown> = {};
+const sessionStorageValues: Record<string, unknown> = {};
 
 mock.module("wxt/browser", () => ({
   browser: {
     scripting: {
       executeScript: mock(async () => undefined),
     },
+    storage: {
+      local: {
+        get: mock(async (keys: string[]) =>
+          Object.fromEntries(
+            keys.flatMap((key) =>
+              key in localStorageValues ? [[key, structuredClone(localStorageValues[key])]] : [],
+            ),
+          ),
+        ),
+        set: mock(async (updates: Record<string, unknown>) => {
+          Object.assign(localStorageValues, structuredClone(updates));
+        }),
+      },
+      session: {
+        get: mock(async (key: string) =>
+          key in sessionStorageValues ? { [key]: structuredClone(sessionStorageValues[key]) } : {},
+        ),
+        remove: mock(async (key: string) => {
+          delete sessionStorageValues[key];
+        }),
+        set: mock(async (updates: Record<string, unknown>) => {
+          Object.assign(sessionStorageValues, structuredClone(updates));
+        }),
+      },
+    },
   },
 }));
 
-mock.module("@/background/services/playbackNavigation", () => ({
-  cancelPendingPlaybackTabNavigation: mock(() => undefined),
-  completePlaybackTabNavigation: mock(async () => undefined),
-  focusBrowserTab: mock(async () => undefined),
-  preparePlaybackTabForNavigation: mock(async () => undefined),
-}));
+function createPlaylist(id: string, videoIds: string[]): Playlist {
+  return {
+    id,
+    createdAt: "2026-06-17T00:00:00.000Z",
+    updatedAt: "2026-06-17T00:00:00.000Z",
+    lastPlayedAt: null,
+    lastCompletedAt: null,
+    popupHidden: false,
+    title: id,
+    videoIds,
+  };
+}
 
-mock.module("@/background/services/playbackSettings", () => ({
-  getStoredPlaybackSettings: getStoredPlaybackSettingsMock,
-}));
+function createPlaybackSettings(): PlaybackSettings {
+  return {
+    playlistRepeatEnabled: false,
+    resumeTabMode: "replace-current-tab",
+    activeRepeatPresetId: null,
+    presets: [],
+    navigation: {
+      restorePreviousTabEnabled: false,
+      restorePreviousTabDelayMs: 0,
+    },
+    completion: {
+      alertEnabled: false,
+      focusTabEnabled: false,
+      playSoundEnabled: false,
+      soundRepeatCount: 1,
+      soundVolume: 1,
+    },
+  };
+}
 
-mock.module("@/background/services/playbackEndNavigationOverride", () => ({
-  clearPlaybackEndNavigationOverride: mock(async () => undefined),
-  consumePlaybackEndNavigationOverride: consumePlaybackEndNavigationOverrideMock,
-}));
-
-mock.module("@/background/services/playlistStore", () => ({
-  clearStoredPlaybackContextByTabId: mock(async () => undefined),
-  markStoredPlaylistCompletedByTabId: mock(async () => undefined),
-  recordContentPlaybackDebugEvent: mock(async () => undefined),
-  recordPlaybackDebugEvent: mock(async () => undefined),
-  resolveNextVideoForPlaybackContext: resolveNextVideoForPlaybackContextMock,
-  syncPlaybackContextForVideo: mock(async () => null),
-}));
+function setStoredPlaybackState(
+  playbackContext: PlaybackContext | null,
+  playlist = createPlaylist("playlist-1", ["sm9", "sm1"]),
+): void {
+  localStorageValues.np_playlists = [playlist];
+  localStorageValues.np_repeat_settings = createPlaybackSettings();
+  localStorageValues.np_playback_contexts = playbackContext ? [playbackContext] : [];
+}
 
 describe("handleWatchMessage", () => {
   beforeEach(() => {
-    getStoredPlaybackSettingsMock.mockClear();
-    resolveNextVideoForPlaybackContextMock.mockClear();
-    consumePlaybackEndNavigationOverrideMock.mockClear();
-    consumePlaybackEndNavigationOverrideMock.mockImplementation(async () => null);
+    for (const key of Object.keys(localStorageValues)) {
+      delete localStorageValues[key];
+    }
+
+    for (const key of Object.keys(sessionStorageValues)) {
+      delete sessionStorageValues[key];
+    }
   });
 
   test("プレイリスト再生中でない時は playbackSettings を返さない", async () => {
-    const { handleWatchMessage } = await import("./watch");
+    setStoredPlaybackState(null);
 
+    const { handleWatchMessage } = await import("./watch");
     const response = await handleWatchMessage(
       {
         type: "watch:resolve-next-video",
@@ -102,18 +116,9 @@ describe("handleWatchMessage", () => {
   });
 
   test("プレイリスト再生中なら playbackSettings を返す", async () => {
-    resolveNextVideoForPlaybackContextMock.mockImplementationOnce(async () => ({
-      firstVideoId: "sm9",
-      playbackContext: {
-        playlistId: "playlist-1",
-        tabId: 1,
-        currentIndex: 0,
-      },
-      nextVideoId: "sm1",
-    }));
+    setStoredPlaybackState({ playlistId: "playlist-1", tabId: 1, currentIndex: 0 });
 
     const { handleWatchMessage } = await import("./watch");
-
     const response = await handleWatchMessage(
       {
         type: "watch:resolve-next-video",
@@ -137,21 +142,16 @@ describe("handleWatchMessage", () => {
   });
 
   test("再生終了後移動 override がある時は current repeat を無視してその動画へ進む", async () => {
-    resolveNextVideoForPlaybackContextMock.mockImplementationOnce(async () => ({
-      firstVideoId: "sm9",
-      playbackContext: {
+    setStoredPlaybackState({ playlistId: "playlist-1", tabId: 1, currentIndex: 0 });
+    sessionStorageValues.playbackEndNavigationOverrides = {
+      1: {
+        nextIndex: 1,
+        nextVideoId: "so5364283",
         playlistId: "playlist-1",
-        tabId: 1,
-        currentIndex: 0,
       },
-      nextVideoId: "sm1",
-    }));
-    consumePlaybackEndNavigationOverrideMock.mockImplementationOnce(async () => ({
-      nextVideoId: "so5364283",
-    }));
+    };
 
     const { handleWatchMessage } = await import("./watch");
-
     const response = await handleWatchMessage(
       {
         type: "watch:resolve-next-video",
@@ -166,5 +166,6 @@ describe("handleWatchMessage", () => {
 
     expect(response?.forceSkipCurrentVideoRepeat).toBe(true);
     expect(response?.nextVideoId).toBe("so5364283");
+    expect(sessionStorageValues.playbackEndNavigationOverrides).toBeUndefined();
   });
 });
