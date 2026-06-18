@@ -55,8 +55,8 @@ function createPlaybackSettings(): PlaybackSettings {
   return {
     playlistRepeatEnabled: false,
     resumeTabMode: "replace-current-tab",
-    activeRepeatPresetId: null,
-    presets: [],
+    activeRepeatPresetId: "global",
+    presets: [{ id: "global", mode: "count", count: 2 }],
     navigation: {
       restorePreviousTabEnabled: false,
       restorePreviousTabDelayMs: 0,
@@ -138,7 +138,32 @@ describe("handleWatchMessage", () => {
     });
     expect(response?.forceSkipCurrentVideoRepeat).toBe(false);
     expect(response?.nextVideoId).toBe("sm1");
-    expect(response?.playbackSettings).not.toBeNull();
+    expect(response?.playbackSettings?.activeRepeatPresetId).toBe("global");
+  });
+
+  test("プレイリスト固有の各動画リピート設定を playbackSettings に反映する", async () => {
+    setStoredPlaybackState(
+      { playlistId: "playlist-1", tabId: 1, currentIndex: 0 },
+      {
+        ...createPlaylist("playlist-1", ["sm9", "sm1"]),
+        repeatPresetId: null,
+      },
+    );
+
+    const { handleWatchMessage } = await import("./watch");
+    const response = await handleWatchMessage(
+      {
+        type: "watch:resolve-next-video",
+        videoId: "sm9",
+      },
+      {
+        tab: {
+          id: 1,
+        },
+      },
+    );
+
+    expect(response?.playbackSettings?.activeRepeatPresetId).toBeNull();
   });
 
   test("再生終了後移動 override がある時は current repeat を無視してその動画へ進む", async () => {

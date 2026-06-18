@@ -7,6 +7,7 @@ import {
   DEFAULT_REPEAT_PRESETS,
   createRepeatPreset,
   resolveActiveRepeatPreset,
+  resolvePlaylistPlaybackSettings,
   sanitizePlaybackSettings,
   shouldRepeatCurrentVideo,
 } from "./playlistLoop";
@@ -134,6 +135,33 @@ describe("playlistLoop", () => {
       id: "custom",
       mode: "count",
       count: 4,
+    });
+  });
+
+  test("プレイリスト固有の各動画リピート設定をグローバル設定へ反映する", () => {
+    const globalSettings = sanitizePlaybackSettings({
+      playlistRepeatEnabled: false,
+      activeRepeatPresetId: "global",
+      presets: [
+        createRepeatPreset("count", 2, "global"),
+        createRepeatPreset("duration", 300, "playlist"),
+      ],
+    });
+
+    expect(resolvePlaylistPlaybackSettings(globalSettings, undefined)).toBe(globalSettings);
+    expect(resolvePlaylistPlaybackSettings(globalSettings, { repeatPresetId: null })).toEqual({
+      ...globalSettings,
+      activeRepeatPresetId: null,
+    });
+    expect(resolvePlaylistPlaybackSettings(globalSettings, { repeatPresetId: "playlist" })).toEqual(
+      {
+        ...globalSettings,
+        activeRepeatPresetId: "playlist",
+      },
+    );
+    expect(resolvePlaylistPlaybackSettings(globalSettings, { repeatPresetId: "missing" })).toEqual({
+      ...globalSettings,
+      activeRepeatPresetId: null,
     });
   });
 

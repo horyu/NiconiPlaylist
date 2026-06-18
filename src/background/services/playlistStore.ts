@@ -1,9 +1,11 @@
 import { getStorageData, mutateStorage } from "@/background/services/storage";
 import { formatDashedTimestampWithMinutes } from "@/lib/dateTime";
+import { resolvePlaylistPlaybackSettings } from "@/lib/playlistLoop";
 import { isPlaybackContext, isPlaybackDebugEvent, isPlaylist } from "@/lib/typeGuards";
 import type {
   PlaybackContext,
   PlaybackDebugEvent,
+  PlaybackSettings,
   Playlist,
   PlaylistId,
   VideoId,
@@ -63,6 +65,7 @@ async function createStoredPlaylistCopyWithVideoIds(
       ...createPlaylistTimestampPatch(new Date()),
       ...createCopyFields(sourcePlaylist),
       memo: sourcePlaylist.memo,
+      repeatPresetId: sourcePlaylist.repeatPresetId,
       popupHidden: false,
     };
 
@@ -265,7 +268,9 @@ export async function activateStoredPlaylist(playlistId: PlaylistId): Promise<vo
 
 export async function updateStoredPlaylist(
   playlistId: PlaylistId,
-  updates: Partial<Pick<Playlist, "memo" | "title" | "videoIds" | "popupHidden">>,
+  updates: Partial<
+    Pick<Playlist, "memo" | "repeatPresetId" | "title" | "videoIds" | "popupHidden">
+  >,
   options?: {
     deletedVideoIndices?: number[];
   },
@@ -613,6 +618,7 @@ export async function resolveNextVideoForPlaybackContext(
 ): Promise<{
   firstVideoId: VideoId | null;
   playbackContext: PlaybackContext | null;
+  playlistPlaybackSettings: PlaybackSettings | null;
   nextVideoId: VideoId | null;
 }> {
   const playbackContext = await syncPlaybackContextForVideo(tabId, videoId);
@@ -621,11 +627,15 @@ export async function resolveNextVideoForPlaybackContext(
     return {
       firstVideoId: null,
       playbackContext: null,
+      playlistPlaybackSettings: null,
       nextVideoId: null,
     };
   }
 
-  const playlists = await getStoredPlaylists();
+  const [{ playbackSettings }, playlists] = await Promise.all([
+    getStorageData(["playbackSettings"]),
+    getStoredPlaylists(),
+  ]);
   const playlist = playlists.find(
     (currentPlaylist) => currentPlaylist.id === playbackContext.playlistId,
   );
@@ -633,6 +643,9 @@ export async function resolveNextVideoForPlaybackContext(
   return {
     firstVideoId: playlist?.videoIds[0] ?? null,
     playbackContext,
+    playlistPlaybackSettings: playlist
+      ? resolvePlaylistPlaybackSettings(playbackSettings, playlist)
+      : playbackSettings,
     nextVideoId: playlist?.videoIds[playbackContext.currentIndex + 1] ?? null,
   };
 }

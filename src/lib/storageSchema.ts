@@ -145,9 +145,19 @@ export function normalizeStorageData(
   ) as unknown as StorageDataByKey;
   const playlistIds = new Set(normalized.playlists.map((playlist) => playlist.id));
   const playlistById = new Map(normalized.playlists.map((playlist) => [playlist.id, playlist]));
+  const repeatPresetIds = new Set(normalized.playbackSettings.presets.map((preset) => preset.id));
 
   return {
     ...normalized,
+    playlists: normalized.playlists.map((playlist) => ({
+      ...playlist,
+      repeatPresetId:
+        playlist.repeatPresetId === undefined ||
+        playlist.repeatPresetId === null ||
+        repeatPresetIds.has(playlist.repeatPresetId)
+          ? playlist.repeatPresetId
+          : undefined,
+    })),
     playbackContexts: normalized.playbackContexts.filter((playbackContext) => {
       const playlist = playlistById.get(playbackContext.playlistId);
       return (

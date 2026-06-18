@@ -50,6 +50,7 @@ export type Playlist = {
   title?: string;
   memo?: string;
   popupHidden?: boolean;
+  repeatPresetId?: string | null;
 };
 
 export type PlaybackContext = {

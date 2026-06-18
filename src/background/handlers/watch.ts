@@ -61,7 +61,7 @@ export async function handleWatchMessage(
         nextVideoId: playbackState.nextVideoId,
         overrideNextVideoId: playbackEndNavigationOverride?.nextVideoId ?? null,
         playbackContext: playbackState.playbackContext,
-        playbackSettings,
+        playbackSettings: playbackState.playlistPlaybackSettings ?? playbackSettings,
       });
 
       if (!resolvedPlaybackState.playbackContext) {

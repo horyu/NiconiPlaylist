@@ -24,7 +24,10 @@ export function isPlaylist(value: unknown): value is Playlist {
     (candidate.lastCompletedAt === null || typeof candidate.lastCompletedAt === "string") &&
     (candidate.title === undefined || typeof candidate.title === "string") &&
     (candidate.memo === undefined || typeof candidate.memo === "string") &&
-    (candidate.popupHidden === undefined || typeof candidate.popupHidden === "boolean")
+    (candidate.popupHidden === undefined || typeof candidate.popupHidden === "boolean") &&
+    (candidate.repeatPresetId === undefined ||
+      candidate.repeatPresetId === null ||
+      typeof candidate.repeatPresetId === "string")
   );
 }
 

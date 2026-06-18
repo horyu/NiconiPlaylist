@@ -15,7 +15,14 @@ const PLAYLIST_JSON_VERSION = 1;
 
 export type PlaylistJsonDraft = Pick<
   Playlist,
-  "createdAt" | "updatedAt" | "lastPlayedAt" | "lastCompletedAt" | "memo" | "title" | "videoIds"
+  | "createdAt"
+  | "updatedAt"
+  | "lastPlayedAt"
+  | "lastCompletedAt"
+  | "memo"
+  | "repeatPresetId"
+  | "title"
+  | "videoIds"
 >;
 
 export type PlaylistJsonPayload = {
@@ -52,6 +59,7 @@ function normalizePlaylistJsonDraft(value: unknown): PlaylistJsonDraft {
     lastPlayedAt: playlistCandidate.lastPlayedAt as string | null,
     memo: playlistCandidate.memo,
     title: playlistCandidate.title,
+    repeatPresetId: playlistCandidate.repeatPresetId,
     updatedAt: playlistCandidate.updatedAt as string,
     videoIds: playlistCandidate.videoIds as string[],
   };
@@ -146,6 +154,7 @@ export async function exportPlaylistJson(
       lastPlayedAt: playlist.lastPlayedAt,
       memo: options?.includeMemo ? playlist.memo : undefined,
       title: options?.includeTitle ? playlist.title : undefined,
+      repeatPresetId: playlist.repeatPresetId,
       updatedAt: playlist.updatedAt,
       videoIds: [...playlist.videoIds],
     },

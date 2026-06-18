@@ -20,7 +20,7 @@ function normalizeOptionalText(value: string | undefined): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-type PlaylistDraft = Pick<Playlist, "videoIds" | "title" | "memo"> &
+type PlaylistDraft = Pick<Playlist, "videoIds" | "title" | "memo" | "repeatPresetId"> &
   Partial<Pick<Playlist, "createdAt" | "updatedAt" | "lastPlayedAt" | "lastCompletedAt">>;
 type CreateStoredPlaylistOptions = {
   defaultTitleSource?: string;
@@ -62,6 +62,7 @@ export async function createStoredPlaylist(
         options?.defaultTitleSource ?? DEFAULT_PLAYLIST_TITLE_SOURCE.videoIdInput,
       ),
     memo: normalizeOptionalText(draft.memo),
+    repeatPresetId: draft.repeatPresetId,
     videoIds: draft.videoIds,
   };
 

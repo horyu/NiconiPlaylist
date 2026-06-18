@@ -89,4 +89,39 @@ describe("storageSchema", () => {
     expect(normalized.owners).toEqual({});
     expect(normalized.videoMetadata).toEqual({});
   });
+
+  test("プレイリスト固有の各動画リピート設定は存在するプリセットだけ保持する", () => {
+    const normalized = normalizeStorageData({
+      data: {
+        playbackSettings: {
+          activeRepeatPresetId: "global",
+          playlistRepeatEnabled: false,
+          presets: [{ count: 2, id: "global", mode: "count" }],
+        },
+        playlists: [
+          {
+            ...playlist,
+            repeatPresetId: "global",
+            id: "valid-playlist",
+          },
+          {
+            ...playlist,
+            repeatPresetId: null,
+            id: "none-playlist",
+          },
+          {
+            ...playlist,
+            repeatPresetId: "missing",
+            id: "invalid-playlist",
+          },
+        ],
+      },
+    });
+
+    expect(normalized.playlists).toEqual([
+      expect.objectContaining({ repeatPresetId: "global", id: "valid-playlist" }),
+      expect.objectContaining({ repeatPresetId: null, id: "none-playlist" }),
+      expect.objectContaining({ repeatPresetId: undefined, id: "invalid-playlist" }),
+    ]);
+  });
 });

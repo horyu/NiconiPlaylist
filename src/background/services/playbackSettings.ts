@@ -31,6 +31,7 @@ export async function updateStoredPlaybackSettings(
 }
 
 export type PlaybackSettingsDraft = {
+  activeRepeatPresetId: string | null;
   completion: PlaybackCompletionSettings;
   navigation: PlaybackNavigationSettings;
   presets: RepeatPreset[];

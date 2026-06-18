@@ -72,7 +72,6 @@ function Popup() {
   const [popupState, { refetch }] = createResource(getPopupState);
   const [feedback, setFeedback] = createSignal<string | null>(null);
   const [manualScrollRequestKey, setManualScrollRequestKey] = createSignal(0);
-  const [selectedRepeatPresetId, setSelectedRepeatPresetId] = createSignal("none");
   const [playbackSettingsDraft, setPlaybackSettingsDraft] = createSignal<PlaybackSettings | null>(
     null,
   );
@@ -141,15 +140,42 @@ function Popup() {
     (popupState()?.playbackContexts ?? []).some((context) => context.playlistId === playlistId);
   const currentPlaybackSettings = () =>
     playbackSettingsDraft() ?? popupState()?.playbackSettings ?? null;
-  const perVideoRepeatStatusLabel = createMemo(() => {
+  const globalRepeatPresetLabel = createMemo(() => {
     const playbackSettings = currentPlaybackSettings();
 
-    if (!playbackSettings || selectedRepeatPresetId() === "none") {
+    if (!playbackSettings?.activeRepeatPresetId) {
+      return "なし";
+    }
+
+    const preset = playbackSettings.presets.find(
+      (candidate) => candidate.id === playbackSettings.activeRepeatPresetId,
+    );
+
+    return preset ? formatRepeatPresetLabel(preset, { includeRepeatSuffix: false }) : "なし";
+  });
+  const playlistRepeatSelectValue = createMemo(() => {
+    const repeatPresetId = activePlaylist()?.repeatPresetId;
+
+    if (repeatPresetId === undefined) {
+      return "global";
+    }
+
+    return repeatPresetId ?? "none";
+  });
+  const perVideoRepeatStatusLabel = createMemo(() => {
+    const playbackSettings = currentPlaybackSettings();
+    const playlist = activePlaylist();
+    const effectiveRepeatPresetId =
+      playlist?.repeatPresetId === undefined
+        ? playbackSettings?.activeRepeatPresetId
+        : playlist.repeatPresetId;
+
+    if (!playbackSettings || !effectiveRepeatPresetId) {
       return "なし";
     }
 
     const activePreset = playbackSettings.presets.find(
-      (preset) => preset.id === selectedRepeatPresetId(),
+      (preset) => preset.id === effectiveRepeatPresetId,
     );
 
     return activePreset
@@ -191,7 +217,6 @@ function Popup() {
     }
 
     setPlaybackSettingsDraft(playbackSettings);
-    setSelectedRepeatPresetId(playbackSettings.activeRepeatPresetId ?? "none");
   });
 
   createEffect(() => {
@@ -230,7 +255,8 @@ function Popup() {
       if (
         changes[STORAGE_KEYS.playlists] ||
         changes[STORAGE_KEYS.lastActivePlaylistId] ||
-        changes[STORAGE_KEYS.playbackContexts]
+        changes[STORAGE_KEYS.playbackContexts] ||
+        changes[STORAGE_KEYS.playbackSettings]
       ) {
         void refetch();
         void refreshAliveTabMap();
@@ -383,27 +409,23 @@ function Popup() {
     window.close();
   }
 
-  async function handleSelectRepeatPreset(nextValue: string) {
-    const playbackSettings = currentPlaybackSettings();
+  async function handleSelectPlaylistRepeatPreset(nextValue: string) {
+    const playlist = activePlaylist();
 
-    setSelectedRepeatPresetId(nextValue);
-
-    if (!playbackSettings) {
-      setFeedback("リピート設定を取得できません。");
+    if (!playlist) {
+      setFeedback("プレイリストを取得できません。");
       return;
     }
 
     setFeedback(null);
 
     try {
-      const nextPlaybackSettings = await updateStoredPlaybackSettings((currentPlaybackSettings) =>
-        sanitizePlaybackSettings({
-          ...currentPlaybackSettings,
-          activeRepeatPresetId: nextValue === "none" ? null : nextValue,
-        }),
-      );
+      await updateStoredPlaylist(playlist.id, {
+        repeatPresetId:
+          nextValue === "global" ? undefined : nextValue === "none" ? null : nextValue,
+      });
 
-      setPlaybackSettingsDraft(nextPlaybackSettings);
+      await refetch();
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "リピート設定の更新に失敗しました。");
     }
@@ -411,7 +433,6 @@ function Popup() {
 
   async function handleTogglePlaylistRepeatEnabled() {
     const playbackSettings = currentPlaybackSettings();
-    const selectedRepeatPresetIdValue = selectedRepeatPresetId();
 
     if (!playbackSettings) {
       setFeedback("再生設定を取得できません。");
@@ -425,8 +446,6 @@ function Popup() {
         sanitizePlaybackSettings({
           ...currentPlaybackSettings,
           playlistRepeatEnabled: !currentPlaybackSettings.playlistRepeatEnabled,
-          activeRepeatPresetId:
-            selectedRepeatPresetIdValue === "none" ? null : selectedRepeatPresetIdValue,
         }),
       );
 
@@ -594,9 +613,7 @@ function Popup() {
                 <Show when={showPlaybackSettings()}>
                   <div class="flex flex-wrap items-center gap-3 rounded-xl bg-stone-900/40 px-3">
                     <div class="flex items-center gap-[2px]">
-                      <span class="text-xs font-medium text-stone-200">
-                        プレイリスト全体のリピート
-                      </span>
+                      <span class="text-xs font-medium text-stone-200">プレイリスト全体:</span>
                       <button
                         type="button"
                         class={`inline-flex w-12 justify-center rounded-full border px-3 py-1 text-xs font-medium transition ${
@@ -611,23 +628,19 @@ function Popup() {
                     </div>
 
                     <div class="flex items-center gap-[2px]">
-                      <span class="text-xs font-medium text-stone-200">各動画のリピート</span>
+                      <span class="text-xs font-medium text-stone-200">各動画:</span>
                       <select
                         class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
-                        value={selectedRepeatPresetId()}
+                        value={playlistRepeatSelectValue()}
                         onChange={(event) =>
-                          void handleSelectRepeatPreset(event.currentTarget.value)
+                          void handleSelectPlaylistRepeatPreset(event.currentTarget.value)
                         }
                       >
-                        <option value="none" selected={selectedRepeatPresetId() === "none"}>
-                          なし
-                        </option>
+                        <option value="global">共通（{globalRepeatPresetLabel()}）</option>
+                        <option value="none">なし</option>
                         <For each={currentPlaybackSettings()?.presets ?? []}>
                           {(preset) => (
-                            <option
-                              value={preset.id}
-                              selected={selectedRepeatPresetId() === preset.id}
-                            >
+                            <option value={preset.id}>
                               {formatRepeatPresetLabel(preset, {
                                 includeRepeatSuffix: false,
                               })}

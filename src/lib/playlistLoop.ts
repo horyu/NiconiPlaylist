@@ -3,6 +3,7 @@ import type {
   PlaybackNavigationSettings,
   PlaybackResumeTabMode,
   PlaybackSettings,
+  Playlist,
   RepeatPreset,
   RepeatPresetMode,
 } from "@/lib/types";
@@ -170,6 +171,26 @@ export function resolveActiveRepeatPreset(settings: PlaybackSettings): RepeatPre
   }
 
   return settings.presets.find((preset) => preset.id === settings.activeRepeatPresetId) ?? null;
+}
+
+export function resolvePlaylistPlaybackSettings(
+  globalSettings: PlaybackSettings,
+  playlist: Pick<Playlist, "repeatPresetId"> | null | undefined,
+): PlaybackSettings {
+  if (!playlist || playlist.repeatPresetId === undefined) {
+    return globalSettings;
+  }
+
+  const activeRepeatPresetId =
+    typeof playlist.repeatPresetId === "string" &&
+    globalSettings.presets.some((preset) => preset.id === playlist.repeatPresetId)
+      ? playlist.repeatPresetId
+      : null;
+
+  return {
+    ...globalSettings,
+    activeRepeatPresetId,
+  };
 }
 
 export function formatRepeatPresetLabel(

@@ -1,4 +1,4 @@
-import { createSignal, Index, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, For, Index, onCleanup, onMount, Show } from "solid-js";
 
 import completionSoundPath from "@/assets/ui-soft-glass-ping.m4a";
 import {
@@ -10,6 +10,7 @@ import {
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
   DEFAULT_PLAYBACK_RESUME_TAB_MODE,
+  formatRepeatPresetLabel,
 } from "@/lib/playlistLoop";
 import { playRepeatedAudio } from "@/lib/playRepeatedAudio";
 import type {
@@ -53,6 +54,7 @@ function clampInteger(value: string, minimum: number, maximum: number, fallback:
 }
 
 export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
+  const [activeRepeatPresetId, setActiveRepeatPresetId] = createSignal<string | null>(null);
   const [presets, setPresets] = createSignal<RepeatPreset[]>([]);
   const [completionSettings, setCompletionSettings] = createSignal<PlaybackCompletionSettings>({
     ...DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
@@ -66,6 +68,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   const [loaded, setLoaded] = createSignal(false);
   const autoSaveQueue = createAutoSaveQueue({
     getSnapshot: () => ({
+      activeRepeatPresetId: activeRepeatPresetId(),
       completion: completionSettings(),
       navigation: navigationSettings(),
       presets: presets(),
@@ -85,6 +88,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
 
   onMount(() => {
     void getStoredPlaybackSettings().then((playbackSettings) => {
+      setActiveRepeatPresetId(playbackSettings.activeRepeatPresetId);
       setPresets(playbackSettings.presets);
       setCompletionSettings(playbackSettings.completion);
       setNavigationSettings(playbackSettings.navigation);
@@ -127,6 +131,9 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
 
   function handleDeletePreset(presetId: string) {
     setPresets((currentPresets) => currentPresets.filter((preset) => preset.id !== presetId));
+    if (activeRepeatPresetId() === presetId) {
+      setActiveRepeatPresetId(null);
+    }
     scheduleAutoSave(0);
   }
 
@@ -331,9 +338,34 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
           <div class="space-y-1">
             <p class="text-xs font-medium text-stone-100">各動画のリピート</p>
             <p class="text-xs text-stone-500">
-              popup から選ぶ各動画リピートの候補を追加・編集します。
+              各動画は、ここで選ぶ共通設定またはプレイリストごとの設定に従って繰り返し再生されます。
             </p>
           </div>
+
+          <label class="flex flex-wrap items-center gap-[2px] text-xs text-stone-300">
+            <span class="font-medium text-stone-100">共通設定</span>
+            <select
+              class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100 outline-none transition focus:border-stone-500"
+              value={activeRepeatPresetId() ?? "none"}
+              onChange={(event) => {
+                const nextValue = event.currentTarget.value;
+
+                setActiveRepeatPresetId(nextValue === "none" ? null : nextValue);
+                scheduleAutoSave(0);
+              }}
+            >
+              <option value="none" selected={activeRepeatPresetId() === null}>
+                なし
+              </option>
+              <For each={presets()}>
+                {(preset) => (
+                  <option value={preset.id} selected={activeRepeatPresetId() === preset.id}>
+                    {formatRepeatPresetLabel(preset, { includeRepeatSuffix: false })}
+                  </option>
+                )}
+              </For>
+            </select>
+          </label>
 
           <div class="flex flex-wrap gap-2">
             <button
