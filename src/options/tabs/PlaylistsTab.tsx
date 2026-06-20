@@ -508,7 +508,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
           </p>
         }
       >
-        <Match when={props.loading}>
+        <Match when={props.loading && !props.state}>
           <p class="text-sm text-stone-400">読み込み中...</p>
         </Match>
 
