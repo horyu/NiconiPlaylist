@@ -301,11 +301,21 @@ function forceNavigateToExpectedNextVideo(expectedNextVideoId: string): void {
     return;
   }
 
+  const currentVideoId = getCurrentWatchVideoId();
+
   console.warn("NiconiPlaylist detected unexpected next video and is forcing navigation.", {
-    currentVideoId: getCurrentWatchVideoId(),
+    currentVideoId,
     currentUrl: location.href,
     expectedNextVideoId,
     expectedNextVideoUrl,
+  });
+  void browser.runtime.sendMessage({
+    type: "watch:record-navigation-debug-event",
+    reason: "force-expected-navigation-requested",
+    currentUrl: location.href,
+    currentVideoId,
+    expectedVideoId: expectedNextVideoId,
+    expectedVideoUrl: expectedNextVideoUrl,
   });
   persistLoopProgressForForcedNavigation(expectedNextVideoId);
   location.href = expectedNextVideoUrl;
@@ -407,6 +417,14 @@ function initWatchLocationObserver(): void {
 
     switch (transition.command.type) {
       case "force-expected-navigation":
+        void browser.runtime.sendMessage({
+          type: "watch:record-navigation-debug-event",
+          reason: "unexpected-navigation-detected",
+          currentUrl: location.href,
+          currentVideoId,
+          expectedVideoId: transition.command.expectedNextVideoId,
+          expectedVideoUrl: buildWatchUrl(transition.command.expectedNextVideoId),
+        });
         forceNavigateToExpectedNextVideo(transition.command.expectedNextVideoId);
         return;
       case "route-ready":

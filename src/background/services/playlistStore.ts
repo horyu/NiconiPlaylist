@@ -248,6 +248,37 @@ export async function recordContentPlaybackDebugEvent(
   });
 }
 
+export async function recordWatchNavigationDebugEvent(
+  tabId: number,
+  event: {
+    reason: string;
+    currentUrl: string;
+    currentVideoId: VideoId | null;
+    expectedVideoId: VideoId;
+    expectedVideoUrl: string;
+  },
+): Promise<void> {
+  const playbackContexts = await getStoredPlaybackContexts();
+  const previousPlaybackContext =
+    playbackContexts.find((context) => context.tabId === tabId) ?? null;
+  const playlists = previousPlaybackContext !== null ? await getStoredPlaylists() : [];
+  const playlist = previousPlaybackContext
+    ? (playlists.find((candidate) => candidate.id === previousPlaybackContext.playlistId) ?? null)
+    : null;
+
+  await recordPlaybackDebugEvent("watch-navigation", event.reason, {
+    playlistId: previousPlaybackContext?.playlistId ?? null,
+    tabId,
+    videoId: event.currentVideoId,
+    currentIndex: previousPlaybackContext?.currentIndex ?? null,
+    playlistVideoCount: playlist?.videoIds.length ?? null,
+    previousPlaybackContext,
+    currentUrl: event.currentUrl,
+    expectedVideoId: event.expectedVideoId,
+    expectedVideoUrl: event.expectedVideoUrl,
+  });
+}
+
 export async function getLastActivePlaylistId(): Promise<PlaylistId | null> {
   const { lastActivePlaylistId } = await getStorageData(["lastActivePlaylistId"]);
   return lastActivePlaylistId;

@@ -193,4 +193,45 @@ describe("handleWatchMessage", () => {
     expect(response?.nextVideoId).toBe("so5364283");
     expect(sessionStorageValues.playbackEndNavigationOverrides).toBeUndefined();
   });
+
+  test("想定外遷移の詳細をデバッグイベントへ保存する", async () => {
+    setStoredPlaybackState({ playlistId: "playlist-1", tabId: 1, currentIndex: 0 });
+    const { handleWatchMessage } = await import("./watch");
+
+    await handleWatchMessage(
+      {
+        type: "watch:record-navigation-debug-event",
+        reason: "unexpected-navigation-detected",
+        currentUrl: "https://www.nicovideo.jp/watch/sm1",
+        currentVideoId: "sm1",
+        expectedVideoId: "sm9",
+        expectedVideoUrl: "https://www.nicovideo.jp/watch/sm9",
+      },
+      {
+        tab: {
+          id: 1,
+        },
+      },
+    );
+
+    expect(localStorageValues.np_playback_debug_events).toEqual([
+      expect.objectContaining({
+        type: "watch-navigation",
+        reason: "unexpected-navigation-detected",
+        playlistId: "playlist-1",
+        tabId: 1,
+        videoId: "sm1",
+        currentIndex: 0,
+        playlistVideoCount: 2,
+        previousPlaybackContext: {
+          playlistId: "playlist-1",
+          tabId: 1,
+          currentIndex: 0,
+        },
+        currentUrl: "https://www.nicovideo.jp/watch/sm1",
+        expectedVideoId: "sm9",
+        expectedVideoUrl: "https://www.nicovideo.jp/watch/sm9",
+      }),
+    ]);
+  });
 });

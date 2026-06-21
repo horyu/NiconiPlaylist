@@ -16,6 +16,7 @@ import {
   markStoredPlaylistCompletedByTabId,
   recordPlaybackDebugEvent,
   recordContentPlaybackDebugEvent,
+  recordWatchNavigationDebugEvent,
   resolveNextVideoForPlaybackContext,
   syncPlaybackContextForVideo,
 } from "@/background/services/playlistStore";
@@ -213,6 +214,10 @@ export async function handleWatchMessage(
       await recordContentPlaybackDebugEvent(tabId, event);
       return undefined;
     }
+
+    case "watch:record-navigation-debug-event":
+      await recordWatchNavigationDebugEvent(tabId, message);
+      return undefined;
 
     case "watch:init-location-observer":
       await browser.scripting.executeScript({

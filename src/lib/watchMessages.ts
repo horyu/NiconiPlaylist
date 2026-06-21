@@ -45,6 +45,15 @@ export type WatchRecordPlaybackDebugEventMessage = {
   videoId: VideoId | null;
 };
 
+export type WatchRecordNavigationDebugEventMessage = {
+  type: "watch:record-navigation-debug-event";
+  reason: "unexpected-navigation-detected" | "force-expected-navigation-requested";
+  currentUrl: string;
+  currentVideoId: VideoId | null;
+  expectedVideoId: VideoId;
+  expectedVideoUrl: string;
+};
+
 export type WatchInitLocationObserverMessage = {
   type: "watch:init-location-observer";
 };
@@ -62,7 +71,8 @@ export type WatchMessage =
   | WatchClearPlaybackContextMessage
   | WatchFocusTabMessage
   | WatchShowCompletionAlertMessage
-  | WatchRecordPlaybackDebugEventMessage;
+  | WatchRecordPlaybackDebugEventMessage
+  | WatchRecordNavigationDebugEventMessage;
 
 export type WatchPlaybackContextResponse = {
   forceSkipCurrentVideoRepeat?: boolean;
