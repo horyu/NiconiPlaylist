@@ -24,6 +24,7 @@ import { isWatchUrl } from "@/lib/nicovideoUrl";
 import { formatRepeatPresetLabel, sanitizePlaybackSettings } from "@/lib/playlistLoop";
 import type { PopupMessage, PopupPlaybackTransitionMode } from "@/lib/popupMessages";
 import { STORAGE_KEYS } from "@/lib/storageSchema";
+import { isPlaybackContext } from "@/lib/typeGuards";
 import type { PlaybackSettings, Playlist, PlaylistId } from "@/lib/types";
 import { PopupPlaylistVideoList } from "@/popup/components/PopupPlaylistVideoList";
 import {
@@ -33,6 +34,8 @@ import {
 } from "@/popup/hooks/usePopupPlaybackState";
 
 type StorageChanges = Record<string, { oldValue?: unknown; newValue?: unknown }>;
+
+const WATCH_VIDEO_ID_PATH_PATTERN = /^\/watch\/([^/]+)\/?$/;
 
 async function resolveAliveTabIds(tabIds: number[]): Promise<Set<number>> {
   const settledTabs = await Promise.allSettled(
@@ -66,6 +69,34 @@ function formatPlaylistOptionLabel(playlist: Playlist, isPlaying: boolean): stri
 
 function comparePlaylistsByCreatedAtDesc(left: Playlist, right: Playlist): number {
   return right.createdAt.localeCompare(left.createdAt);
+}
+
+function getWatchVideoId(url: string | null | undefined): string | null {
+  if (typeof url !== "string" || !isWatchUrl(url)) {
+    return null;
+  }
+
+  try {
+    return new URL(url).pathname.match(WATCH_VIDEO_ID_PATH_PATTERN)?.[1] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function hasPlaybackContextReachedIndex(
+  value: unknown,
+  playlistId: PlaylistId,
+  index: number,
+): boolean {
+  return (
+    Array.isArray(value) &&
+    value.some(
+      (candidate) =>
+        isPlaybackContext(candidate) &&
+        candidate.playlistId === playlistId &&
+        candidate.currentIndex === index,
+    )
+  );
 }
 
 function Popup() {
@@ -136,6 +167,12 @@ function Popup() {
 
     return popupState()?.pendingPlaybackEndNavigationByPlaylistId[playlist.id] ?? null;
   };
+  const pendingPlaybackEndNavigationVideoId = createMemo(() => {
+    const playlist = activePlaylist();
+    const pendingIndex = pendingPlaybackEndNavigationIndex();
+
+    return playlist && pendingIndex !== null ? (playlist.videoIds[pendingIndex] ?? null) : null;
+  });
   const hasPlaylistPlaybackContext = (playlistId: PlaylistId) =>
     (popupState()?.playbackContexts ?? []).some((context) => context.playlistId === playlistId);
   const currentPlaybackSettings = () =>
@@ -252,6 +289,20 @@ function Popup() {
 
   onMount(() => {
     const handleStorageChanged = (changes: StorageChanges) => {
+      const playlist = activePlaylist();
+      const pendingIndex = pendingPlaybackEndNavigationIndex();
+      const playbackContextsChange = changes[STORAGE_KEYS.playbackContexts];
+
+      if (
+        playlist &&
+        pendingIndex !== null &&
+        playbackContextsChange &&
+        hasPlaybackContextReachedIndex(playbackContextsChange.newValue, playlist.id, pendingIndex)
+      ) {
+        window.close();
+        return;
+      }
+
       if (
         changes[STORAGE_KEYS.playlists] ||
         changes[STORAGE_KEYS.lastActivePlaylistId] ||
@@ -267,7 +318,22 @@ function Popup() {
       }
     };
     const handleTabUpdated = (tabId: number, changeInfo: { url?: string }) => {
-      if (tabId !== popupState()?.activeTabId || changeInfo.url === undefined) {
+      if (changeInfo.url === undefined) {
+        return;
+      }
+
+      const pendingVideoId = pendingPlaybackEndNavigationVideoId();
+
+      if (
+        pendingVideoId !== null &&
+        tabId === playbackTabId() &&
+        getWatchVideoId(changeInfo.url) === pendingVideoId
+      ) {
+        window.close();
+        return;
+      }
+
+      if (tabId !== popupState()?.activeTabId) {
         return;
       }
 
