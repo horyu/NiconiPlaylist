@@ -21,9 +21,9 @@
     "test:watch": "bun test --watch"
   },
   "dependencies": {
-    "@voidzero-dev/vite-plus-core": "0.2.2",
+    "@voidzero-dev/vite-plus-core": "0.2.4",
     "solid-js": "1.9.13",
-    "vite-plus": "0.2.2"
+    "vite-plus": "0.2.4"
   },
   "devDependencies": {
     "@e18e/eslint-plugin": "0.5.1",
@@ -35,6 +35,6 @@
     "wxt": "0.20.27"
   },
   "overrides": {
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.2"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.4"
   }
 }
