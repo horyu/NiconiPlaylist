@@ -5,7 +5,9 @@ import {
   DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
   DEFAULT_PLAYBACK_RESUME_TAB_MODE,
   DEFAULT_REPEAT_PRESETS,
+  createCombinedRepeatPreset,
   createRepeatPreset,
+  formatRepeatPresetLabel,
   resolveActiveRepeatPreset,
   resolvePlaylistPlaybackSettings,
   sanitizePlaybackSettings,
@@ -97,6 +99,60 @@ describe("playlistLoop", () => {
         120,
       ),
     ).toBe(false);
+  });
+
+  test("min モードでは回数または時間の短い方に達したら次へ進む", () => {
+    const settings = sanitizePlaybackSettings({
+      playlistRepeatEnabled: false,
+      activeRepeatPresetId: "min-2-300",
+      presets: [createCombinedRepeatPreset("min", 2, 300, "min-2-300")],
+    });
+
+    expect(shouldRepeatCurrentVideo(settings, 1, 30)).toBe(true);
+    expect(shouldRepeatCurrentVideo(settings, 2, 30)).toBe(false);
+  });
+
+  test("max モードでは回数と時間の長い方に達するまでループする", () => {
+    const settings = sanitizePlaybackSettings({
+      playlistRepeatEnabled: false,
+      activeRepeatPresetId: "max-3-600",
+      presets: [createCombinedRepeatPreset("max", 3, 600, "max-3-600")],
+    });
+
+    expect(shouldRepeatCurrentVideo(settings, 3, 30)).toBe(true);
+    expect(shouldRepeatCurrentVideo(settings, 20, 30)).toBe(false);
+  });
+
+  test("複合条件は動画時間を取得できない場合に回数条件だけで判定する", () => {
+    const minSettings = sanitizePlaybackSettings({
+      playlistRepeatEnabled: false,
+      activeRepeatPresetId: "min-3-300",
+      presets: [createCombinedRepeatPreset("min", 3, 300, "min-3-300")],
+    });
+    const maxSettings = sanitizePlaybackSettings({
+      playlistRepeatEnabled: false,
+      activeRepeatPresetId: "max-3-300",
+      presets: [createCombinedRepeatPreset("max", 3, 300, "max-3-300")],
+    });
+
+    expect(shouldRepeatCurrentVideo(minSettings, 2, Number.NaN)).toBe(true);
+    expect(shouldRepeatCurrentVideo(minSettings, 3, Number.NaN)).toBe(false);
+    expect(shouldRepeatCurrentVideo(maxSettings, 2, Number.NaN)).toBe(true);
+    expect(shouldRepeatCurrentVideo(maxSettings, 3, Number.NaN)).toBe(false);
+  });
+
+  test("複合条件を正規化して表示できる", () => {
+    const preset = createCombinedRepeatPreset("min", 0, 0, "min");
+
+    expect(preset).toEqual({
+      id: "min",
+      mode: "min",
+      count: 1,
+      durationSeconds: 1,
+    });
+    expect(formatRepeatPresetLabel(createCombinedRepeatPreset("max", 3, 600, "max"))).toBe(
+      "長い方（3回 / 10分）リピート",
+    );
   });
 
   test("sanitize は未保存時だけ初期プリセットを補完し、無効な active id を解除する", () => {

@@ -7,6 +7,7 @@ import {
 } from "@/background/services/playbackSettings";
 import {
   createRepeatPreset,
+  createCombinedRepeatPreset,
   DEFAULT_PLAYBACK_COMPLETION_SETTINGS,
   DEFAULT_PLAYBACK_NAVIGATION_SETTINGS,
   DEFAULT_PLAYBACK_RESUME_TAB_MODE,
@@ -129,6 +130,25 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
     scheduleAutoSave(0);
   }
 
+  function handleAddCombinedPreset(mode: "min" | "max") {
+    setPresets((currentPresets) => [
+      ...currentPresets,
+      createCombinedRepeatPreset(mode, 2, 5 * 60),
+    ]);
+    scheduleAutoSave(0);
+  }
+
+  function handleUpdateCombinedPresetMode(presetId: string, mode: "min" | "max") {
+    setPresets((currentPresets) =>
+      currentPresets.map((preset) =>
+        preset.id === presetId && (preset.mode === "min" || preset.mode === "max")
+          ? createCombinedRepeatPreset(mode, preset.count, preset.durationSeconds, preset.id)
+          : preset,
+      ),
+    );
+    scheduleAutoSave(0);
+  }
+
   function handleDeletePreset(presetId: string) {
     setPresets((currentPresets) => currentPresets.filter((preset) => preset.id !== presetId));
     if (activeRepeatPresetId() === presetId) {
@@ -142,9 +162,13 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
 
     setPresets((currentPresets) =>
       currentPresets.map((preset) =>
-        preset.id === presetId && preset.mode === "count"
-          ? createRepeatPreset("count", count, preset.id)
-          : preset,
+        preset.id !== presetId
+          ? preset
+          : preset.mode === "count"
+            ? createRepeatPreset("count", count, preset.id)
+            : preset.mode === "min" || preset.mode === "max"
+              ? createCombinedRepeatPreset(preset.mode, count, preset.durationSeconds, preset.id)
+              : preset,
       ),
     );
   }
@@ -156,7 +180,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
   ) {
     setPresets((currentPresets) =>
       currentPresets.map((preset) => {
-        if (preset.id !== presetId || preset.mode !== "duration") {
+        if (preset.id !== presetId || preset.mode === "count") {
           return preset;
         }
 
@@ -165,7 +189,14 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
         const nextSeconds = field === "seconds" ? parsePositiveInteger(value, 0) : Number(seconds);
         const durationSeconds = nextMinutes * 60 + Math.min(nextSeconds, 59);
 
-        return createRepeatPreset("duration", Math.max(durationSeconds, 1), preset.id);
+        return preset.mode === "duration"
+          ? createRepeatPreset("duration", Math.max(durationSeconds, 1), preset.id)
+          : createCombinedRepeatPreset(
+              preset.mode,
+              preset.count,
+              Math.max(durationSeconds, 1),
+              preset.id,
+            );
       }),
     );
   }
@@ -388,6 +419,16 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 各動画を指定時間以上になるまで繰り返します。
               </span>
             </button>
+            <button
+              type="button"
+              class="flex w-[310px] flex-col items-start rounded-2xl border border-stone-700 bg-stone-900 px-3 py-2 text-left transition hover:border-stone-500 hover:bg-stone-800"
+              onClick={() => handleAddCombinedPreset("min")}
+            >
+              <span class="text-xs font-medium text-stone-100">複合リピートを追加</span>
+              <span class="text-xs text-stone-500">
+                回数と時間を組み合わせ、短い方または長い方を条件にできます。
+              </span>
+            </button>
           </div>
 
           <div class="space-y-2">
@@ -397,14 +438,14 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                 const durationParts = () => {
                   const presetValue = currentPreset();
 
-                  return presetValue.mode === "duration"
+                  return presetValue.mode !== "count"
                     ? splitDurationSeconds(presetValue.durationSeconds)
                     : { minutes: "0", seconds: "0" };
                 };
                 const countText = () => {
                   const presetValue = currentPreset();
 
-                  return presetValue.mode === "count" ? presetValue.count.toString() : "1";
+                  return presetValue.mode !== "duration" ? presetValue.count.toString() : "1";
                 };
 
                 return (
@@ -412,42 +453,113 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
                     <Show
                       when={currentPreset().mode === "count"}
                       fallback={
-                        <div class="flex flex-wrap items-center gap-2">
-                          <span>時間リピート</span>
-                          <input
-                            type="number"
-                            min="0"
-                            inputMode="numeric"
-                            value={durationParts().minutes}
-                            onInput={(event) =>
-                              handleUpdateDurationPreset(
-                                currentPreset().id,
-                                "minutes",
-                                event.currentTarget.value,
-                              )
-                            }
-                            onBlur={() => scheduleAutoSave(0)}
-                            class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
-                          />
-                          <span>分</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="59"
-                            inputMode="numeric"
-                            value={durationParts().seconds}
-                            onInput={(event) =>
-                              handleUpdateDurationPreset(
-                                currentPreset().id,
-                                "seconds",
-                                event.currentTarget.value,
-                              )
-                            }
-                            onBlur={() => scheduleAutoSave(0)}
-                            class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
-                          />
-                          <span>秒</span>
-                        </div>
+                        <Show
+                          when={currentPreset().mode === "duration"}
+                          fallback={
+                            <div class="flex flex-wrap items-center gap-2">
+                              <span>複合リピート</span>
+                              <select
+                                aria-label="複合条件の判定方法"
+                                class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                                value={currentPreset().mode}
+                                onChange={(event) =>
+                                  handleUpdateCombinedPresetMode(
+                                    currentPreset().id,
+                                    event.currentTarget.value as "min" | "max",
+                                  )
+                                }
+                              >
+                                <option value="min">短い方</option>
+                                <option value="max">長い方</option>
+                              </select>
+                              <input
+                                type="number"
+                                min="1"
+                                inputMode="numeric"
+                                value={countText()}
+                                onInput={(event) =>
+                                  handleUpdateCountPreset(
+                                    currentPreset().id,
+                                    event.currentTarget.value,
+                                  )
+                                }
+                                onBlur={() => scheduleAutoSave(0)}
+                                class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                              />
+                              <span>回 /</span>
+                              <input
+                                type="number"
+                                min="0"
+                                inputMode="numeric"
+                                value={durationParts().minutes}
+                                onInput={(event) =>
+                                  handleUpdateDurationPreset(
+                                    currentPreset().id,
+                                    "minutes",
+                                    event.currentTarget.value,
+                                  )
+                                }
+                                onBlur={() => scheduleAutoSave(0)}
+                                class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                              />
+                              <span>分</span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="59"
+                                inputMode="numeric"
+                                value={durationParts().seconds}
+                                onInput={(event) =>
+                                  handleUpdateDurationPreset(
+                                    currentPreset().id,
+                                    "seconds",
+                                    event.currentTarget.value,
+                                  )
+                                }
+                                onBlur={() => scheduleAutoSave(0)}
+                                class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                              />
+                              <span>秒</span>
+                            </div>
+                          }
+                        >
+                          <div class="flex flex-wrap items-center gap-2">
+                            <span>時間リピート</span>
+                            <input
+                              type="number"
+                              min="0"
+                              inputMode="numeric"
+                              value={durationParts().minutes}
+                              onInput={(event) =>
+                                handleUpdateDurationPreset(
+                                  currentPreset().id,
+                                  "minutes",
+                                  event.currentTarget.value,
+                                )
+                              }
+                              onBlur={() => scheduleAutoSave(0)}
+                              class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                            />
+                            <span>分</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max="59"
+                              inputMode="numeric"
+                              value={durationParts().seconds}
+                              onInput={(event) =>
+                                handleUpdateDurationPreset(
+                                  currentPreset().id,
+                                  "seconds",
+                                  event.currentTarget.value,
+                                )
+                              }
+                              onBlur={() => scheduleAutoSave(0)}
+                              class="w-14 rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100"
+                            />
+                            <span>秒</span>
+                          </div>
+                        </Show>
                       }
                     >
                       <div class="flex items-center gap-2">

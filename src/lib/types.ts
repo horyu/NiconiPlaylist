@@ -2,7 +2,7 @@ export type VideoId = string;
 
 export type PlaylistId = string;
 
-export type RepeatPresetMode = "count" | "duration";
+export type RepeatPresetMode = "count" | "duration" | "min" | "max";
 
 export type RepeatPreset =
   | {
@@ -13,6 +13,12 @@ export type RepeatPreset =
   | {
       id: string;
       mode: "duration";
+      durationSeconds: number;
+    }
+  | {
+      id: string;
+      mode: "min" | "max";
+      count: number;
       durationSeconds: number;
     };
 

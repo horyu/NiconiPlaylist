@@ -18,6 +18,12 @@ type RepeatPresetInput =
       id?: string;
       mode?: "duration";
       durationSeconds?: number;
+    }
+  | {
+      id?: string;
+      mode?: "min" | "max";
+      count?: number;
+      durationSeconds?: number;
     };
 
 type PlaybackSettingsInput = {
@@ -66,7 +72,7 @@ function createRepeatPresetId(): string {
 }
 
 export function createRepeatPreset(
-  mode: RepeatPresetMode,
+  mode: Extract<RepeatPresetMode, "count" | "duration">,
   value?: number,
   id?: string,
 ): RepeatPreset {
@@ -85,6 +91,20 @@ export function createRepeatPreset(
   };
 }
 
+export function createCombinedRepeatPreset(
+  mode: Extract<RepeatPresetMode, "min" | "max">,
+  count?: number,
+  durationSeconds?: number,
+  id?: string,
+): RepeatPreset {
+  return {
+    id: id ?? createRepeatPresetId(),
+    mode,
+    count: Math.max(Number.isInteger(count) ? (count ?? 1) : 1, 1),
+    durationSeconds: Math.max(Number.isInteger(durationSeconds) ? (durationSeconds ?? 1) : 1, 1),
+  };
+}
+
 function sanitizeRepeatPreset(preset: RepeatPresetInput): RepeatPreset | null {
   if (preset.mode === "count") {
     return createRepeatPreset("count", preset.count, preset.id);
@@ -92,6 +112,10 @@ function sanitizeRepeatPreset(preset: RepeatPresetInput): RepeatPreset | null {
 
   if (preset.mode === "duration") {
     return createRepeatPreset("duration", preset.durationSeconds, preset.id);
+  }
+
+  if (preset.mode === "min" || preset.mode === "max") {
+    return createCombinedRepeatPreset(preset.mode, preset.count, preset.durationSeconds, preset.id);
   }
 
   return null;
@@ -203,18 +227,28 @@ export function formatRepeatPresetLabel(
     return `${preset.count}回${suffix}`;
   }
 
-  const minutes = Math.floor(preset.durationSeconds / 60);
-  const seconds = preset.durationSeconds % 60;
+  const formatDuration = (durationSeconds: number) => {
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
 
-  if (seconds === 0) {
-    return `${minutes}分${suffix}`;
+    if (seconds === 0) {
+      return `${minutes}分`;
+    }
+
+    if (minutes === 0) {
+      return `${seconds}秒`;
+    }
+
+    return `${minutes}分${seconds}秒`;
+  };
+
+  if (preset.mode === "duration") {
+    return `${formatDuration(preset.durationSeconds)}${suffix}`;
   }
 
-  if (minutes === 0) {
-    return `${seconds}秒${suffix}`;
-  }
+  const modeLabel = preset.mode === "min" ? "短い方" : "長い方";
 
-  return `${minutes}分${seconds}秒${suffix}`;
+  return `${modeLabel}（${preset.count}回 / ${formatDuration(preset.durationSeconds)}）${suffix}`;
 }
 
 export function shouldRepeatCurrentVideo(
@@ -232,9 +266,25 @@ export function shouldRepeatCurrentVideo(
     return completedPlaybackCount < activeRepeatPreset.count;
   }
 
-  if (Number.isFinite(durationSeconds) && durationSeconds > 0) {
-    return completedPlaybackCount * durationSeconds < activeRepeatPreset.durationSeconds;
+  const hasValidDuration = Number.isFinite(durationSeconds) && durationSeconds > 0;
+
+  if (activeRepeatPreset.mode === "duration") {
+    return (
+      hasValidDuration &&
+      completedPlaybackCount * durationSeconds < activeRepeatPreset.durationSeconds
+    );
   }
 
-  return false;
+  const repeatByCount = completedPlaybackCount < activeRepeatPreset.count;
+
+  if (!hasValidDuration) {
+    return repeatByCount;
+  }
+
+  const repeatByDuration =
+    completedPlaybackCount * durationSeconds < activeRepeatPreset.durationSeconds;
+
+  return activeRepeatPreset.mode === "min"
+    ? repeatByCount && repeatByDuration
+    : repeatByCount || repeatByDuration;
 }

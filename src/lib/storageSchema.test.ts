@@ -69,6 +69,19 @@ describe("storageSchema", () => {
     expect(normalized.completion.soundRepeatCount).toBeGreaterThan(0);
   });
 
+  test("複合リピート条件を保持する", () => {
+    const normalized = normalizeStorageValue("playbackSettings", {
+      activeRepeatPresetId: "min",
+      playlistRepeatEnabled: false,
+      presets: [{ count: 2, durationSeconds: 300, id: "min", mode: "min" }],
+    });
+
+    expect(normalized.activeRepeatPresetId).toBe("min");
+    expect(normalized.presets).toEqual([
+      { count: 2, durationSeconds: 300, id: "min", mode: "min" },
+    ]);
+  });
+
   test("部分欠損データを default で補完し関連不整合を除外する", () => {
     const normalized = normalizeStorageData({
       data: {

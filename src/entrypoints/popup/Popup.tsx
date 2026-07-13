@@ -571,7 +571,7 @@ function Popup() {
                   <button
                     type="button"
                     onClick={() => setShowPlaybackSettings(true)}
-                    class="max-w-32 truncate rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-stone-300 transition hover:border-stone-600 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500"
+                    class="whitespace-nowrap rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-stone-300 transition hover:border-stone-600 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500"
                     title="リピート設定を表示"
                     aria-label="リピート設定を表示"
                   >
@@ -582,7 +582,7 @@ function Popup() {
                 <button
                   type="button"
                   onClick={() => setShowPlaybackSettings(false)}
-                  class="max-w-32 truncate rounded-full border border-stone-300 bg-white px-2 py-0.5 text-[10px] font-medium text-stone-900 transition hover:border-stone-200 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
+                  class="whitespace-nowrap rounded-full border border-stone-300 bg-white px-2 py-0.5 text-[10px] font-medium text-stone-900 transition hover:border-stone-200 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
                   title="リピート設定を閉じる"
                   aria-label="リピート設定を閉じる"
                 >
@@ -702,7 +702,7 @@ function Popup() {
                           void handleSelectPlaylistRepeatPreset(event.currentTarget.value)
                         }
                       >
-                        <option value="global">共通（{globalRepeatPresetLabel()}）</option>
+                        <option value="global">共通: {globalRepeatPresetLabel()}</option>
                         <option value="none">なし</option>
                         <For each={currentPlaybackSettings()?.presets ?? []}>
                           {(preset) => (

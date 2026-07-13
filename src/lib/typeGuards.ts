@@ -163,6 +163,17 @@ function isRepeatPreset(value: unknown): value is RepeatPreset {
     );
   }
 
+  if (candidate.mode === "min" || candidate.mode === "max") {
+    return (
+      typeof candidate.count === "number" &&
+      Number.isInteger(candidate.count) &&
+      candidate.count >= 1 &&
+      typeof candidate.durationSeconds === "number" &&
+      Number.isInteger(candidate.durationSeconds) &&
+      candidate.durationSeconds >= 1
+    );
+  }
+
   return false;
 }
 
