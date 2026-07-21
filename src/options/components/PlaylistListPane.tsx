@@ -17,7 +17,7 @@ function getPlaylistLabel(playlist: Playlist): string {
 
 export function PlaylistListPane(props: PlaylistListPaneProps) {
   return (
-    <section class="min-w-0 space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4">
+    <section class="min-w-0 space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4 xl:flex xl:h-full xl:flex-col">
       <div class="space-y-2">
         <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">Playlist List</p>
         <label class="block">
@@ -31,7 +31,7 @@ export function PlaylistListPane(props: PlaylistListPaneProps) {
         </label>
       </div>
 
-      <div class="max-h-[44rem] space-y-2 overflow-y-auto pr-1">
+      <div class="max-h-[44rem] space-y-2 overflow-y-auto pr-1 xl:max-h-none xl:min-h-0 xl:flex-1">
         <For each={props.playlists}>
           {(playlist) => {
             const isSelected = () => playlist.id === props.selectedPlaylistId;
