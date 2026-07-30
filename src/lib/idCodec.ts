@@ -35,14 +35,19 @@ function parseVideoId(videoId: string): { prefix: Prefix; numeric: number } {
     throw new Error("Invalid video ID.");
   }
 
-  const prefix = match[1] as Prefix;
-  const numeric = Number.parseInt(match[2], 10);
+  const [, prefix, numericPart] = match;
+
+  if (!prefix || !numericPart) {
+    throw new Error("Invalid video ID.");
+  }
+
+  const numeric = Number.parseInt(numericPart, 10);
 
   if (!Number.isSafeInteger(numeric) || numeric < 1 || numeric > MAX_VIDEO_NUMBER) {
     throw new Error("Invalid video ID numeric part.");
   }
 
-  return { prefix, numeric };
+  return { prefix: prefix as Prefix, numeric };
 }
 
 function assertSignedInt32(value: number, label: string) {

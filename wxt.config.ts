@@ -11,6 +11,17 @@ export default defineConfig({
   manifestVersion: 3,
   targetBrowsers: ["chrome", "firefox"],
   manifest: ({ browser }) => ({
+    browser_specific_settings:
+      browser === "firefox"
+        ? {
+            gecko: {
+              id: "niconiplaylist@horyu.github.io",
+              data_collection_permissions: {
+                required: ["browsingActivity"],
+              },
+            },
+          }
+        : undefined,
     permissions: [
       "storage",
       "tabs",

@@ -106,6 +106,11 @@ async function processQueuedVideoMetadata(): Promise<void> {
   try {
     while (queuedVideoIds.size > 0) {
       const [videoId] = queuedVideoIds;
+
+      if (!videoId) {
+        continue;
+      }
+
       queuedVideoIds.delete(videoId);
 
       const existingVideoMetadataMap = await getStoredVideoMetadataMap();
