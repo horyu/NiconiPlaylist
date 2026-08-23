@@ -161,6 +161,8 @@ watch ページにはニコニコ広告が存在し、シークバー上では�
 終了判定条件は以下。
 
 - `video.ended`
+- 次動画確認オーバーレイの `next_video_confirmation_cancel` と
+  `next_video_confirmation_play_now` がともに表示されている
 - `video.duration - video.currentTime <= 1s`
 - fallback として `aria-label="video - currentTime"` の `aria-valuenow >= video.duration`
 
@@ -176,7 +178,7 @@ watch ページにはニコニコ広告が存在し、シークバー上では�
 
 - ニコニコ動画側で Router 実装が変わると `navigate()` 分岐が壊れる可能性がある
 - `?from=0` の canonical 化挙動が変わると route-ready 判定が壊れる可能性がある
-- 広告動画やシークバー DOM の仕様変更で終了判定が影響を受ける可能性がある
+- 広告動画、シークバー、次動画確認オーバーレイの DOM / `data-element-name` の仕様変更で終了判定が影響を受ける可能性がある
 - `0` キーによる先頭再生の扱いが変わると、リピート時に強制復帰が頻発する可能性がある
 
 watch ページ連携に不具合が出た場合は、まず本書の前提に依存している箇所を見直す。

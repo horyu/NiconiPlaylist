@@ -27,6 +27,10 @@ const LOOP_PROGRESS_RESTORE_TTL_MS = 10_000;
 const ADVERTISEMENT_TITLE_FRAGMENT = "Advertisement";
 const ADVERTISEMENT_SRC_PREFIX = "https://dcdn.cdn.nimg.jp/nicoad/instream/video";
 const CURRENT_TIME_SLIDER_SELECTOR = '[aria-label="video - currentTime"][role="slider"]';
+const NEXT_VIDEO_CONFIRMATION_CANCEL_SELECTOR =
+  '[data-element-name="next_video_confirmation_cancel"]';
+const NEXT_VIDEO_CONFIRMATION_PLAY_NOW_SELECTOR =
+  '[data-element-name="next_video_confirmation_play_now"]';
 const WATCH_VIDEO_ID_PATH_PATTERN = /^\/watch\/((sm|so|nm)[1-9][0-9]{0,8})$/u;
 const PLAYLIST_COMPLETED_ALERT_MESSAGE = "プレイリストの再生が終了しました。";
 
@@ -53,8 +57,19 @@ function getCurrentTimeSliderValue(): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
+function hasNextVideoConfirmation(): boolean {
+  return (
+    document.querySelector(NEXT_VIDEO_CONFIRMATION_CANCEL_SELECTOR) !== null &&
+    document.querySelector(NEXT_VIDEO_CONFIRMATION_PLAY_NOW_SELECTOR) !== null
+  );
+}
+
 function isPlaybackEndedByPause(video: HTMLVideoElement): boolean {
   if (video.ended) {
+    return true;
+  }
+
+  if (hasNextVideoConfirmation()) {
     return true;
   }
 
