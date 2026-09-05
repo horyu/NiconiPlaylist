@@ -548,8 +548,8 @@ function Popup() {
   }
 
   return (
-    <main class="flex h-[600px] min-w-[30rem] max-w-[42rem] flex-col overflow-hidden bg-stone-950 text-stone-100">
-      <div class="mx-auto flex h-full w-full min-h-0 flex-col gap-3 px-3 py-3">
+    <main class="flex h-[600px] max-w-[42rem] min-w-[30rem] flex-col overflow-hidden bg-stone-950 text-stone-100">
+      <div class="mx-auto flex size-full min-h-0 flex-col gap-3 p-3">
         <div class="shrink-0 space-y-3">
           <div class="flex items-center justify-between gap-3">
             <div class="flex min-w-0 items-center gap-2">
@@ -557,7 +557,7 @@ function Popup() {
               <button
                 type="button"
                 onClick={() => void handleOpenOptionsPage()}
-                class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800"
+                class="inline-flex size-6 shrink-0 items-center justify-center rounded border border-stone-700 bg-stone-900 text-xs text-stone-200 transition hover:bg-stone-800"
                 title="オプションを開く"
                 aria-label="オプションを開く"
               >
@@ -571,7 +571,7 @@ function Popup() {
                   <button
                     type="button"
                     onClick={() => setShowPlaybackSettings(true)}
-                    class="whitespace-nowrap rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[10px] font-medium text-stone-300 transition hover:border-stone-600 hover:bg-stone-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500"
+                    class="rounded-full border border-stone-700 bg-stone-900 px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-stone-300 transition hover:border-stone-600 hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-500"
                     title="リピート設定を表示"
                     aria-label="リピート設定を表示"
                   >
@@ -582,7 +582,7 @@ function Popup() {
                 <button
                   type="button"
                   onClick={() => setShowPlaybackSettings(false)}
-                  class="whitespace-nowrap rounded-full border border-stone-300 bg-white px-2 py-0.5 text-[10px] font-medium text-stone-900 transition hover:border-stone-200 hover:bg-stone-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
+                  class="rounded-full border border-stone-300 bg-white px-2 py-0.5 text-[10px] font-medium whitespace-nowrap text-stone-900 transition hover:border-stone-200 hover:bg-stone-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-400"
                   title="リピート設定を閉じる"
                   aria-label="リピート設定を閉じる"
                 >
@@ -592,7 +592,7 @@ function Popup() {
               <button
                 type="button"
                 onClick={() => setShowMemoEditor((value) => !value)}
-                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition ${
+                class={`inline-flex size-6 shrink-0 items-center justify-center rounded border text-xs transition ${
                   showMemoEditor()
                     ? "border-stone-300 bg-white text-stone-900"
                     : "border-stone-700 bg-stone-900 text-stone-200 hover:bg-stone-800"
@@ -610,7 +610,7 @@ function Popup() {
                   void handleStepPlaybackIndexAfterCurrentEnded("previous");
                 }}
                 disabled={currentPlaybackIndex() === null || (currentPlaybackIndex() ?? 0) <= 0}
-                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600 ${
+                class={`inline-flex size-6 shrink-0 items-center justify-center rounded border text-xs transition disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600 ${
                   pendingPlaybackEndNavigationIndex() !== null &&
                   pendingPlaybackEndNavigationIndex() === (currentPlaybackIndex() ?? 0) - 1
                     ? "border-sky-500/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
@@ -632,7 +632,7 @@ function Popup() {
                   currentPlaybackIndex() === null ||
                   (currentPlaybackIndex() ?? -1) >= activePlaylistVideoCount() - 1
                 }
-                class={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded border text-xs transition disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600 ${
+                class={`inline-flex size-6 shrink-0 items-center justify-center rounded border text-xs transition disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600 ${
                   pendingPlaybackEndNavigationIndex() !== null &&
                   pendingPlaybackEndNavigationIndex() === (currentPlaybackIndex() ?? -1) + 1
                     ? "border-sky-500/40 bg-sky-500/10 text-sky-200 hover:bg-sky-500/20"
@@ -657,7 +657,7 @@ function Popup() {
 
         <Switch
           fallback={
-            <div class="space-y-2 rounded-xl bg-stone-900/40 px-3 py-3">
+            <div class="space-y-2 rounded-xl bg-stone-900/40 p-3">
               <p class="text-sm font-medium text-stone-200">保存済みプレイリストはありません。</p>
               <p class="text-sm leading-5 text-stone-400">
                 オプションページから共有 URL をインポートするか、新規作成してください。
@@ -720,7 +720,7 @@ function Popup() {
 
                 <div class="flex items-center gap-2">
                   <select
-                    class="w-full rounded-xl border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                    class="w-full rounded-xl border border-stone-700 bg-stone-900 px-3 py-2 text-sm text-stone-100 transition outline-none focus:border-stone-500"
                     value={popupState()?.lastActivePlaylistId ?? ""}
                     onChange={(event) => void handleActivate(event.currentTarget.value)}
                   >
@@ -762,7 +762,7 @@ function Popup() {
                     const isMemoDirty = () => (playlist().memo ?? "") !== memoDraft();
 
                     return (
-                      <div class="space-y-2 rounded-xl bg-stone-900/40 px-3 py-3">
+                      <div class="space-y-2 rounded-xl bg-stone-900/40 p-3">
                         <div class="flex items-center justify-between gap-2">
                           <span class="text-xs font-medium text-stone-200">プレイリストメモ</span>
                           <button
@@ -779,7 +779,7 @@ function Popup() {
                           </button>
                         </div>
                         <textarea
-                          class="h-28 max-h-40 min-h-24 w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                          class="h-28 max-h-40 min-h-24 w-full rounded-lg border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 transition outline-none focus:border-stone-500"
                           value={memoDraft()}
                           onInput={(event) => setMemoDraft(event.currentTarget.value)}
                           placeholder="このプレイリストのメモ"
@@ -791,7 +791,7 @@ function Popup() {
 
                 <Show when={activePlaylist() && !showMemoEditor() && activePlaylist()?.memo}>
                   {(memo) => (
-                    <p class="overflow-hidden text-xs leading-5 text-stone-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
+                    <p class="[display:-webkit-box] overflow-hidden text-xs leading-5 text-stone-500 [-webkit-box-orient:vertical] [-webkit-line-clamp:3]">
                       {memo()}
                     </p>
                   )}

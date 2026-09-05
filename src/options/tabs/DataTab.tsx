@@ -307,7 +307,7 @@ export function DataTab(props: DataTabProps) {
                 inputmode="numeric"
                 value={stalePlaybackDays()}
                 onInput={(event) => setStalePlaybackDays(event.currentTarget.value)}
-                class="w-20 rounded-full border border-stone-700 bg-stone-950 px-3 py-1 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                class="w-20 rounded-full border border-stone-700 bg-stone-950 px-3 py-1 text-sm text-stone-100 transition outline-none focus:border-stone-500"
               />
               <span class="text-sm text-stone-400">日より前</span>
               <span aria-hidden="true" class="text-sm text-stone-600">

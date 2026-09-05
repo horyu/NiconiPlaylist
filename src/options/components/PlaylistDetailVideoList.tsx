@@ -114,7 +114,7 @@ function EditableVideoRow(props: EditableVideoRowProps) {
           {props.index() + 1}
         </span>
         <Show when={isCurrent()}>
-          <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+          <span class="mt-1 text-[10px] font-medium tracking-[0.18em] text-emerald-300 uppercase">
             NOW
           </span>
         </Show>
@@ -127,7 +127,7 @@ function EditableVideoRow(props: EditableVideoRowProps) {
         class="h-14 w-24 overflow-hidden rounded-lg bg-stone-900"
       >
         <Show when={props.thumbnailUrl}>
-          {(thumbnailUrl) => <img src={thumbnailUrl()} alt="" class="h-full w-full object-cover" />}
+          {(thumbnailUrl) => <img src={thumbnailUrl()} alt="" class="size-full object-cover" />}
         </Show>
       </a>
 
@@ -150,7 +150,7 @@ function EditableVideoRow(props: EditableVideoRowProps) {
             <div
               role="button"
               tabindex="0"
-              class="inline-flex h-7 w-7 cursor-grab select-none items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 active:cursor-grabbing"
+              class="inline-flex size-7 cursor-grab items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition select-none hover:border-stone-500 hover:bg-stone-800 active:cursor-grabbing"
               onMouseDown={() => props.onArmDragRow?.(props.rowId)}
               onMouseUp={() => props.onArmDragRow?.(null)}
               title="ドラッグして移動"
@@ -160,7 +160,7 @@ function EditableVideoRow(props: EditableVideoRowProps) {
             </div>
             <button
               type="button"
-              class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+              class="inline-flex size-7 items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
               onClick={() => handleMove("up")}
               disabled={!props.canMoveUp}
               title="上へ移動"
@@ -170,7 +170,7 @@ function EditableVideoRow(props: EditableVideoRowProps) {
             </button>
             <button
               type="button"
-              class="inline-flex h-7 w-7 items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+              class="inline-flex size-7 items-center justify-center rounded-full border border-stone-700 text-xs text-stone-200 transition hover:border-stone-500 hover:bg-stone-800 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
               onClick={() => handleMove("down")}
               disabled={!props.canMoveDown}
               title="下へ移動"

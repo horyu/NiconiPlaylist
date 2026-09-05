@@ -66,7 +66,7 @@ export default function OptionsPage() {
     <main class="min-h-screen bg-stone-950 text-stone-100">
       <Show when={toast()}>
         {(currentToast) => (
-          <div class="fixed right-10 top-[5.5rem] z-50">
+          <div class="fixed top-[5.5rem] right-10 z-50">
             <div
               class={[
                 "flex items-center gap-3 rounded-md px-4 py-2 text-sm shadow-lg shadow-black/25",
@@ -89,7 +89,7 @@ export default function OptionsPage() {
         )}
       </Show>
 
-      <div class="flex min-h-screen w-full flex-col gap-6 px-6 py-6 lg:px-10">
+      <div class="flex min-h-screen w-full flex-col gap-6 p-6 lg:px-10">
         <header class="flex flex-col gap-4 border-b border-stone-800 pb-6 sm:flex-row sm:items-center sm:justify-between">
           <div class="space-y-1">
             <h1 class="text-2xl font-semibold text-stone-50">NiconiPlaylist</h1>

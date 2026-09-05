@@ -547,20 +547,20 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                     <div class="min-w-0 space-y-4">
                       <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1 space-y-1">
-                          <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                          <p class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                             Playlist Detail
                           </p>
                           <Show
                             when={isEditingDetail()}
                             fallback={
-                              <h3 class="break-words text-xl font-semibold text-stone-50">
+                              <h3 class="text-xl font-semibold wrap-break-word text-stone-50">
                                 {getPlaylistLabel(detailPlaylist)}
                               </h3>
                             }
                           >
                             <input
                               type="text"
-                              class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-xl font-semibold text-stone-50 outline-none transition focus:border-stone-500"
+                              class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-xl font-semibold text-stone-50 transition outline-none focus:border-stone-500"
                               value={detailDraft().title}
                               onInput={(event) =>
                                 setDetailDraft((currentDraft) => ({
@@ -597,7 +597,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                             <span class="text-stone-600">•</span>
                             <Show when={detailPlaylist.id === props.state?.lastActivePlaylistId}>
                               <>
-                                <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+                                <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium tracking-[0.18em] text-emerald-300 uppercase">
                                   Active
                                 </span>
                                 <button
@@ -816,14 +816,14 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                       </div>
 
                       <div class="rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3">
-                        <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                        <p class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                           Memo
                         </p>
                         <Show
                           when={isEditingDetail()}
                           fallback={
                             <Show when={detailPlaylist.memo}>
-                              <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-stone-300">
+                              <p class="mt-2 text-sm leading-6 whitespace-pre-wrap text-stone-300">
                                 {detailPlaylist.memo}
                               </p>
                             </Show>
@@ -831,7 +831,7 @@ export function PlaylistsTab(props: PlaylistsTabProps) {
                         >
                           <textarea
                             rows="5"
-                            class="mt-2 w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm leading-6 text-stone-200 outline-none transition focus:border-stone-500"
+                            class="mt-2 w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm leading-6 text-stone-200 transition outline-none focus:border-stone-500"
                             value={detailDraft().memo}
                             onInput={(event) =>
                               setDetailDraft((currentDraft) => ({

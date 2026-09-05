@@ -211,7 +211,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
               <span class="text-sm font-medium text-stone-200">watch URL / 動画ID</span>
               <textarea
                 rows="8"
-                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 transition outline-none focus:border-stone-500"
                 placeholder={["sm9", "https://www.nicovideo.jp/watch/so5364283", "nm2829323"].join(
                   "\n",
                 )}
@@ -225,7 +225,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
             <label class="block space-y-2">
               <span class="text-sm font-medium text-stone-200">重複動画の除去</span>
               <select
-                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 transition outline-none focus:border-stone-500"
                 value={directInputDedupeMode()}
                 onChange={(event) => {
                   setDirectInputDedupeMode(
@@ -244,7 +244,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
                 <span class="text-sm font-medium text-stone-200">タイトル</span>
                 <input
                   type="text"
-                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 transition outline-none focus:border-stone-500"
                   placeholder={`YYYY/MM/DD hh:mm:ss ${DEFAULT_PLAYLIST_TITLE_SOURCE.videoIdInput}`}
                   value={directTitle()}
                   onInput={(event) => {
@@ -258,7 +258,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
                 <span class="text-sm font-medium text-stone-200">メモ</span>
                 <textarea
                   rows="4"
-                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm leading-6 text-stone-100 outline-none transition focus:border-stone-500"
+                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm leading-6 text-stone-100 transition outline-none focus:border-stone-500"
                   placeholder="未指定"
                   value={directMemo()}
                   onInput={(event) => {
@@ -293,7 +293,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
 
             <Show when={directShareInfo()}>
               {(info) => (
-                <p class="text-sm text-stone-400 break-all">
+                <p class="text-sm break-all text-stone-400">
                   <button
                     type="button"
                     class="rounded-full border border-stone-700 px-3 py-1 text-xs font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
@@ -320,7 +320,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
             title="作成前プレビュー"
             headerRight={
               <Show when={directInputPreview().kind === "ready"}>
-                <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
+                <p class="text-xs tracking-[0.2em] text-stone-500 uppercase">
                   {directPreviewCountLabel()}
                 </p>
               </Show>

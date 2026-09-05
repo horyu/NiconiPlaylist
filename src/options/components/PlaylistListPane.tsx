@@ -19,11 +19,11 @@ export function PlaylistListPane(props: PlaylistListPaneProps) {
   return (
     <section class="min-w-0 space-y-4 rounded-2xl border border-stone-800 bg-stone-950/40 p-4 xl:flex xl:h-full xl:flex-col">
       <div class="space-y-2">
-        <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">Playlist List</p>
+        <p class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">Playlist List</p>
         <label class="block">
           <input
             type="text"
-            class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+            class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-100 transition outline-none focus:border-stone-500"
             placeholder="プレイリストを検索"
             value={props.query}
             onInput={(event) => props.onQueryInput(event.currentTarget.value)}
@@ -60,14 +60,14 @@ export function PlaylistListPane(props: PlaylistListPaneProps) {
                     </div>
                   </div>
                   <Show when={isActive()}>
-                    <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+                    <span class="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium tracking-[0.18em] text-emerald-300 uppercase">
                       Active
                     </span>
                   </Show>
                 </div>
 
                 <Show when={playlist.memo}>
-                  <p class="mt-2 overflow-hidden text-xs leading-5 text-stone-500 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                  <p class="mt-2 [display:-webkit-box] overflow-hidden text-xs leading-5 text-stone-500 [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                     {playlist.memo}
                   </p>
                 </Show>

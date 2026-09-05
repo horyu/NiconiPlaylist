@@ -41,7 +41,7 @@ export function VideoListItem(props: VideoListItemProps) {
         <Show
           when={props.videoMetadata?.thumbnail.listingUrl ?? props.videoMetadata?.thumbnail.url}
         >
-          {(thumbnailUrl) => <img src={thumbnailUrl()} alt="" class="h-full w-full object-cover" />}
+          {(thumbnailUrl) => <img src={thumbnailUrl()} alt="" class="size-full object-cover" />}
         </Show>
       </a>
 

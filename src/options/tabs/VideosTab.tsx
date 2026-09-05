@@ -73,13 +73,13 @@ function ClearableFilterInput(props: {
         value={props.value}
         onInput={(event) => props.onInput(event.currentTarget.value)}
         placeholder={props.placeholder}
-        class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition placeholder:text-stone-600 focus:border-stone-600"
+        class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 transition outline-none placeholder:text-stone-600 focus:border-stone-600"
       />
       <Show when={props.value.trim() !== ""}>
         <button
           type="button"
           onClick={() => props.onClear()}
-          class="absolute right-3.5 top-1/2 z-10 -translate-y-1/2 bg-stone-950 px-1 text-base leading-none text-stone-500 transition hover:text-stone-200"
+          class="absolute top-1/2 right-3.5 z-10 -translate-y-1/2 bg-stone-950 px-1 text-base leading-none text-stone-500 transition hover:text-stone-200"
           aria-label="入力をクリア"
         >
           ×
@@ -405,7 +405,7 @@ export function VideosTab(props: VideosTabProps) {
           <div class="space-y-4 border-b border-stone-800 pb-4">
             <div class="flex flex-wrap gap-3">
               <label class="min-w-[12rem] flex-1 space-y-2">
-                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                <span class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                   タイトル
                 </span>
                 <ClearableFilterInput
@@ -416,7 +416,7 @@ export function VideosTab(props: VideosTabProps) {
                 />
               </label>
               <label class="min-w-[10rem] flex-1 space-y-2">
-                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                <span class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                   watchId
                 </span>
                 <ClearableFilterInput
@@ -427,7 +427,7 @@ export function VideosTab(props: VideosTabProps) {
                 />
               </label>
               <label class="min-w-[10rem] flex-1 space-y-2">
-                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                <span class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                   投稿者
                 </span>
                 <ClearableFilterInput
@@ -442,7 +442,7 @@ export function VideosTab(props: VideosTabProps) {
                 </datalist>
               </label>
               <label class="min-w-[12rem] flex-1 space-y-2">
-                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                <span class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                   Playlist
                 </span>
                 <ClearableFilterInput
@@ -459,13 +459,13 @@ export function VideosTab(props: VideosTabProps) {
                 </datalist>
               </label>
               <label class="min-w-[9rem] flex-none space-y-2">
-                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                <span class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                   ソート
                 </span>
                 <select
                   value={sortKey()}
                   onChange={(event) => setSortKey(event.currentTarget.value as VideoSortKey)}
-                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 outline-none transition focus:border-stone-600"
+                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-sm text-stone-100 transition outline-none focus:border-stone-600"
                 >
                   <option value="title">タイトル</option>
                   <option value="registered-at">投稿日時</option>
@@ -476,13 +476,13 @@ export function VideosTab(props: VideosTabProps) {
                 </select>
               </label>
               <div class="min-w-[7rem] flex-none space-y-2">
-                <span class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+                <span class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
                   順序
                 </span>
                 <button
                   type="button"
                   onClick={() => setSortOrder((current) => (current === "asc" ? "desc" : "asc"))}
-                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-left text-sm text-stone-100 outline-none transition hover:border-stone-700 hover:bg-stone-900 focus:border-stone-600"
+                  class="w-full rounded-xl border border-stone-800 bg-stone-950 px-3 py-2 text-left text-sm text-stone-100 transition outline-none hover:border-stone-700 hover:bg-stone-900 focus:border-stone-600"
                 >
                   {sortOrder() === "asc" ? "昇順" : "降順"}
                 </button>
@@ -522,15 +522,15 @@ export function VideosTab(props: VideosTabProps) {
               <div class="overflow-x-auto pt-4">
                 <table class="min-w-full table-fixed border-separate border-spacing-0 overflow-hidden rounded-2xl border border-stone-800">
                   <thead class="bg-stone-900/80">
-                    <tr class="text-left text-xs uppercase tracking-[0.18em] text-stone-500">
-                      <th class="w-12 pl-4 py-3 font-medium">#</th>
-                      <th class="w-28 pl-4 py-3 font-medium">サムネ</th>
-                      <th class="pl-4 py-3 font-medium">タイトル</th>
-                      <th class="w-32 pl-4 py-3 font-medium">投稿日時</th>
-                      <th class="w-12 pl-4 py-3 font-medium">時間</th>
-                      <th class="w-24 pl-4 py-3 font-medium">watchId</th>
-                      <th class="w-36 pl-4 py-3 font-medium">投稿者</th>
-                      <th class="w-72 pl-4 pr-4 py-3 font-medium">playlist</th>
+                    <tr class="text-left text-xs tracking-[0.18em] text-stone-500 uppercase">
+                      <th class="w-12 py-3 pl-4 font-medium">#</th>
+                      <th class="w-28 py-3 pl-4 font-medium">サムネ</th>
+                      <th class="py-3 pl-4 font-medium">タイトル</th>
+                      <th class="w-32 py-3 pl-4 font-medium">投稿日時</th>
+                      <th class="w-12 py-3 pl-4 font-medium">時間</th>
+                      <th class="w-24 py-3 pl-4 font-medium">watchId</th>
+                      <th class="w-36 py-3 pl-4 font-medium">投稿者</th>
+                      <th class="w-72 px-4 py-3 font-medium">playlist</th>
                     </tr>
                   </thead>
                   <tbody class="bg-stone-950/40">
@@ -543,10 +543,10 @@ export function VideosTab(props: VideosTabProps) {
 
                         return (
                           <tr class="align-top text-sm text-stone-200">
-                            <td class="border-t border-stone-800 pl-4 py-4 text-xs font-medium text-stone-500">
+                            <td class="border-t border-stone-800 py-4 pl-4 text-xs font-medium text-stone-500">
                               #{index() + 1}
                             </td>
-                            <td class="border-t border-stone-800 pl-4 py-4">
+                            <td class="border-t border-stone-800 py-4 pl-4">
                               <a
                                 href={`https://www.nicovideo.jp/watch/${row.videoId}`}
                                 target="_blank"
@@ -558,30 +558,30 @@ export function VideosTab(props: VideosTabProps) {
                                     <img
                                       src={resolvedThumbnailUrl()}
                                       alt=""
-                                      class="h-full w-full object-cover"
+                                      class="size-full object-cover"
                                     />
                                   )}
                                 </Show>
                               </a>
                             </td>
-                            <td class="border-t border-stone-800 pl-4 py-4">
+                            <td class="border-t border-stone-800 py-4 pl-4">
                               <p class="line-clamp-3 font-medium text-stone-100">
                                 {videoMetadata()?.title ?? "未取得"}
                               </p>
                             </td>
-                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
+                            <td class="border-t border-stone-800 py-4 pl-4 text-xs text-stone-400">
                               {formatRegisteredAt(videoMetadata()?.registeredAt)}
                             </td>
-                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
+                            <td class="border-t border-stone-800 py-4 pl-4 text-xs text-stone-400">
                               {formatDuration(videoMetadata()?.duration)}
                             </td>
-                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
+                            <td class="border-t border-stone-800 py-4 pl-4 text-xs text-stone-400">
                               {row.videoId}
                             </td>
-                            <td class="border-t border-stone-800 pl-4 py-4 text-xs text-stone-400">
+                            <td class="border-t border-stone-800 py-4 pl-4 text-xs text-stone-400">
                               {ownerMetadata()?.name ?? "-"}
                             </td>
-                            <td class="border-t border-stone-800 pl-4 pr-4 py-4">
+                            <td class="border-t border-stone-800 p-4">
                               <div class="space-y-2">
                                 <button
                                   type="button"

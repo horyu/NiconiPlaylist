@@ -264,7 +264,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
       </div>
 
       <div class="space-y-3">
-        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 p-3">
           <div class="space-y-1">
             <p class="text-xs font-medium text-stone-100">再生タブが無い時の開き方</p>
             <p class="text-xs text-stone-500">
@@ -300,7 +300,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
           </div>
         </div>
 
-        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 p-3">
           <div class="space-y-1">
             <p class="text-xs font-medium text-stone-100">次動画へ進む時の前面化</p>
             <p class="text-xs text-stone-500">
@@ -365,7 +365,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
           </Show>
         </div>
 
-        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 p-3">
           <div class="space-y-1">
             <p class="text-xs font-medium text-stone-100">各動画のリピート</p>
             <p class="text-xs text-stone-500">
@@ -376,7 +376,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
           <label class="flex flex-wrap items-center gap-[2px] text-xs text-stone-300">
             <span class="font-medium text-stone-100">共通設定</span>
             <select
-              class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100 outline-none transition focus:border-stone-500"
+              class="rounded-md border border-stone-700 bg-stone-950 px-2 py-1 text-xs text-stone-100 transition outline-none focus:border-stone-500"
               value={activeRepeatPresetId() ?? "none"}
               onChange={(event) => {
                 const nextValue = event.currentTarget.value;
@@ -593,7 +593,7 @@ export function RepeatSettingsTab(props: RepeatSettingsTabProps) {
           </div>
         </div>
 
-        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 px-3 py-3">
+        <div class="space-y-3 rounded-2xl border border-stone-800 bg-stone-950/70 p-3">
           <div class="space-y-1">
             <p class="text-xs font-medium text-stone-100">プレイリスト完了後（リピートなし時）</p>
             <p class="text-xs text-stone-500">

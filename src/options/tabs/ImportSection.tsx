@@ -295,7 +295,7 @@ export function ImportSection(props: ImportSectionProps) {
                   <span class="text-sm font-medium text-stone-200">共有 URL</span>
                   <input
                     type="url"
-                    class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                    class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 transition outline-none focus:border-stone-500"
                     placeholder="https://horyu.github.io/NiconiPlaylist/?videoIds=..."
                     value={sharedUrl()}
                     onInput={(event) => {
@@ -339,7 +339,7 @@ export function ImportSection(props: ImportSectionProps) {
                 <span class="text-sm font-medium text-stone-200">タイトル</span>
                 <input
                   type="text"
-                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 outline-none transition focus:border-stone-500"
+                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm text-stone-100 transition outline-none focus:border-stone-500"
                   placeholder={currentReadyPreview()?.title ?? getDefaultTitlePlaceholder(source())}
                   value={playlistTitle()}
                   onInput={(event) => setPlaylistTitle(event.currentTarget.value)}
@@ -350,7 +350,7 @@ export function ImportSection(props: ImportSectionProps) {
                 <span class="text-sm font-medium text-stone-200">メモ</span>
                 <textarea
                   rows="4"
-                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm leading-6 text-stone-100 outline-none transition focus:border-stone-500"
+                  class="w-full rounded-2xl border border-stone-700 bg-stone-950 px-4 py-3 text-sm leading-6 text-stone-100 transition outline-none focus:border-stone-500"
                   placeholder={currentReadyPreview()?.memo ?? "未指定"}
                   value={playlistMemo()}
                   onInput={(event) => setPlaylistMemo(event.currentTarget.value)}
@@ -377,7 +377,7 @@ export function ImportSection(props: ImportSectionProps) {
             headerRight={
               <Show when={currentReadyPreview()}>
                 <div class="flex items-center gap-3">
-                  <p class="text-xs uppercase tracking-[0.2em] text-stone-500">
+                  <p class="text-xs tracking-[0.2em] text-stone-500 uppercase">
                     {previewCountLabel()}
                   </p>
                   <Show when={(currentReadyPreview()?.videoIds.length ?? 0) > 5}>

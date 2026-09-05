@@ -125,12 +125,12 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                   {formatIndex(index())}
                 </span>
                 <Show when={isCurrent()}>
-                  <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-300">
+                  <span class="mt-1 text-[10px] font-medium tracking-[0.18em] text-emerald-300 uppercase">
                     now
                   </span>
                 </Show>
                 <Show when={!isCurrent() && isPending()}>
-                  <span class="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sky-300">
+                  <span class="mt-1 text-[10px] font-medium tracking-[0.18em] text-sky-300 uppercase">
                     next
                   </span>
                 </Show>
@@ -146,7 +146,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                   when={videoMetadata()?.thumbnail.listingUrl ?? videoMetadata()?.thumbnail.url}
                 >
                   {(thumbnailUrl) => (
-                    <img src={thumbnailUrl()} alt="" class="h-full w-full object-cover" />
+                    <img src={thumbnailUrl()} alt="" class="size-full object-cover" />
                   )}
                 </Show>
               </a>
@@ -171,14 +171,14 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                     <Show
                       when={canFocusPlaybackTab()}
                       fallback={
-                        <div class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200">
+                        <div class="inline-flex size-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200">
                           ●
                         </div>
                       }
                     >
                       <button
                         type="button"
-                        class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
+                        class="inline-flex size-8 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-xs font-medium text-emerald-200 transition hover:bg-emerald-500/20"
                         title="再生中のタブをフォーカス"
                         aria-label="再生中のタブをフォーカス"
                         onClick={() => props.onFocusPlaybackTab()}
@@ -190,7 +190,7 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
                 >
                   <button
                     type="button"
-                    class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-stone-600 text-sm text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
+                    class="inline-flex size-8 items-center justify-center rounded-full border border-stone-600 text-sm text-stone-200 transition hover:border-stone-500 hover:bg-stone-800"
                     title="ここから再生"
                     aria-label="ここから再生"
                     onClick={() => props.onMovePlaybackIndex(index())}

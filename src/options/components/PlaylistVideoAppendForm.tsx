@@ -17,7 +17,7 @@ export function PlaylistVideoAppendForm(props: PlaylistVideoAppendFormProps) {
     <div class="rounded-2xl border border-stone-800 bg-stone-900/50 px-4 py-3">
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="space-y-1">
-          <p class="text-xs font-medium uppercase tracking-[0.18em] text-stone-500">
+          <p class="text-xs font-medium tracking-[0.18em] text-stone-500 uppercase">
             Append Videos
           </p>
           <p class="text-sm text-stone-300">
@@ -36,7 +36,7 @@ export function PlaylistVideoAppendForm(props: PlaylistVideoAppendFormProps) {
         <label>
           <select
             aria-label="動画追加位置"
-            class="w-[170px] rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none transition focus:border-stone-500"
+            class="w-[170px] rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 transition outline-none focus:border-stone-500"
             value={props.position}
             onChange={(event) =>
               props.onPositionChange(event.currentTarget.value as VideoInsertPosition)
@@ -57,7 +57,7 @@ export function PlaylistVideoAppendForm(props: PlaylistVideoAppendFormProps) {
               type="number"
               min="1"
               aria-label="動画追加位置の番号"
-              class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 outline-none transition focus:border-stone-500"
+              class="w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm text-stone-200 transition outline-none focus:border-stone-500"
               value={props.indexInput}
               onInput={(event) => props.onIndexInput(event.currentTarget.value)}
               placeholder="1"
@@ -67,7 +67,7 @@ export function PlaylistVideoAppendForm(props: PlaylistVideoAppendFormProps) {
       </div>
       <textarea
         rows="3"
-        class="mt-3 w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm leading-6 text-stone-200 outline-none transition focus:border-stone-500"
+        class="mt-3 w-full rounded-xl border border-stone-700 bg-stone-950 px-3 py-2 text-sm leading-6 text-stone-200 transition outline-none focus:border-stone-500"
         value={props.input}
         onInput={(event) => props.onInput(event.currentTarget.value)}
         placeholder={["sm9", "https://www.nicovideo.jp/watch/so5364283", "nm2829323"].join("\n")}
