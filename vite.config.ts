@@ -58,6 +58,7 @@ export default defineConfig({
   lint: {
     jsPlugins: ["@e18e/eslint-plugin", "eslint-plugin-solid", "oxlint-tailwindcss"],
     options: {
+      denyWarnings: true,
       typeAware: true,
       typeCheck: true,
     },
