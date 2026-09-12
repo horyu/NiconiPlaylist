@@ -548,7 +548,7 @@ function Popup() {
   }
 
   return (
-    <main class="flex h-[600px] max-w-[42rem] min-w-[30rem] flex-col overflow-hidden bg-stone-950 text-stone-100">
+    <main class="flex h-[600px] w-[35rem] flex-col overflow-hidden bg-stone-950 text-stone-100">
       <div class="mx-auto flex size-full min-h-0 flex-col gap-3 p-3">
         <div class="shrink-0 space-y-3">
           <div class="flex items-center justify-between gap-3">

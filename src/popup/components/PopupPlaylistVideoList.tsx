@@ -152,7 +152,10 @@ export function PopupPlaylistVideoList(props: PopupPlaylistVideoListProps) {
               </a>
 
               <div class="min-w-0 flex-1 space-y-1">
-                <p class="truncate text-sm font-medium text-stone-100">
+                <p
+                  class="truncate text-sm font-medium text-stone-100"
+                  title={videoMetadata()?.title ?? videoId}
+                >
                   {videoMetadata()?.title ?? videoId}
                 </p>
                 <p class="text-xs text-stone-400">{videoId}</p>
