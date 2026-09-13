@@ -26,7 +26,7 @@ type DirectInputPreviewState =
     };
 
 type DirectInputCreateSectionProps = {
-  onImported: () => Promise<void> | void;
+  onImported: (playlistId: string) => Promise<void> | void;
   videoMetadataState: VideoMetadataState | undefined;
 };
 
@@ -125,7 +125,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
     }
 
     try {
-      await createStoredPlaylist(
+      const playlist = await createStoredPlaylist(
         {
           videoIds: currentPreview.videoIds,
           title: directTitle(),
@@ -139,8 +139,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
       resetDirectShareState();
       setDirectTitle("");
       setDirectMemo("");
-      setDirectInputFeedback("プレイリストを作成しました。");
-      await props.onImported();
+      await props.onImported(playlist.id);
     } catch (error) {
       setDirectInputFeedback(
         error instanceof Error ? error.message : "プレイリストの作成に失敗しました。",

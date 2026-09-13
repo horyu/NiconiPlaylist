@@ -11,6 +11,7 @@ import {
 } from "@/background/services/playlistJson";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { parseSharedPlaylistUrl, SAMPLE_SHARED_PLAYLIST_URL } from "@/lib/playlistUrl";
+import type { Playlist } from "@/lib/types";
 import { PreviewPanel } from "@/options/components/PreviewPanel";
 import { PreviewVideoList } from "@/options/components/PreviewVideoList";
 import type { VideoMetadataState } from "@/options/hooks/useVideoMetadataState";
@@ -28,7 +29,7 @@ type PlaylistJsonPreviewState =
   | { kind: "ready"; fileName: string; payload: PlaylistJsonPayload };
 
 type ImportSectionProps = {
-  onImported: () => Promise<void> | void;
+  onImported: (playlistId: string) => Promise<void> | void;
   videoMetadataState: VideoMetadataState | undefined;
 };
 
@@ -213,8 +214,10 @@ export function ImportSection(props: ImportSectionProps) {
     setImporting(true);
 
     try {
+      let playlist: Playlist;
+
       if (source() === "shared-url") {
-        await importSharedPlaylist(sharedUrl().trim(), {
+        playlist = await importSharedPlaylist(sharedUrl().trim(), {
           title: playlistTitle(),
           memo: playlistMemo(),
         });
@@ -226,7 +229,7 @@ export function ImportSection(props: ImportSectionProps) {
           return;
         }
 
-        await importPlaylistJson({
+        playlist = await importPlaylistJson({
           ...preview.payload,
           playlist: {
             ...preview.payload.playlist,
@@ -243,8 +246,7 @@ export function ImportSection(props: ImportSectionProps) {
       setShowAllPreview(false);
       setPlaylistTitle("");
       setPlaylistMemo("");
-      setFeedback("プレイリストをインポートしました。");
-      await props.onImported();
+      await props.onImported(playlist.id);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "インポートに失敗しました。");
     } finally {

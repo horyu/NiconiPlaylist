@@ -46,6 +46,16 @@ export default function OptionsPage() {
     setToast(null);
   }
 
+  async function handlePlaylistImported(playlistId: string, message: string) {
+    await refreshState();
+    setPlaylistSelectionRequest((current) => ({
+      playlistId,
+      requestKey: (current?.requestKey ?? 0) + 1,
+    }));
+    setActiveTab("playlists");
+    setToast({ text: message, tone: "success" });
+  }
+
   createEffect(() => {
     const currentToast = toast();
 
@@ -123,12 +133,19 @@ export default function OptionsPage() {
 
         <Switch>
           <Match when={activeTab() === "import"}>
-            <ImportSection onImported={refreshState} videoMetadataState={videoMetadataState()} />
+            <ImportSection
+              onImported={(playlistId) =>
+                handlePlaylistImported(playlistId, "プレイリストをインポートしました。")
+              }
+              videoMetadataState={videoMetadataState()}
+            />
           </Match>
 
           <Match when={activeTab() === "create"}>
             <DirectInputCreateSection
-              onImported={refreshState}
+              onImported={(playlistId) =>
+                handlePlaylistImported(playlistId, "プレイリストを作成しました。")
+              }
               videoMetadataState={videoMetadataState()}
             />
           </Match>
