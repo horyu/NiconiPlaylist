@@ -6,6 +6,7 @@ import {
 } from "@/background/services/importPlaylist";
 import { enqueueVideoMetadataForVideoIds } from "@/background/services/videoMetadata";
 import { buildSharedPlaylistUrl } from "@/lib/playlistUrl";
+import { shuffleVideoIds } from "@/lib/shuffleVideoIds";
 import { normalizeOptionalText } from "@/lib/text";
 import { parseVideoIdInputLines, type ParseVideoIdInputOptions } from "@/lib/videoIdInput";
 import { PreviewPanel } from "@/options/components/PreviewPanel";
@@ -116,6 +117,8 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
 
   async function handleCreateFromVideoIds(event: SubmitEvent) {
     event.preventDefault();
+    const shuffle =
+      event.submitter instanceof HTMLButtonElement && event.submitter.value === "shuffle";
     setDirectInputFeedback(null);
 
     const currentPreview = directInputPreview();
@@ -127,7 +130,7 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
     try {
       const playlist = await createStoredPlaylist(
         {
-          videoIds: currentPreview.videoIds,
+          videoIds: shuffle ? shuffleVideoIds(currentPreview.videoIds) : currentPreview.videoIds,
           title: directTitle(),
           memo: directMemo(),
         },
@@ -268,13 +271,21 @@ export function DirectInputCreateSection(props: DirectInputCreateSectionProps) {
               </label>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <button
                 type="submit"
                 disabled={directInputPreview().kind !== "ready"}
                 class="rounded-full bg-stone-100 px-4 py-2 text-sm font-medium text-stone-950 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-stone-700 disabled:text-stone-400"
               >
                 プレイリストを作成
+              </button>
+              <button
+                type="submit"
+                value="shuffle"
+                disabled={directInputPreview().kind !== "ready"}
+                class="rounded-full border border-stone-700 px-4 py-2 text-sm font-medium text-stone-200 transition hover:border-stone-400 hover:text-stone-50 disabled:cursor-not-allowed disabled:border-stone-800 disabled:text-stone-600"
+              >
+                シャッフルして作成
               </button>
               <button
                 type="button"

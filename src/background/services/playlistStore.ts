@@ -1,6 +1,7 @@
 import { getStorageData, mutateStorage } from "@/background/services/storage";
 import { formatDashedTimestampWithMinutes } from "@/lib/dateTime";
 import { resolvePlaylistPlaybackSettings } from "@/lib/playlistLoop";
+import { shuffleVideoIds } from "@/lib/shuffleVideoIds";
 import { isPlaybackContext, isPlaybackDebugEvent, isPlaylist } from "@/lib/typeGuards";
 import type {
   PlaybackContext,
@@ -77,20 +78,6 @@ async function createStoredPlaylistCopyWithVideoIds(
       result: nextPlaylist,
     };
   });
-}
-
-function shuffleVideoIds(videoIds: VideoId[]): VideoId[] {
-  const nextVideoIds = [...videoIds];
-
-  for (let index = nextVideoIds.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    const currentVideoId = nextVideoIds[index]!;
-
-    nextVideoIds[index] = nextVideoIds[randomIndex]!;
-    nextVideoIds[randomIndex] = currentVideoId;
-  }
-
-  return nextVideoIds;
 }
 
 function buildVideoOccurrenceKeys(videoIds: VideoId[]): string[] {
