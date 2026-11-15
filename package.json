@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@voidzero-dev/vite-plus-core": "1.5.0",
-    "solid-js": "1.9.18",
+    "solid-js": "1.9.19",
     "vite-plus": "1.5.0"
   },
   "devDependencies": {
