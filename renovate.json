@@ -8,6 +8,9 @@
   "separateMajorMinor": true,
   "rangeStrategy": "pin",
   "minimumReleaseAge": "2 days",
+  "lockFileMaintenance": {
+    "minimumReleaseAge": null
+  },
   "packageRules": [
     {
       "description": "Do not pin versions in mise toolchain config",
