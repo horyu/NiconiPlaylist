@@ -14,7 +14,7 @@
         "@tailwindcss/vite": "4.3.5",
         "@types/bun": "1.4.2",
         "@wxt-dev/module-solid": "1.1.4",
-        "eslint-plugin-solid": "0.19.0",
+        "eslint-plugin-solid": "0.20.0",
         "oxlint-tailwindcss": "1.17.2",
         "tailwindcss": "4.3.5",
         "wxt": "0.21.5",
@@ -407,7 +407,7 @@
 
     "escape-string-regexp": ["escape-string-regexp@5.0.0", "", {}, "sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw=="],
 
-    "eslint-plugin-solid": ["eslint-plugin-solid@0.19.0", "", { "dependencies": { "eslint-visitor-keys": "^3.4.3", "estraverse": "^5.3.0", "is-html": "^2.0.0", "kebab-case": "^1.0.2", "known-css-properties": "^0.30.0", "parse5": "^7.3.0", "style-to-object": "^1.0.6", "validate-html-nesting": "^1.2.4" }, "peerDependencies": { "eslint": "^9.0.0 || ^10.0.0" }, "optionalPeers": ["eslint"] }, "sha512-Is7Aj9bfce774C9B6ivc/S5HNmUpYwlzYx8bO13EIIF7JaY8c6OACxE0LTyhNLDeMR3VNBDn+a/k830dvYl4uQ=="],
+    "eslint-plugin-solid": ["eslint-plugin-solid@0.20.0", "", { "dependencies": { "eslint-visitor-keys": "^3.4.3", "estraverse": "^5.3.0", "is-html": "^2.0.0", "kebab-case": "^1.0.2", "known-css-properties": "^0.30.0", "parse5": "^7.3.0", "style-to-object": "^1.0.6", "validate-html-nesting": "^1.2.4" }, "peerDependencies": { "eslint": "^9.0.0 || ^10.0.0" }, "optionalPeers": ["eslint"] }, "sha512-+cA9Yz+ON+Sr3sfl2RJePrPDXZmIAleS3D6W5rRuP/BKRqnt2DcSXi2YMFi52oClWGoOfBl29FdtLere7qoJUQ=="],
 
     "eslint-visitor-keys": ["eslint-visitor-keys@3.4.3", "", {}, "sha512-wpc+LXeiyiisxPlEkUzU6svyS1frIO3Mgxj1fdy7Pm8Ygzguax2N3Fa/D/ag1WqbOprdI+uY6wMUl8/a2G+iag=="],
 
