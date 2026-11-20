@@ -23,7 +23,7 @@
   "dependencies": {
     "@voidzero-dev/vite-plus-core": "1.6.0",
     "solid-js": "1.9.19",
-    "vite-plus": "1.6.0"
+    "vite-plus": "1.7.0"
   },
   "devDependencies": {
     "@e18e/eslint-plugin": "0.8.1",
