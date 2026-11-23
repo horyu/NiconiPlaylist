@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@voidzero-dev/vite-plus-core": "8.3.8000",
-    "solid-js": "1.9.19",
+    "solid-js": "1.9.20",
     "vite-plus": "1.7.0"
   },
   "devDependencies": {
@@ -30,7 +30,7 @@
     "@tailwindcss/vite": "4.3.5",
     "@types/bun": "1.4.4",
     "@wxt-dev/module-solid": "1.1.4",
-    "eslint-plugin-solid": "0.19.0",
+    "eslint-plugin-solid": "0.20.1",
     "oxlint-tailwindcss": "1.17.2",
     "tailwindcss": "4.3.5",
     "wxt": "0.21.5"
